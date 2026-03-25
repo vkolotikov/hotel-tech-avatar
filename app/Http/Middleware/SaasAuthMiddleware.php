@@ -46,18 +46,42 @@ class SaasAuthMiddleware
 
     private function verifyJwt(string $token): array
     {
-        $sdkPath = base_path('../../../saas/packages/auth-sdk/php/SaasAuth.php');
-        if (!file_exists($sdkPath)) {
-            return ['valid' => false, 'error' => 'Auth SDK not found'];
+        $secret = config('services.saas.jwt_secret', env('SAAS_JWT_SECRET', ''));
+        if (!$secret) {
+            return ['valid' => false, 'error' => 'JWT secret not configured'];
         }
 
-        require_once $sdkPath;
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) {
+            return ['valid' => false, 'error' => 'Invalid token format'];
+        }
 
-        $auth = new \SaasAuth([
-            'platform_url' => config('services.saas.platform_url', 'http://localhost:3000'),
-            'jwt_secret'   => config('services.saas.jwt_secret', ''),
-        ]);
+        [$header, $payload, $signature] = $parts;
 
-        return $auth->verifyToken($token);
+        $expected = rtrim(strtr(base64_encode(hash_hmac('sha256', "$header.$payload", $secret, true)), '+/', '-_'), '=');
+        if (!hash_equals($expected, $signature)) {
+            return ['valid' => false, 'error' => 'Invalid signature'];
+        }
+
+        $data = json_decode(base64_decode(str_pad(strtr($payload, '-_', '+/'), strlen($payload) % 4 ? strlen($payload) + 4 - strlen($payload) % 4 : strlen($payload), '=')), true);
+        if (!$data) {
+            return ['valid' => false, 'error' => 'Invalid payload'];
+        }
+
+        if (isset($data['exp']) && $data['exp'] < time()) {
+            return ['valid' => false, 'error' => 'Token expired'];
+        }
+
+        return [
+            'valid' => true,
+            'user'  => [
+                'id'    => $data['userId'] ?? $data['sub'] ?? '',
+                'email' => $data['email'] ?? '',
+            ],
+            'organization' => isset($data['currentOrgId']) ? [
+                'id'   => $data['currentOrgId'],
+                'slug' => $data['currentOrgSlug'] ?? '',
+            ] : null,
+        ];
     }
 }
