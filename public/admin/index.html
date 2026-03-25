@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AvatarHub Admin</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar__header">
+        <h1>AvatarHub Admin</h1>
+        <button id="new-agent" type="button">+ New Avatar</button>
+      </div>
+      <div id="agents-list" class="agents-list"></div>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-main__header">
+        <h2 id="form-title">Create Avatar</h2>
+        <div class="admin-main__header-tools">
+          <button id="usage-info-button" class="icon-button" type="button" title="API usage statistics" aria-label="API usage statistics">i</button>
+          <p id="status" class="status">Ready</p>
+        </div>
+      </header>
+
+      <form id="agent-form" class="agent-form">
+        <div class="agent-form__grid">
+          <label>
+            Slug
+            <input id="slug" name="slug" type="text" placeholder="marketing-expert" required>
+          </label>
+          <label>
+            Name
+            <input id="name" name="name" type="text" placeholder="Marketing Expert" required>
+          </label>
+          <label>
+            Role
+            <input id="role" name="role" type="text" placeholder="Marketing" required>
+          </label>
+          <label>
+            OpenAI Model
+            <select id="openai_model" name="openai_model"></select>
+          </label>
+          <label>
+            OpenAI Voice
+            <select id="openai_voice" name="openai_voice"></select>
+          </label>
+          <label class="toggle-field">
+            <input id="use_advanced_ai" name="use_advanced_ai" type="checkbox">
+            <span>Advanced AI retrieval mode (File Search)</span>
+          </label>
+          <label class="toggle-field">
+            <input id="is_published" name="is_published" type="checkbox" checked>
+            <span>Published (show on frontend)</span>
+          </label>
+          <div class="agent-form__full knowledge-sync">
+            <div class="knowledge-sync__header">
+              <span class="field-label">Knowledge Sync</span>
+              <button id="reindex-knowledge" type="button">Reindex knowledge</button>
+            </div>
+            <div class="knowledge-sync__status">
+              <span id="knowledge-sync-chip" class="knowledge-sync__chip knowledge-sync__chip--idle">Idle</span>
+              <span id="knowledge-sync-meta">Not synced yet</span>
+            </div>
+            <p id="knowledge-sync-error" class="knowledge-sync__error" hidden></p>
+          </div>
+          <label class="agent-form__full">
+            Description
+            <textarea id="description" name="description" rows="2"></textarea>
+          </label>
+          <input id="avatar_image_url" name="avatar_image_url" type="hidden" value="">
+          <input id="chat_background_url" name="chat_background_url" type="hidden" value="">
+          <div class="agent-form__full field-group">
+            <span class="field-label">Avatar Gallery</span>
+            <div id="avatar-gallery" class="asset-gallery"></div>
+          </div>
+          <div class="agent-form__full field-group">
+            <span class="field-label">Background Gallery</span>
+            <div id="background-gallery" class="asset-gallery asset-gallery--background"></div>
+          </div>
+          <div class="agent-form__full field-group">
+            <span class="field-label">Chat Preview</span>
+            <section class="preview preview--compact">
+              <div class="preview__background" id="preview-background"></div>
+              <img id="preview-avatar" alt="Avatar preview">
+              <div class="preview__meta">
+                <h3 id="preview-name">Avatar Preview</h3>
+                <p id="preview-role">Role</p>
+              </div>
+            </section>
+          </div>
+          <label class="agent-form__full">
+            System Instructions
+            <textarea id="system_instructions" name="system_instructions" rows="6" placeholder="Define behavior, tone, and boundaries."></textarea>
+          </label>
+          <label class="agent-form__full">
+            Knowledge Text
+            <textarea id="knowledge_text" name="knowledge_text" rows="6" placeholder="Paste domain knowledge for this avatar."></textarea>
+          </label>
+          <label class="agent-form__full">
+            Knowledge Files (one URL/path per line)
+            <textarea id="knowledge_files" name="knowledge_files" rows="4" placeholder="/docs/pricing.pdf"></textarea>
+            <div
+              id="knowledge-dropzone"
+              class="knowledge-dropzone"
+              role="button"
+              tabindex="0"
+              aria-label="Upload knowledge files"
+            >
+              <p>Drag and drop knowledge files here</p>
+              <p class="knowledge-dropzone__hint">Accepted: .txt, .md, .pdf, .csv, .json, .docx, .xlsx, .pptx (max 10MB each)</p>
+              <button id="knowledge-upload-button" type="button">Select files</button>
+            </div>
+            <input
+              id="knowledge_upload_input"
+              type="file"
+              multiple
+              accept=".txt,.md,.pdf,.csv,.json,.docx,.xlsx,.pptx"
+              class="knowledge-upload-input"
+            >
+          </label>
+        </div>
+
+        <div class="agent-form__actions">
+          <button id="delete-agent" type="button" class="button-danger" disabled>Delete</button>
+          <button id="save-agent" type="submit">Save</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <div id="usage-modal" class="usage-modal" hidden>
+    <div class="usage-modal__backdrop" data-usage-close></div>
+    <section class="usage-modal__panel" role="dialog" aria-modal="true" aria-labelledby="usage-modal-title">
+      <header class="usage-modal__header">
+        <div>
+          <h3 id="usage-modal-title">Token Usage</h3>
+          <p>Usage from AI-generated agent replies.</p>
+        </div>
+        <div class="usage-modal__controls">
+          <label class="usage-modal__range">
+            Last
+            <select id="usage-range-days">
+              <option value="7">7 days</option>
+              <option value="30" selected>30 days</option>
+              <option value="90">90 days</option>
+              <option value="365">365 days</option>
+            </select>
+          </label>
+          <button id="usage-refresh-button" type="button">Refresh</button>
+          <button id="usage-close-button" class="usage-modal__close" type="button" aria-label="Close usage popup">x</button>
+        </div>
+      </header>
+      <div id="usage-content" class="usage-content">Loading...</div>
+    </section>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

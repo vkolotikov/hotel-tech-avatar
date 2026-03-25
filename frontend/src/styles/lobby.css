@@ -1,0 +1,203 @@
+.lobby-page {
+  min-height: 100dvh;
+  height: 100dvh;
+  background: var(--lobby-bg, #0b1222) center/cover no-repeat;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  overflow-x: hidden;
+}
+
+.lobby-page__overlay {
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(86, 118, 204, 0.32), rgba(6, 9, 16, 0.336) 50%),
+    rgba(8, 11, 18, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(14px, 2vh, 28px) 18px;
+  gap: clamp(10px, 1.6vh, 20px);
+  color: #f8fafc;
+}
+
+.lobby-page__header {
+  text-align: center;
+  max-width: 780px;
+}
+
+.lobby-page__header h1 {
+  margin: 0 0 6px;
+  font-size: clamp(32px, 4.2vw, 32px);
+  letter-spacing: 0.7px;
+  font-weight: 700;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.lobby-page__header p {
+  margin: 0;
+  color: rgba(241, 245, 249, 0.85);
+  font-size: clamp(15px, 1.4vw, 14px);
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.lobby-page__state {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 15px;
+}
+
+.lobby-page__state--error {
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
+.lobby-grid {
+  width: min(1320px, 100%);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: clamp(12px, 2vh, 24px) clamp(20px, 2.2vw, 32px);
+  justify-items: center;
+}
+
+.lobby-agent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(280px, 100%);
+  text-align: center;
+  text-decoration: none;
+  color: #f8fafc;
+  transition: transform 0.24s ease, opacity 0.24s ease;
+  cursor: pointer;
+  min-height: 44px;
+  padding: 4px;
+}
+
+.lobby-agent:hover {
+  transform: translateY(-7px);
+}
+
+.lobby-agent__avatar {
+  width: min(100%, 230px);
+  height: min(27vh, 240px);
+  object-fit: contain;
+  object-position: center bottom;
+  border-radius: 0;
+  background: transparent;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.44));
+  transition: transform 0.26s ease, filter 0.26s ease;
+}
+
+.lobby-agent:hover .lobby-agent__avatar {
+  transform: translateY(-4px) scale(1.04);
+  filter:
+    drop-shadow(0 22px 34px rgba(0, 0, 0, 0.52))
+    drop-shadow(0 0 16px rgba(147, 197, 253, 0.28));
+}
+
+.lobby-agent__name {
+  margin-top: 2px;
+  font-weight: 700;
+  font-size: clamp(24px, 2.1vw, 24px);
+  letter-spacing: 0.1px;
+  line-height: 1.04;
+  text-shadow: 0 8px 20px rgba(0, 0, 0, 0.48);
+}
+
+.lobby-agent__role {
+  font-size: 14px;
+  color: rgba(236, 244, 255, 0.95);
+  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.42);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(4px);
+}
+
+.lobby-agent--disabled {
+  opacity: 0.62;
+  cursor: default;
+}
+
+.lobby-agent--disabled:hover {
+  transform: none;
+}
+
+.lobby-agent--disabled .lobby-agent__avatar {
+  filter: grayscale(0.1) drop-shadow(0 16px 26px rgba(0, 0, 0, 0.34));
+}
+
+.lobby-agent--disabled:hover .lobby-agent__avatar {
+  transform: none;
+}
+
+.lobby-agent:focus-visible {
+  outline: none;
+}
+
+.lobby-agent:focus-visible .lobby-agent__avatar {
+  transform: translateY(-4px) scale(1.04);
+  filter:
+    drop-shadow(0 22px 34px rgba(0, 0, 0, 0.52))
+    drop-shadow(0 0 0 rgba(59, 130, 246, 0))
+    drop-shadow(0 0 22px rgba(96, 165, 250, 0.56));
+}
+
+@media (max-width: 720px) {
+  .lobby-page__overlay {
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 14px calc(22px + env(safe-area-inset-bottom, 0px));
+    gap: 24px;
+    overflow-y: auto;
+  }
+
+  .lobby-grid {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 14px;
+  }
+
+  .lobby-agent {
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .lobby-agent__avatar {
+    width: min(100%, 172px);
+    height: min(27vh, 208px);
+  }
+
+  .lobby-agent__name {
+    font-size: clamp(24px, 5.2vw, 30px);
+  }
+
+  .lobby-agent__role {
+    font-size: 14px;
+    padding: 4px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lobby-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .lobby-agent {
+    max-width: 280px;
+    justify-self: center;
+  }
+
+  .lobby-agent__name {
+    font-size: clamp(21px, 7.2vw, 30px);
+  }
+}
