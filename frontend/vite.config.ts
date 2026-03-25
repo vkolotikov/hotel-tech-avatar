@@ -23,11 +23,11 @@ export default defineConfig(({ mode }) => {
           theme_color: '#0b1222',
           background_color: '#0b1222',
           icons: [
-            { src: '/pwa/icon-192.png', sizes: '192x192', type: 'image/png' },
-            { src: '/pwa/icon-512.png', sizes: '512x512', type: 'image/png' },
-            { src: '/pwa/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-            { src: '/pwa/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-            { src: '/pwa/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+            { src: 'pwa/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: 'pwa/icon-512.png', sizes: '512x512', type: 'image/png' },
+            { src: 'pwa/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+            { src: 'pwa/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+            { src: 'pwa/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
           ],
         },
         workbox: {
