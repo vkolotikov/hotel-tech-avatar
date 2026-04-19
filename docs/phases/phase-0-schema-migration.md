@@ -141,7 +141,7 @@ services:
       POSTGRES_PASSWORD: avatar
       POSTGRES_DB: hotel_avatar
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -172,26 +172,28 @@ Replace the SQLite block (or append, if no DB block exists) with:
 ```dotenv
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
-DB_PORT=5432
+DB_PORT=5433
 DB_DATABASE=hotel_avatar
 DB_USERNAME=avatar
 DB_PASSWORD=avatar
 ```
 
-Leave the production `.env` untouched — Laravel Cloud continues to inject its own `DB_*` values via secrets.
+Host port `5433` is used (not the stock `5432`) to avoid collisions with any native Postgres install on the developer's machine (e.g. a wamp-bundled server). Inside the container Postgres still listens on `5432`; only the host-side mapping changes. Leave the production `.env` untouched — Laravel Cloud continues to inject its own `DB_*` values via secrets.
 
 - [ ] **Step 2b: Update `phpunit.xml` to force a separate test database**
 
 The current `phpunit.xml` has the SQLite overrides commented out, so tests inherit the repo's `.env`. Without this fix, `RefreshDatabase` runs against production Postgres. Add three `<env>` lines inside the `<php>` block (keep existing entries):
 
 ```xml
-<env name="DB_CONNECTION" value="pgsql"/>
-<env name="DB_DATABASE" value="hotel_avatar_test"/>
-<env name="DB_HOST" value="127.0.0.1"/>
-<env name="DB_PORT" value="5432"/>
-<env name="DB_USERNAME" value="avatar"/>
-<env name="DB_PASSWORD" value="avatar"/>
+<env name="DB_CONNECTION" value="pgsql" force="true"/>
+<env name="DB_HOST" value="127.0.0.1" force="true"/>
+<env name="DB_PORT" value="5433" force="true"/>
+<env name="DB_DATABASE" value="hotel_avatar_test" force="true"/>
+<env name="DB_USERNAME" value="avatar" force="true"/>
+<env name="DB_PASSWORD" value="avatar" force="true"/>
 ```
+
+The `force="true"` attribute is required. Without it, PHPUnit only calls `putenv()` for each var, which Laravel's `env()` helper ignores when a value already exists in `$_ENV` / `$_SERVER` from the `.env` file — so `DB_PASSWORD` in particular silently falls back to the production value and `RefreshDatabase` connects to prod. `force="true"` sets all three sources, so Laravel definitely reads the test values.
 
 Delete the two commented SQLite lines at the same time — they are no longer valid given the "Postgres everywhere, no SQLite fallback" decision. Keep `APP_ENV=testing` so Laravel doesn't think it's running in production.
 
@@ -316,11 +318,13 @@ class HotelSpaRegressionTest extends TestCase
         $response = $this->getJson("/api/v1/agents/{$agent->id}");
 
         $response->assertOk();
+        // AgentController::show uses $agent->only(...) — no timestamps in the payload.
         $response->assertJsonStructure([
             'id', 'slug', 'name', 'role', 'description',
             'avatar_image_url', 'chat_background_url',
-            'created_at', 'updated_at',
+            'openai_voice', 'is_published',
         ]);
+        $response->assertJsonFragment(['slug' => 'spa-therapist']);
     }
 
     public function test_conversation_create_and_message_roundtrip(): void
@@ -333,22 +337,27 @@ class HotelSpaRegressionTest extends TestCase
 
         $this->assertEquals($agent->id, $conv['agent_id']);
 
+        // auto_reply=false avoids calling OpenAI during tests.
+        // Controller always sets role='user' server-side; sending it is ignored.
         $this->postJson("/api/v1/conversations/{$conv['id']}/messages", [
-            'role' => 'user',
             'content' => 'Hello',
             'auto_reply' => false,
         ])->assertCreated();
 
+        // Fresh conversation has exactly one message (ours). Index 0.
         $this->getJson("/api/v1/conversations/{$conv['id']}/messages")
             ->assertOk()
-            ->assertJsonPath('1.content', 'Hello');
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.content', 'Hello')
+            ->assertJsonPath('0.role', 'user');
     }
 }
 ```
 
 - [ ] **Step 2: Run it to confirm it passes on `main` (baseline green)**
 
-Run: `./vendor/bin/pest tests/Feature/Regression/HotelSpaRegressionTest.php`
+Pest isn't installed in this repo — use PHPUnit directly:
+`./vendor/bin/phpunit --filter HotelSpaRegressionTest`
 Expected: PASS (3/3). If it fails, STOP — the pin is wrong and must be fixed before any migration lands.
 
 - [ ] **Step 3: Commit the pin**
