@@ -10,22 +10,28 @@ class Agent extends Model
 {
     protected $fillable = [
         'vertical_id',
-        'slug', 'name', 'role', 'description',
+        'slug', 'name', 'role', 'domain', 'description',
         'avatar_image_url', 'chat_background_url',
         'system_instructions', 'knowledge_text', 'knowledge_files_json',
         'openai_model', 'openai_voice',
         'use_advanced_ai', 'openai_vector_store_id',
         'knowledge_sync_status', 'knowledge_synced_at', 'knowledge_last_error',
         'is_published',
+        'persona_json', 'scope_json', 'red_flag_rules_json', 'handoff_rules_json',
+        'active_prompt_version_id',
     ];
 
     protected function casts(): array
     {
         return [
-            'knowledge_files_json' => 'array',
-            'use_advanced_ai'      => 'boolean',
-            'is_published'         => 'boolean',
-            'knowledge_synced_at'  => 'datetime',
+            'knowledge_files_json'  => 'array',
+            'use_advanced_ai'       => 'boolean',
+            'is_published'          => 'boolean',
+            'knowledge_synced_at'   => 'datetime',
+            'persona_json'          => 'array',
+            'scope_json'            => 'array',
+            'red_flag_rules_json'   => 'array',
+            'handoff_rules_json'    => 'array',
         ];
     }
 
