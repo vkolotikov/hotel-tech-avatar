@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Agent;
+use App\Models\AgentPromptVersion;
 use App\Models\Conversation;
 use App\Models\Vertical;
 use Illuminate\Database\Seeder;
@@ -75,6 +76,20 @@ class DemoSeeder extends Seeder
         foreach ($agents as $data) {
             $data['vertical_id'] = $hotelVerticalId;
             $agent = Agent::create($data);
+
+            $version = AgentPromptVersion::create([
+                'agent_id' => $agent->id,
+                'version_number' => 1,
+                'system_instructions' => $agent->system_instructions ?? '',
+                'persona_json' => $agent->persona_json,
+                'scope_json' => $agent->scope_json,
+                'red_flag_rules_json' => $agent->red_flag_rules_json,
+                'handoff_rules_json' => $agent->handoff_rules_json,
+                'is_active' => true,
+                'created_by_user_id' => null,
+                'note' => 'Initial snapshot from DemoSeeder',
+            ]);
+            $agent->update(['active_prompt_version_id' => $version->id]);
 
             // Create a sample conversation for each
             $conv = $agent->conversations()->create([

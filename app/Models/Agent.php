@@ -50,6 +50,16 @@ class Agent extends Model
         return $this->hasMany(AgentKnowledgeFile::class);
     }
 
+    public function promptVersions(): HasMany
+    {
+        return $this->hasMany(AgentPromptVersion::class);
+    }
+
+    public function activePromptVersion(): BelongsTo
+    {
+        return $this->belongsTo(AgentPromptVersion::class, 'active_prompt_version_id');
+    }
+
     public function scopePublished($query)
     {
         return $query->where('is_published', true);
