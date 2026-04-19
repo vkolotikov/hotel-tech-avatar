@@ -77,7 +77,10 @@ class DemoSeeder extends Seeder
             $agent = Agent::create($data);
 
             // Create a sample conversation for each
-            $conv = $agent->conversations()->create(['title' => 'Welcome Chat']);
+            $conv = $agent->conversations()->create([
+                'title' => 'Welcome Chat',
+                'vertical_id' => $hotelVerticalId,
+            ]);
             $conv->messages()->create([
                 'role'    => 'agent',
                 'content' => "Hello! I'm {$agent->name}, your {$agent->role}. How can I help you today?",
