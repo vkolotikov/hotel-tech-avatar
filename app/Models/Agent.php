@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Agent extends Model
 {
     protected $fillable = [
+        'vertical_id',
         'slug', 'name', 'role', 'description',
         'avatar_image_url', 'chat_background_url',
         'system_instructions', 'knowledge_text', 'knowledge_files_json',
@@ -27,6 +29,11 @@ class Agent extends Model
         ];
     }
 
+    public function vertical(): BelongsTo
+    {
+        return $this->belongsTo(Vertical::class);
+    }
+
     public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class);
@@ -40,5 +47,10 @@ class Agent extends Model
     public function scopePublished($query)
     {
         return $query->where('is_published', true);
+    }
+
+    public function scopeForVertical($query, string $slug)
+    {
+        return $query->whereHas('vertical', fn ($q) => $q->where('slug', $slug));
     }
 }

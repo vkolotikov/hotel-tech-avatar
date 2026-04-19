@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Agent;
 use App\Models\Conversation;
+use App\Models\Vertical;
 use Illuminate\Database\Seeder;
 
 class DemoSeeder extends Seeder
@@ -14,6 +15,11 @@ class DemoSeeder extends Seeder
             $this->command->info('Agents already exist — skipping seed.');
             return;
         }
+
+        $hotelVerticalId = Vertical::firstOrCreate(
+            ['slug' => 'hotel'],
+            ['name' => 'Hotel Concierge Suite', 'is_active' => true, 'launched_at' => now()]
+        )->id;
 
         $agents = [
             [
@@ -67,6 +73,7 @@ class DemoSeeder extends Seeder
         ];
 
         foreach ($agents as $data) {
+            $data['vertical_id'] = $hotelVerticalId;
             $agent = Agent::create($data);
 
             // Create a sample conversation for each
