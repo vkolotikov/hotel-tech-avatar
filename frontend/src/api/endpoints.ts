@@ -184,3 +184,19 @@ export function speakConversationMessage(
 export function health() {
   return apiFetch<{ ok: boolean; service: string; time: string }>('/api/v1/health');
 }
+
+export type HeygenToken = {
+  token: string;
+  config: {
+    avatar_name: string | null;
+    voice_id: string | null;
+    quality: string | null;
+  };
+};
+
+export function createHeygenToken(signal?: AbortSignal) {
+  return apiFetch<HeygenToken>('/api/v1/heygen/token', {
+    method: 'POST',
+    signal,
+  });
+}

@@ -26,6 +26,24 @@ import {
   type Message,
 } from '../api/endpoints';
 import { getAgentExpertProfile, type ExpertProfile } from '../utils/agentAssets';
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CopyIcon,
+  HeadphonesIcon,
+  MicIcon,
+  PaperclipIcon,
+  PencilIcon,
+  PlusIcon,
+  PrinterIcon,
+  SendIcon,
+  StopIcon,
+  TrashIcon,
+  Volume2Icon,
+} from '../components/icons';
+import { AvatarStream, type AvatarStreamHandle } from '../components/AvatarStream';
 import '../styles/chat.css';
 
 const STARTER_PROMPTS: Record<ExpertProfile['key'], string[]> = {
@@ -278,6 +296,11 @@ export default function ChatPage() {
   const [voiceTranscribing, setVoiceTranscribing] = useState(false);
   const [voicePlayingId, setVoicePlayingId] = useState<number | null>(null);
   const [voiceLoadingId, setVoiceLoadingId] = useState<number | null>(null);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const voiceModeRef = useRef(false);
+  const autoSpokenMessageIdRef = useRef<number | null>(null);
+  const avatarStreamRef = useRef<AvatarStreamHandle | null>(null);
+  const [introFinished, setIntroFinished] = useState(false);
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
   const [waitingForAgent, setWaitingForAgent] = useState(false);
   const [streamingAgentMessage, setStreamingAgentMessage] = useState<RenderMessage | null>(null);
@@ -503,7 +526,12 @@ export default function ChatPage() {
       const text = result.text?.trim() ?? '';
 
       if (text !== '') {
-        setInput(text);
+        if (voiceModeRef.current) {
+          setInput('');
+          void sendMessage(text);
+        } else {
+          setInput(text);
+        }
       } else {
         setError('No speech detected. Please try again.');
       }
@@ -643,7 +671,12 @@ export default function ChatPage() {
     }
 
     audio.src = url;
-    audio.onended = () => setVoicePlayingId(null);
+    audio.onended = () => {
+      setVoicePlayingId(null);
+      if (voiceModeRef.current) {
+        void startVoiceRecording();
+      }
+    };
     audio.onerror = () => setVoicePlayingId(null);
 
     audio.play().then(() => {
@@ -652,6 +685,33 @@ export default function ChatPage() {
       setError('Audio playback was blocked by the browser.');
       setVoicePlayingId(null);
     });
+  };
+
+  const handleToggleVoiceMode = () => {
+    if (voiceMode) {
+      voiceModeRef.current = false;
+      setVoiceMode(false);
+      if (voiceRecording) {
+        stopVoiceRecording();
+      }
+      stopVoicePlayback();
+      return;
+    }
+
+    if (!activeConversationId) {
+      setError('Select a chat before starting voice mode.');
+      return;
+    }
+
+    if (!isOnline) {
+      setError('Offline mode: reconnect to use voice mode.');
+      return;
+    }
+
+    voiceModeRef.current = true;
+    setVoiceMode(true);
+    autoSpokenMessageIdRef.current = messages.length > 0 ? messages[messages.length - 1].id : null;
+    void startVoiceRecording();
   };
 
   useEffect(() => {
@@ -772,6 +832,10 @@ export default function ChatPage() {
   }, [activeConversationId]);
 
   useEffect(() => {
+    setIntroFinished(false);
+  }, [agent?.id]);
+
+  useEffect(() => {
     if (!isMobileViewport) {
       setMobileHistoryOpen(false);
       return;
@@ -789,6 +853,32 @@ export default function ChatPage() {
 
     listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, streamingAgentMessage?.content, waitingForAgent, pendingUserMessage]);
+
+  useEffect(() => {
+    if (!voiceMode || messages.length === 0 || streamingAgentMessage !== null || waitingForAgent) {
+      return;
+    }
+
+    const last = messages[messages.length - 1];
+    if (last.role !== 'assistant') {
+      return;
+    }
+
+    if (autoSpokenMessageIdRef.current === last.id) {
+      return;
+    }
+
+    autoSpokenMessageIdRef.current = last.id;
+
+    if (avatarStreamRef.current?.isReady()) {
+      void avatarStreamRef.current.speak(last.content).catch(() => {
+        void handleSpeakMessage(last.id, last.content);
+      });
+      return;
+    }
+
+    void handleSpeakMessage(last.id, last.content);
+  }, [messages, voiceMode, streamingAgentMessage, waitingForAgent]);
 
   useEffect(() => {
     return () => {
@@ -855,10 +945,12 @@ export default function ChatPage() {
       return null;
     }
 
+    const name = agent.name || profile?.name || 'Avatar';
     return {
-      name: agent.name || profile?.name || 'Avatar',
+      name,
       role: agent.role || profile?.role || 'Assistant',
       avatar: assetUrl(agent.avatar_image_url || profile?.avatar || '/assets/avatars/marketing-expert.png'),
+      introVideo: assetUrl(`/assets/avatars/${encodeURIComponent(name)}.mp4`),
     };
   }, [agent, profile]);
 
@@ -1223,11 +1315,39 @@ export default function ChatPage() {
     <div className="chat-page" style={backgroundStyle}>
       <div className="chat-page__overlay">
         <aside className="chat-agent" style={agentStyle}>
-          <img
-            className="chat-agent__avatar"
-            src={displayAgent.avatar}
-            alt={`${displayAgent.name} avatar`}
-          />
+          {voiceMode && !isMobileViewport ? (
+            <AvatarStream
+              ref={avatarStreamRef}
+              active={voiceMode}
+              fallbackImage={displayAgent.avatar}
+              fallbackAlt={`${displayAgent.name} avatar`}
+              className="chat-agent__avatar chat-agent__avatar--stream"
+              onAvatarStopTalking={() => {
+                if (voiceModeRef.current) {
+                  void startVoiceRecording();
+                }
+              }}
+              onError={(err) => setError(err.message)}
+            />
+          ) : (
+            <>
+              <img
+                className="chat-agent__avatar"
+                src={displayAgent.avatar}
+                alt={`${displayAgent.name} avatar`}
+              />
+              {!introFinished && displayAgent.introVideo && (
+                <video
+                  className="chat-agent__intro"
+                  src={displayAgent.introVideo}
+                  autoPlay
+                  playsInline
+                  onEnded={() => setIntroFinished(true)}
+                  onError={() => setIntroFinished(true)}
+                />
+              )}
+            </>
+          )}
           <h1>{displayAgent.name}</h1>
           <p>{displayAgent.role}</p>
         </aside>
@@ -1236,7 +1356,8 @@ export default function ChatPage() {
           <header className="chat-panel__header">
             <div className="chat-panel__heading">
               <Link to="/" className="chat-panel__back">
-                {'< Back to Hub'}
+                <ArrowLeftIcon width={14} height={14} />
+                <span>Back to Hub</span>
               </Link>
               {isMobileViewport && (
                 <button
@@ -1259,7 +1380,18 @@ export default function ChatPage() {
                 aria-label={attachmentsOpen ? 'Hide attachments' : 'Show attachments'}
                 title={attachmentsOpen ? 'Hide attachments' : 'Show attachments'}
               >
-                <span className="chat-panel__paperclip" aria-hidden="true" />
+                <PaperclipIcon width={15} height={15} />
+              </button>
+
+              <button
+                type="button"
+                className={`chat-panel__action chat-panel__action--voice-mode ${voiceMode ? 'chat-panel__action--voice-mode-active' : ''}`}
+                onClick={handleToggleVoiceMode}
+                disabled={!activeConversationId || !isOnline}
+                aria-label={voiceMode ? 'Exit voice mode' : 'Start voice mode'}
+                title={voiceMode ? 'Exit voice mode — stop hands-free chat' : 'Voice mode — talk and listen'}
+              >
+                <HeadphonesIcon width={15} height={15} />
               </button>
 
               <button
@@ -1269,7 +1401,7 @@ export default function ChatPage() {
                 aria-label="Print chat"
                 title="Print chat"
               >
-                <span className="chat-panel__print-icon" aria-hidden="true" />
+                <PrinterIcon width={15} height={15} />
               </button>
 
               <button
@@ -1280,7 +1412,7 @@ export default function ChatPage() {
                 aria-label={activeConversation ? `Rename chat ${activeConversation.id}` : 'Rename chat'}
                 title="Rename chat"
               >
-                <span className="chat-dialogs__rename-icon" aria-hidden="true" />
+                <PencilIcon width={15} height={15} />
               </button>
 
               <button
@@ -1291,17 +1423,45 @@ export default function ChatPage() {
                 aria-label={activeConversationId ? `Delete chat ${activeConversationId}` : 'Delete chat'}
                 title="Delete chat"
               >
-                <span className="chat-dialogs__delete-icon" aria-hidden="true" />
+                <TrashIcon width={15} height={15} />
               </button>
             </div>
 
             {isMobileViewport && (
               <div className="chat-panel__mobile-profile">
-                <img
-                  className="chat-panel__mobile-avatar"
-                  src={displayAgent.avatar}
-                  alt={`${displayAgent.name} avatar`}
-                />
+                {voiceMode ? (
+                  <AvatarStream
+                    ref={avatarStreamRef}
+                    active={voiceMode}
+                    fallbackImage={displayAgent.avatar}
+                    fallbackAlt={`${displayAgent.name} avatar`}
+                    className="chat-panel__mobile-avatar chat-panel__mobile-avatar--stream"
+                    onAvatarStopTalking={() => {
+                      if (voiceModeRef.current) {
+                        void startVoiceRecording();
+                      }
+                    }}
+                    onError={(err) => setError(err.message)}
+                  />
+                ) : (
+                  <div className="chat-panel__mobile-avatar-wrap">
+                    <img
+                      className="chat-panel__mobile-avatar"
+                      src={displayAgent.avatar}
+                      alt={`${displayAgent.name} avatar`}
+                    />
+                    {!introFinished && displayAgent.introVideo && (
+                      <video
+                        className="chat-panel__mobile-avatar-intro"
+                        src={displayAgent.introVideo}
+                        autoPlay
+                        playsInline
+                        onEnded={() => setIntroFinished(true)}
+                        onError={() => setIntroFinished(true)}
+                      />
+                    )}
+                  </div>
+                )}
                 <div className="chat-panel__mobile-meta">
                   <strong>{displayAgent.name}</strong>
                   <span>{displayAgent.role}</span>
@@ -1342,7 +1502,8 @@ export default function ChatPage() {
                   onClick={() => void handleCreateChat()}
                   disabled={creatingChat || sending || isAssistantBusy || deletingConversationId !== null || renamingConversationId !== null}
                 >
-                  + New chat
+                  <PlusIcon width={14} height={14} />
+                  <span>New chat</span>
                 </button>
 
                 {activeConversation && (
@@ -1383,7 +1544,7 @@ export default function ChatPage() {
                     aria-label={historyCollapsed ? 'Expand chat history' : 'Collapse chat history'}
                     title={historyCollapsed ? 'Expand history' : 'Collapse history'}
                   >
-                    {historyCollapsed ? '>>' : '<<'}
+                    {historyCollapsed ? <ChevronRightIcon width={14} height={14} /> : <ChevronLeftIcon width={14} height={14} />}
                   </button>
 
                   <button
@@ -1392,7 +1553,8 @@ export default function ChatPage() {
                     onClick={() => void handleCreateChat()}
                     disabled={creatingChat || sending || isAssistantBusy || deletingConversationId !== null || renamingConversationId !== null}
                   >
-                    + New chat
+                    <PlusIcon width={14} height={14} />
+                    <span>New chat</span>
                   </button>
 
                   {conversationList}
@@ -1564,7 +1726,7 @@ export default function ChatPage() {
                               title={voicePlayingId === message.id ? 'Stop' : 'Play'}
                               disabled={voiceLoadingId !== null}
                             >
-                              <span className="chat-voice-icon" aria-hidden="true" />
+                              {voicePlayingId === message.id ? <StopIcon width={14} height={14} /> : <Volume2Icon width={14} height={14} />}
                             </button>
                           )}
 
@@ -1576,7 +1738,7 @@ export default function ChatPage() {
                               aria-label={copiedMessageId === message.id ? 'Copied' : 'Copy reply'}
                               title={copiedMessageId === message.id ? 'Copied' : 'Copy'}
                             >
-                              <span className="chat-copy-icon" aria-hidden="true" />
+                              {copiedMessageId === message.id ? <CheckIcon width={14} height={14} /> : <CopyIcon width={14} height={14} />}
                             </button>
                           )}
                         </div>
@@ -1613,7 +1775,7 @@ export default function ChatPage() {
                     title="Attach files to this chat"
                     disabled={!activeConversationId || conversationAttachmentsUploading || !isOnline}
                   >
-                    <span className="chat-panel__paperclip" aria-hidden="true" />
+                    <PaperclipIcon width={18} height={18} />
                   </button>
                   <button
                     type="button"
@@ -1623,7 +1785,7 @@ export default function ChatPage() {
                     title={voiceRecording ? 'Stop recording' : 'Start voice input'}
                     disabled={!activeConversationId || voiceTranscribing || !isOnline}
                   >
-                    <span className="chat-input__voice-icon" aria-hidden="true" />
+                    {voiceRecording ? <StopIcon width={18} height={18} /> : <MicIcon width={18} height={18} />}
                   </button>
                   <input
                     ref={fileInputRef}
@@ -1643,6 +1805,9 @@ export default function ChatPage() {
                   />
                   <button
                     type="submit"
+                    className="chat-input__send"
+                    aria-label="Send message"
+                    title="Send message"
                     disabled={
                       sending
                       || isAssistantBusy
@@ -1651,7 +1816,8 @@ export default function ChatPage() {
                       || !isOnline
                     }
                   >
-                    Send
+                    <SendIcon width={18} height={18} />
+                    <span>Send</span>
                   </button>
                 </form>
                 {voiceTranscribing && (
