@@ -8,13 +8,13 @@
 
 Primary generation, STT, and TTS for the hotel vertical today. Planned to remain the wellness v1.0 brain at launch per `docs/PROJECT_SPEC.md`; upgrade path to Anthropic/Google/ElevenLabs/Deepgram is a quality-measured decision against the eval harness, not a deadline.
 
-All calls go through `app/Services/OpenAiService.php`. New code should not talk to OpenAI directly — route through the service so the future LLM-client abstraction has a single cut-over point.
+Chat completions go through `App\Services\Llm\LlmClient` (which in turn calls `OpenAiProvider`). STT, TTS, files, and vector-store calls stay in `app/Services/OpenAiService.php`. New generation code must use `LlmClient`; `OpenAiService::chat()` has been removed to keep one cut-over point.
 
 ## Endpoints this project calls
 
 | Method | Path | Purpose | Caller |
 |---|---|---|---|
-| POST | `/v1/chat/completions` | Agent text replies | `OpenAiService::chat()` ([app/Services/OpenAiService.php:24](app/Services/OpenAiService.php#L24)) |
+| POST | `/v1/chat/completions` | Agent text replies | `LlmClient::chat()` via `OpenAiProvider::chat()` ([app/Services/Llm/Providers/OpenAiProvider.php](app/Services/Llm/Providers/OpenAiProvider.php)) |
 | POST | `/v1/audio/transcriptions` | Whisper / gpt-4o-transcribe STT for voice mode | `OpenAiService::transcribe()` ([app/Services/OpenAiService.php:63](app/Services/OpenAiService.php#L63)) |
 | POST | `/v1/audio/speech` | `gpt-4o-mini-tts` TTS fallback when HeyGen unavailable | `OpenAiService::speak()` ([app/Services/OpenAiService.php:85](app/Services/OpenAiService.php#L85)) |
 | POST | `/v1/files` | Upload docs for vector store | `OpenAiService::uploadFile()` ([app/Services/OpenAiService.php:108](app/Services/OpenAiService.php#L108)) |
@@ -38,14 +38,14 @@ Model defaults (overridable per-call and per-env):
 ## Error handling expectations
 
 - Service uses `Illuminate\Support\Facades\Http` with a 45s default timeout (`OPENAI_TIMEOUT_SECONDS`).
-- Failed responses throw `RuntimeException` with the response body — caller is responsible for classifying transient vs. hard failures.
-- Rate limits: 429s are currently unhandled (no backoff). When we build the LLM client abstraction, add: transient vs rate-limit vs content-policy classification + exponential backoff with jitter.
+- `OpenAiProvider` throws `RuntimeException("OpenAI chat failed (HTTP {status})")` on non-2xx — the raw response body is deliberately NOT included in the exception message, because OpenAI error responses may echo user content and Sentry does not scrub exception messages. Callers classify by status.
+- Rate limits: 429s are currently unhandled (no backoff). Transient vs rate-limit vs content-policy classification + exponential backoff with jitter is a Phase 1 addition to `OpenAiProvider`.
 - `/v1/chat/completions` returns `choices[0].message.content`; we read `usage.prompt_tokens`, `usage.completion_tokens`, `usage.total_tokens` for accounting. Missing `usage` is possible on stream-cancellation — defaulted to 0.
 
 ## Cost and quota notes
 
 - Pricing: https://openai.com/api/pricing
-- Each call's `prompt_tokens` / `completion_tokens` / `total_tokens` + measured latency are returned from `chat()` and belong in the `llm_calls` ledger (Phase 1).
+- Each call's `prompt_tokens` / `completion_tokens` / `total_tokens` + measured latency are written to the `llm_calls` ledger by `LlmClient` on every success and every failure (error rows carry `metadata.error_class`, never the raw message).
 - Per-session cap enforced at the app level via `conversations.session_cost_usd_cents` (spec §9.4).
 - Daily per-user cap enforced via `token_usage_daily` (spec §9.4).
 
@@ -60,3 +60,7 @@ Model defaults (overridable per-call and per-env):
 
 - 2026-04-19 — ZDR request sent to OpenAI support; documented in `docs/compliance/openai-zdr.md`
 - 2026-04-20 — this file created from `_template.md` as part of Phase 0 integrations scaffold
+- 2026-04-20 — chat completions moved behind `LlmClient` via `OpenAiProvider`.
+  `store=false` is sent unconditionally on every chat request (belt-and-braces
+  with the dashboard-level opt-out). `OpenAiService::chat()` removed; STT / TTS
+  / file / vector-store helpers stay in `OpenAiService`.

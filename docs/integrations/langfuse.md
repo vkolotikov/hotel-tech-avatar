@@ -1,6 +1,6 @@
 # Langfuse
 
-**Status:** `planned` (wiring is a Phase 0 DoD item — see `docs/phases/phase-0-telemetry.md`)
+**Status:** `live` — wired via `App\Services\Llm\Tracing\LangfuseTracer`, bound into `LlmClient` when `LANGFUSE_ENABLED=true`
 **Last verified:** 2026-04-20
 **Official docs:** https://langfuse.com/docs
 
@@ -12,8 +12,8 @@ LLM observability: end-to-end traces of every generation, including the verifica
 
 Langfuse SDK handles transport — envelope uploads go to the Langfuse host (cloud or self-hosted). We call the SDK, not the API.
 
-- **PHP**: either the community `langfuse-php` package or direct HTTP from the LLM client abstraction
-- **Python microservice**: `langfuse` pip package
+- **PHP**: direct HTTP from `LangfuseTracer` to `POST {host}/api/public/ingestion` with a `batch` of `trace-create` + `generation-create` events. No SDK dependency.
+- **Python microservice**: `langfuse` pip package (when the service lands)
 - **Mobile**: not expected — mobile does not make LLM calls directly
 
 ## Authentication
@@ -41,3 +41,7 @@ Langfuse SDK handles transport — envelope uploads go to the Langfuse host (clo
 ## Change log
 
 - 2026-04-20 — stub created as part of Phase 0 integrations scaffold
+- 2026-04-20 — wired via `LlmClient` + `LangfuseTracer` using the public
+  ingestion API. Tracer is fire-and-forget: any ingestion failure is caught
+  and logged, never propagated to the generation path. Error events write
+  only `metadata.error_class` (FQCN) — never the raw exception message.

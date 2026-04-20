@@ -1,6 +1,6 @@
 # Sentry
 
-**Status:** `planned` (wiring is a Phase 0 DoD item — see `docs/phases/phase-0-telemetry.md`)
+**Status:** backend `live`; mobile `planned` (waits for the Expo skeleton plan)
 **Last verified:** 2026-04-20
 **Official docs:** https://docs.sentry.io
 
@@ -41,3 +41,6 @@ Sentry SDKs handle the transport — we do not call endpoints directly. Envelope
 ## Change log
 
 - 2026-04-20 — stub created as part of Phase 0 integrations scaffold
+- 2026-04-20 — backend wired via `sentry/sentry-laravel` with a before-send
+  scrubber that strips `message`, `prompt`, and `response` keys from request
+  data. Mobile Sentry deferred until the Expo skeleton lands.
