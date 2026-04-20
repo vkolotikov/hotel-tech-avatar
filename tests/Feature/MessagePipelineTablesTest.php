@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Agent;
 use App\Models\Conversation;
+use App\Models\ExternalSource;
 use App\Models\LlmCall;
 use App\Models\Message;
 use App\Models\MessageCitation;
@@ -84,5 +85,38 @@ class MessagePipelineTablesTest extends TestCase
         Message::where('role', 'agent')->get()->each(
             fn (Message $m) => $this->assertNotNull($m->agent_id, "Agent message {$m->id} missing agent_id after backfill")
         );
+    }
+
+    public function test_external_source_can_be_cited(): void
+    {
+        $this->seed(VerticalsSeeder::class);
+        $this->seed(DemoSeeder::class);
+
+        $conv = Conversation::first();
+        $agent = Agent::find($conv->agent_id);
+
+        $msg = Message::create([
+            'conversation_id' => $conv->id,
+            'agent_id' => $agent->id,
+            'role' => 'agent',
+            'content' => 'per PubMed',
+        ]);
+
+        $source = ExternalSource::create([
+            'provider' => 'pubmed',
+            'external_id' => 'PMID:12345',
+            'title' => 'Test paper',
+            'url' => 'https://pubmed.ncbi.nlm.nih.gov/12345',
+            'payload' => ['abstract' => 'stub'],
+            'fetched_at' => now(),
+        ]);
+
+        MessageCitation::create([
+            'message_id' => $msg->id,
+            'external_source_id' => $source->id,
+            'label' => 'Test paper (2024)',
+        ]);
+
+        $this->assertSame(1, MessageCitation::where('external_source_id', $source->id)->count());
     }
 }
