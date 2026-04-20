@@ -97,8 +97,9 @@ class DemoSeeder extends Seeder
                 'vertical_id' => $hotelVerticalId,
             ]);
             $conv->messages()->create([
-                'role'    => 'agent',
-                'content' => "Hello! I'm {$agent->name}, your {$agent->role}. How can I help you today?",
+                'role'     => 'agent',
+                'agent_id' => $agent->id,
+                'content'  => "Hello! I'm {$agent->name}, your {$agent->role}. How can I help you today?",
             ]);
         }
 
