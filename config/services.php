@@ -53,6 +53,15 @@ return [
         'jwt_secret'   => env('SAAS_JWT_SECRET', ''),
     ],
 
+    'heygen' => [
+        'api_key'         => env('HEYGEN_API_KEY', ''),
+        'base_url'        => env('HEYGEN_BASE_URL', 'https://api.heygen.com'),
+        'default_avatar'  => env('HEYGEN_DEFAULT_AVATAR', 'Anna_public_3_20240108'),
+        'default_voice'   => env('HEYGEN_DEFAULT_VOICE', ''),
+        'default_quality' => env('HEYGEN_DEFAULT_QUALITY', 'high'),
+        'timeout'         => env('HEYGEN_TIMEOUT_SECONDS', 15),
+    ],
+
     'langfuse' => [
         'public_key' => env('LANGFUSE_PUBLIC_KEY'),
         'secret_key' => env('LANGFUSE_SECRET_KEY'),

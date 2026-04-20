@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AgentController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\AdminController;
+use App\Http\Controllers\Api\V1\HeygenController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -36,6 +37,9 @@ Route::prefix('v1')->group(function () {
     // ─── Voice Endpoints ───────────────────────────────────────────────────
     Route::post('conversations/{conversation}/voice/transcribe', [ConversationController::class, 'transcribe']);
     Route::post('conversations/{conversation}/voice/speak',      [ConversationController::class, 'speak']);
+
+    // ─── HeyGen Streaming Avatar ───────────────────────────────────────────
+    Route::post('heygen/token', [HeygenController::class, 'token']);
 
     // ─── Admin Endpoints (SaaS JWT Auth) ───────────────────────────────────
     Route::prefix('admin')->middleware('saas.auth')->group(function () {
