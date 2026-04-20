@@ -53,4 +53,12 @@ return [
         'jwt_secret'   => env('SAAS_JWT_SECRET', ''),
     ],
 
+    'langfuse' => [
+        'public_key' => env('LANGFUSE_PUBLIC_KEY'),
+        'secret_key' => env('LANGFUSE_SECRET_KEY'),
+        'host' => env('LANGFUSE_HOST', 'https://cloud.langfuse.com'),
+        'enabled' => env('LANGFUSE_ENABLED', false),
+        'timeout' => (int) env('LANGFUSE_TIMEOUT_SECONDS', 5),
+    ],
+
 ];
