@@ -2,19 +2,20 @@
 
 namespace Tests\Unit\Sentry;
 
+use App\Support\Sentry\ScrubBeforeSend;
 use PHPUnit\Framework\TestCase;
 use Sentry\Event;
-use Sentry\EventHint;
 
 class BeforeSendScrubberTest extends TestCase
 {
-    private \Closure $scrubber;
-
-    protected function setUp(): void
+    public function test_config_before_send_is_var_export_safe(): void
     {
-        parent::setUp();
         $config = require __DIR__ . '/../../../config/sentry.php';
-        $this->scrubber = $config['before_send'];
+        $exported = var_export($config['before_send'], true);
+        // Round-trip: the exported string must be valid PHP that rebuilds an equal callable.
+        $rebuilt = eval('return ' . $exported . ';');
+        $this->assertSame($config['before_send'], $rebuilt);
+        $this->assertTrue(is_callable($config['before_send']));
     }
 
     public function test_scrubs_top_level_message_key(): void
@@ -22,7 +23,7 @@ class BeforeSendScrubberTest extends TestCase
         $event = Event::createEvent();
         $event->setRequest(['data' => ['message' => 'I have chest pain']]);
 
-        $result = ($this->scrubber)($event, null);
+        $result = ScrubBeforeSend::handle($event, null);
 
         $this->assertSame('[scrubbed]', $result->getRequest()['data']['message']);
     }
@@ -41,7 +42,7 @@ class BeforeSendScrubberTest extends TestCase
             ],
         ]);
 
-        $result = ($this->scrubber)($event, null);
+        $result = ScrubBeforeSend::handle($event, null);
 
         $data = $result->getRequest()['data'];
         $this->assertSame('[scrubbed]', $data['conversation']['message']);
@@ -60,7 +61,7 @@ class BeforeSendScrubberTest extends TestCase
             ],
         ]);
 
-        $data = ($this->scrubber)($event, null)->getRequest()['data'];
+        $data = ScrubBeforeSend::handle($event, null)->getRequest()['data'];
 
         foreach (['message', 'prompt', 'response', 'content', 'transcription', 'input', 'output'] as $k) {
             $this->assertSame('[scrubbed]', $data[$k], "key {$k} not scrubbed");
@@ -73,7 +74,7 @@ class BeforeSendScrubberTest extends TestCase
         $event = Event::createEvent();
         $event->setRequest([]);
 
-        $result = ($this->scrubber)($event, null);
+        $result = ScrubBeforeSend::handle($event, null);
 
         $this->assertNotNull($result);
     }
@@ -83,7 +84,7 @@ class BeforeSendScrubberTest extends TestCase
         $event = Event::createEvent();
         $event->setRequest(['data' => 'raw-body']);
 
-        $result = ($this->scrubber)($event, null);
+        $result = ScrubBeforeSend::handle($event, null);
 
         $this->assertSame('raw-body', $result->getRequest()['data']);
     }

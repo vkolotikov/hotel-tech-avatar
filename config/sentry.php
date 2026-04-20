@@ -11,33 +11,9 @@ return [
     'dsn' => env('SENTRY_LARAVEL_DSN', env('SENTRY_DSN')),
 
     // PHI scrubbing — message bodies and prompt/response strings never leave the host.
-    // Walks nested structures because real request payloads are often wrapped
-    // (e.g. {"conversation": {"message": "..."}}).
-    'before_send' => function (\Sentry\Event $event, ?\Sentry\EventHint $hint): ?\Sentry\Event {
-        $scrubKeys = ['message', 'prompt', 'response', 'content', 'transcription', 'input', 'output'];
-
-        $scrub = function (&$node) use (&$scrub, $scrubKeys): void {
-            if (!is_array($node)) {
-                return;
-            }
-            foreach ($node as $k => &$v) {
-                if (in_array($k, $scrubKeys, true)) {
-                    $v = '[scrubbed]';
-                    continue;
-                }
-                if (is_array($v)) {
-                    $scrub($v);
-                }
-            }
-        };
-
-        $request = $event->getRequest();
-        if (is_array($request) && isset($request['data']) && is_array($request['data'])) {
-            $scrub($request['data']);
-            $event->setRequest($request);
-        }
-        return $event;
-    },
+    // Implemented as a class (not a closure) so `php artisan config:cache`
+    // can serialize this file in production.
+    'before_send' => [\App\Support\Sentry\ScrubBeforeSend::class, 'handle'],
 
     // @see https://spotlightjs.com/
     // 'spotlight' => env('SENTRY_SPOTLIGHT', false),
