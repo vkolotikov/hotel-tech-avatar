@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(VerticalsSeeder::class);
+        $this->call(SubscriptionPlansSeeder::class);
 
         User::factory()->create([
             'name' => 'Test User',

@@ -42,4 +42,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(UserProfile::class);
     }
+
+    public function entitlement(): HasOne
+    {
+        return $this->hasOne(SubscriptionEntitlement::class);
+    }
 }
