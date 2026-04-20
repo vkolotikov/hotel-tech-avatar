@@ -128,4 +128,25 @@ YAML);
         $this->expectException(\RuntimeException::class);
         (new Loader())->sync($this->tmpFile);
     }
+
+    public function test_sync_throws_runtime_exception_on_empty_file(): void
+    {
+        $this->writeYaml('');
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('empty or not a YAML mapping');
+        (new Loader())->sync($this->tmpFile);
+    }
+
+    public function test_sync_throws_when_cases_is_not_a_list(): void
+    {
+        $this->writeYaml(<<<YAML
+slug: scalar-cases
+name: Scalar cases
+vertical: hotel
+cases: not-an-array
+YAML);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage("'cases' must be a list");
+        (new Loader())->sync($this->tmpFile);
+    }
 }

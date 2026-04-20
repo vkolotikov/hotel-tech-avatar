@@ -24,10 +24,18 @@ final class Loader
             throw new \RuntimeException("invalid YAML in {$absolutePath}: {$e->getMessage()}", 0, $e);
         }
 
+        if (!is_array($parsed)) {
+            throw new \RuntimeException("dataset {$absolutePath} is empty or not a YAML mapping");
+        }
+
         foreach (['slug', 'name', 'vertical', 'cases'] as $k) {
             if (!array_key_exists($k, $parsed)) {
                 throw new \RuntimeException("dataset {$absolutePath} missing required key: {$k}");
             }
+        }
+
+        if (!is_array($parsed['cases'])) {
+            throw new \RuntimeException("dataset {$absolutePath}: 'cases' must be a list");
         }
 
         $relativePath = $this->relativePath($absolutePath);
