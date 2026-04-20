@@ -7,6 +7,8 @@ use App\Models\Agent;
 use App\Models\Conversation;
 use App\Models\ConversationAttachment;
 use App\Models\Message;
+use App\Services\Llm\LlmClient;
+use App\Services\Llm\LlmRequest;
 use App\Services\OpenAiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -209,8 +211,28 @@ class ConversationController extends Controller
             ]];
         }
 
-        $openai = app(OpenAiService::class);
-        $result = $openai->chat($messages, $agent->openai_model, $tools, (float) config('services.openai.temperature', 0.3));
+        $client = app(LlmClient::class);
+        $response = $client->chat(new LlmRequest(
+            messages: $messages,
+            model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
+            temperature: (float) config('services.openai.temperature', 0.3),
+            maxTokens: (int) config('services.openai.max_output_tokens', 220),
+            tools: $tools ?? [],
+            purpose: 'generation',
+            messageId: null,
+        ));
+
+        $result = [
+            'content'           => $response->content,
+            'role'              => $response->role,
+            'ai_provider'       => $response->provider,
+            'ai_model'          => $response->model,
+            'prompt_tokens'     => $response->promptTokens,
+            'completion_tokens' => $response->completionTokens,
+            'total_tokens'      => $response->totalTokens,
+            'ai_latency_ms'     => $response->latencyMs,
+            'trace_id'          => $response->traceId,
+        ];
 
         return $conversation->messages()->create([
             'role'                   => 'agent',

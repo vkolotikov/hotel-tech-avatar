@@ -19,45 +19,6 @@ class OpenAiService
     }
 
     /**
-     * Generate a chat completion.
-     */
-    public function chat(array $messages, string $model = null, array $tools = [], float $temperature = null): array
-    {
-        $model       = $model ?? config('services.openai.model', 'gpt-4o');
-        $temperature = $temperature ?? (float) config('services.openai.temperature', 0.3);
-        $maxTokens   = (int) config('services.openai.max_output_tokens', 220);
-
-        $body = [
-            'model'       => $model,
-            'messages'    => $messages,
-            'temperature' => $temperature,
-            'max_tokens'  => $maxTokens,
-        ];
-
-        if (!empty($tools)) {
-            $body['tools'] = $tools;
-        }
-
-        $start    = microtime(true);
-        $response = $this->request('POST', '/chat/completions', $body);
-        $latency  = (int) round((microtime(true) - $start) * 1000);
-
-        $choice = $response['choices'][0] ?? [];
-        $usage  = $response['usage'] ?? [];
-
-        return [
-            'content'           => $choice['message']['content'] ?? '',
-            'role'              => $choice['message']['role'] ?? 'assistant',
-            'ai_provider'       => 'openai',
-            'ai_model'          => $response['model'] ?? $model,
-            'prompt_tokens'     => $usage['prompt_tokens'] ?? 0,
-            'completion_tokens' => $usage['completion_tokens'] ?? 0,
-            'total_tokens'      => $usage['total_tokens'] ?? 0,
-            'ai_latency_ms'     => $latency,
-        ];
-    }
-
-    /**
      * Transcribe audio to text.
      */
     public function transcribe(string $audioPath, string $model = null): string
