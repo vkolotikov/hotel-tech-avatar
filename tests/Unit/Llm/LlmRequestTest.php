@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Unit\Llm;
 
 use App\Services\Llm\LlmRequest;
@@ -45,5 +47,23 @@ class LlmRequestTest extends TestCase
         $this->assertSame('Hello', $res->content);
         $this->assertSame(12, $res->totalTokens);
         $this->assertSame('trace_abc', $res->traceId);
+    }
+
+    public function test_response_allows_null_trace_id(): void
+    {
+        $res = new LlmResponse(
+            content: 'Hi',
+            role: 'assistant',
+            provider: 'openai',
+            model: 'gpt-4o-2025-03-15',
+            promptTokens: 3,
+            completionTokens: 1,
+            totalTokens: 4,
+            latencyMs: 120,
+            traceId: null,
+        );
+
+        $this->assertNull($res->traceId);
+        $this->assertSame([], $res->raw);
     }
 }
