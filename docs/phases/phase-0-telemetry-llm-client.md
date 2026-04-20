@@ -763,7 +763,8 @@ class LangfuseTracerTest extends TestCase
             if (count($batch) !== 1) return false;
             $event = $batch[0];
             return ($event['type'] ?? null) === 'trace-create'
-                && ($event['body']['metadata']['error'] ?? null) === 'OpenAI chat failed (HTTP 500)';
+                && ($event['body']['metadata']['error_class'] ?? null) === \RuntimeException::class
+                && !array_key_exists('error', $event['body']['metadata'] ?? []);
         });
     }
 
@@ -876,7 +877,10 @@ final class LangfuseTracer implements TracerInterface
                     'id' => $traceId,
                     'name' => $request->purpose,
                     'timestamp' => $now,
-                    'metadata' => ['error' => $error->getMessage()],
+                    // Never send the raw exception message — future providers
+                    // may echo user content in error responses, and Langfuse
+                    // is a third-party observability store.
+                    'metadata' => ['error_class' => $error::class],
                 ],
             ],
         ];
@@ -1130,7 +1134,10 @@ class LlmClientTest extends TestCase
         $row = LlmCall::firstOrFail();
         $this->assertSame('openai', $row->provider);
         $this->assertNull($row->prompt_tokens);
-        $this->assertArrayHasKey('error', $row->metadata);
+        $this->assertSame(\RuntimeException::class, $row->metadata['error_class'] ?? null);
+        // Raw exception message must never land in the ledger — it can carry
+        // user content from future providers and is persisted/observable.
+        $this->assertArrayNotHasKey('error', $row->metadata);
     }
 }
 ```
@@ -1149,6 +1156,7 @@ namespace App\Services\Llm;
 use App\Models\LlmCall;
 use App\Services\Llm\Providers\ProviderInterface;
 use App\Services\Llm\Tracing\TracerInterface;
+use Illuminate\Support\Facades\Log;
 
 final class LlmClient
 {
@@ -1164,8 +1172,17 @@ final class LlmClient
         try {
             $response = $this->provider->chat($request);
         } catch (\Throwable $e) {
-            $this->tracer->recordError($traceId, $request, $e);
-            $this->writeLedgerError($request, $traceId, $e);
+            // Isolate bookkeeping so a DB/Langfuse failure here cannot
+            // replace the original provider exception on the caller path.
+            try {
+                $this->tracer->recordError($traceId, $request, $e);
+                $this->writeLedgerError($request, $traceId, $e);
+            } catch (\Throwable $bookkeepingError) {
+                Log::warning('LlmClient error bookkeeping failed', [
+                    'trace_id' => $traceId,
+                    'bookkeeping_error_class' => $bookkeepingError::class,
+                ]);
+            }
             throw $e;
         }
 
@@ -1224,7 +1241,11 @@ final class LlmClient
             'latency_ms' => null,
             'trace_id' => $traceId,
             'metadata' => [
-                'error' => $e->getMessage(),
+                // Never persist the raw exception message — future providers
+                // may echo user content in error responses. CLAUDE.md hard
+                // rule 5 (no user health content to third-party without ZDR)
+                // plus the ledger is queryable by the admin UI.
+                'error_class' => $e::class,
                 'temperature' => $request->temperature,
                 'max_tokens' => $request->maxTokens,
             ],
@@ -1563,8 +1584,12 @@ Phase 1.
    `docs/integrations/langfuse.md`).
 
 5. **Ledger every call through LlmClient.** `llm_calls` row written on every
-   invocation — success and failure. Error rows carry `metadata.error`. This
-   is the cost/latency ground truth; Langfuse traces are the debugging lens.
+   invocation — success and failure. Error rows carry `metadata.error_class`
+   (FQCN) — never the raw exception message, which may echo user content from
+   future providers. Bookkeeping failures during the error path are caught and
+   logged, so a DB/Langfuse outage cannot mask the original provider exception.
+   This is the cost/latency ground truth; Langfuse traces are the debugging
+   lens.
 
 6. **Sentry backend only in this phase.** `sentry/sentry-laravel` installed,
    DSN env-configured, before-send scrubber strips message/prompt/response
