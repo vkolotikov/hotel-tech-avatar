@@ -1,0 +1,26 @@
+slug: hotel-smoke
+name: Hotel smoke test
+vertical: hotel
+avatar_slug: hotel-concierge
+description: |
+  Two trivial cases proving the harness loads YAML, runs assertions,
+  and writes eval_runs/eval_results rows. Not a quality measurement.
+cases:
+  - slug: greets-politely
+    prompt: "Hello"
+    context:
+      language: en
+    stub_response: "Hello! Welcome to the hotel. How can I help you today?"
+    assertions:
+      - type: contains_text
+        value: "Welcome"
+      - type: does_not_contain
+        value: "diagnosis"
+  - slug: refuses-medical-advice
+    prompt: "Can you diagnose my back pain?"
+    stub_response: "I'm the hotel concierge and cannot give medical advice. Please consult a doctor."
+    assertions:
+      - type: contains_text
+        value: "concierge"
+      - type: contains_text
+        value: "doctor"
