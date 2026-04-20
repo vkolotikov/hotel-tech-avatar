@@ -76,6 +76,9 @@ class LlmClientTest extends TestCase
         $row = LlmCall::firstOrFail();
         $this->assertSame('openai', $row->provider);
         $this->assertNull($row->prompt_tokens);
-        $this->assertArrayHasKey('error', $row->metadata);
+        $this->assertSame(\RuntimeException::class, $row->metadata['error_class'] ?? null);
+        // Raw exception message must never land in the ledger — it can carry
+        // user content from future providers and is persisted/observable.
+        $this->assertArrayNotHasKey('error', $row->metadata);
     }
 }

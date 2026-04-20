@@ -77,7 +77,7 @@ final class LangfuseTracer implements TracerInterface
                     'id' => $traceId,
                     'name' => $request->purpose,
                     'timestamp' => $now,
-                    'metadata' => ['error' => $error->getMessage()],
+                    'metadata' => ['error_class' => $error::class],
                 ],
             ],
         ];

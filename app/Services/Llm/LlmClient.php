@@ -7,6 +7,7 @@ namespace App\Services\Llm;
 use App\Models\LlmCall;
 use App\Services\Llm\Providers\ProviderInterface;
 use App\Services\Llm\Tracing\TracerInterface;
+use Illuminate\Support\Facades\Log;
 
 final class LlmClient
 {
@@ -22,8 +23,15 @@ final class LlmClient
         try {
             $response = $this->provider->chat($request);
         } catch (\Throwable $e) {
-            $this->tracer->recordError($traceId, $request, $e);
-            $this->writeLedgerError($request, $traceId, $e);
+            try {
+                $this->tracer->recordError($traceId, $request, $e);
+                $this->writeLedgerError($request, $traceId, $e);
+            } catch (\Throwable $bookkeepingError) {
+                Log::warning('LlmClient error bookkeeping failed', [
+                    'trace_id' => $traceId,
+                    'bookkeeping_error_class' => $bookkeepingError::class,
+                ]);
+            }
             throw $e;
         }
 
@@ -86,7 +94,7 @@ final class LlmClient
             'latency_ms' => null,
             'trace_id' => $traceId,
             'metadata' => [
-                'error' => $e->getMessage(),
+                'error_class' => $e::class,
                 'temperature' => $request->temperature,
                 'max_tokens' => $request->maxTokens,
             ],

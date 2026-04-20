@@ -87,7 +87,8 @@ class LangfuseTracerTest extends TestCase
             if (count($batch) !== 1) return false;
             $event = $batch[0];
             return ($event['type'] ?? null) === 'trace-create'
-                && ($event['body']['metadata']['error'] ?? null) === 'OpenAI chat failed (HTTP 500)';
+                && ($event['body']['metadata']['error_class'] ?? null) === \RuntimeException::class
+                && !array_key_exists('error', $event['body']['metadata'] ?? []);
         });
     }
 
