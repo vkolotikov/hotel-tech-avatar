@@ -46,6 +46,8 @@ class OpenAiProviderTest extends TestCase
                 && $body['model'] === 'gpt-4o'
                 && $body['messages'][0]['content'] === 'Hi';
         });
+
+        Http::assertSentCount(1);
     }
 
     public function test_chat_throws_on_http_failure(): void
@@ -55,10 +57,17 @@ class OpenAiProviderTest extends TestCase
         ]);
         config(['services.openai.api_key' => 'sk-test', 'services.openai.base_url' => 'https://api.openai.com/v1']);
 
-        $this->expectException(\RuntimeException::class);
-        (new OpenAiProvider())->chat(new LlmRequest(
-            messages: [['role' => 'user', 'content' => 'Hi']],
-            model: 'gpt-4o',
-        ));
+        try {
+            (new OpenAiProvider())->chat(new LlmRequest(
+                messages: [['role' => 'user', 'content' => 'Hi']],
+                model: 'gpt-4o',
+            ));
+            $this->fail('expected RuntimeException');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('HTTP 400', $e->getMessage());
+            $this->assertStringNotContainsString('bad', $e->getMessage(), 'exception message must not echo API body');
+        }
+
+        Http::assertSent(fn ($req) => ($req->data()['store'] ?? null) === false);
     }
 }
