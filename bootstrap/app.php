@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'saas.auth' => \App\Http\Middleware\SaasAuthMiddleware::class,
         ]);
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command('eval:run --trigger=scheduled')
+            ->dailyAt('03:00')
+            ->withoutOverlapping()
+            ->onOneServer();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Throwable $e, Request $request) {
