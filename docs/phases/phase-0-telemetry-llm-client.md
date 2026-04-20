@@ -740,6 +740,55 @@ class LangfuseTracerTest extends TestCase
 
         $this->assertTrue(true); // must not throw
     }
+
+    public function test_record_error_posts_trace_with_error_metadata(): void
+    {
+        config([
+            'services.langfuse.enabled' => true,
+            'services.langfuse.public_key' => 'pk',
+            'services.langfuse.secret_key' => 'sk',
+            'services.langfuse.host' => 'https://cloud.langfuse.com',
+        ]);
+        Http::fake([
+            'https://cloud.langfuse.com/api/public/ingestion' => Http::response(['status' => 'ok']),
+        ]);
+
+        $tracer = new LangfuseTracer();
+        $req = new LlmRequest(messages: [], model: 'gpt-4o', purpose: 'generation');
+        $traceId = $tracer->startTrace($req);
+        $tracer->recordError($traceId, $req, new \RuntimeException('OpenAI chat failed (HTTP 500)'));
+
+        Http::assertSent(function ($request) {
+            $batch = $request->data()['batch'] ?? [];
+            if (count($batch) !== 1) return false;
+            $event = $batch[0];
+            return ($event['type'] ?? null) === 'trace-create'
+                && ($event['body']['metadata']['error'] ?? null) === 'OpenAI chat failed (HTTP 500)';
+        });
+    }
+
+    public function test_tracer_is_noop_when_enabled_but_keys_missing(): void
+    {
+        config([
+            'services.langfuse.enabled' => true,
+            'services.langfuse.public_key' => '',
+            'services.langfuse.secret_key' => '',
+            'services.langfuse.host' => 'https://cloud.langfuse.com',
+        ]);
+        Http::fake();
+
+        $tracer = new LangfuseTracer();
+        $req = new LlmRequest(messages: [], model: 'gpt-4o');
+        $traceId = $tracer->startTrace($req);
+        $tracer->recordResponse($traceId, $req, new LlmResponse(
+            content: '', role: 'assistant', provider: 'openai', model: 'gpt-4o',
+            promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: 0,
+            traceId: $traceId, raw: [],
+        ));
+        $tracer->recordError($traceId, $req, new \RuntimeException('x'));
+
+        Http::assertNothingSent();
+    }
 }
 ```
 
@@ -771,7 +820,9 @@ final class LangfuseTracer implements TracerInterface
     {
         if (!$this->enabled()) return;
 
-        $now = now()->toIso8601String();
+        $endAt = now();
+        $startAt = $endAt->copy()->subMilliseconds($response->latencyMs);
+        $now = $endAt->toIso8601String();
         $batch = [
             [
                 'id' => (string) Str::uuid(),
@@ -803,7 +854,7 @@ final class LangfuseTracer implements TracerInterface
                         'output' => $response->completionTokens,
                         'total' => $response->totalTokens,
                     ],
-                    'startTime' => $now,
+                    'startTime' => $startAt->toIso8601String(),
                     'endTime' => $now,
                 ],
             ],
@@ -864,7 +915,7 @@ final class LangfuseTracer implements TracerInterface
 c:/wamp64/bin/php/php8.4.20/php.exe artisan test --filter=LangfuseTracerTest
 ```
 
-Expected: `3 passed`.
+Expected: `5 passed`.
 
 - [ ] **Step 6: Commit**
 

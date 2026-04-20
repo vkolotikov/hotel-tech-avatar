@@ -21,7 +21,9 @@ final class LangfuseTracer implements TracerInterface
     {
         if (!$this->enabled()) return;
 
-        $now = now()->toIso8601String();
+        $endAt = now();
+        $startAt = $endAt->copy()->subMilliseconds($response->latencyMs);
+        $now = $endAt->toIso8601String();
         $batch = [
             [
                 'id' => (string) Str::uuid(),
@@ -53,7 +55,7 @@ final class LangfuseTracer implements TracerInterface
                         'output' => $response->completionTokens,
                         'total' => $response->totalTokens,
                     ],
-                    'startTime' => $now,
+                    'startTime' => $startAt->toIso8601String(),
                     'endTime' => $now,
                 ],
             ],
