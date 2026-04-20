@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EvalCase extends Model
 {
@@ -22,5 +23,10 @@ class EvalCase extends Model
     public function dataset(): BelongsTo
     {
         return $this->belongsTo(EvalDataset::class, 'dataset_id');
+    }
+
+    public function results(): HasMany
+    {
+        return $this->hasMany(EvalResult::class, 'case_id');
     }
 }

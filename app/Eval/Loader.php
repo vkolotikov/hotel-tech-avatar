@@ -60,20 +60,30 @@ final class Loader
                 return $dataset->id;
             }
 
-            $dataset->cases()->delete();
+            $incomingSlugs = [];
             foreach ($parsed['cases'] as $i => $case) {
                 if (empty($case['slug'])) {
                     throw new \RuntimeException("case #{$i} in {$relativePath} missing slug");
                 }
-                EvalCase::create([
-                    'dataset_id' => $dataset->id,
-                    'slug' => $case['slug'],
-                    'prompt' => $case['prompt'] ?? '',
-                    'context_json' => $case['context'] ?? null,
-                    'stub_response' => $case['stub_response'] ?? null,
-                    'assertions_json' => $case['assertions'] ?? [],
-                ]);
+                $incomingSlugs[] = $case['slug'];
+                EvalCase::updateOrCreate(
+                    ['dataset_id' => $dataset->id, 'slug' => $case['slug']],
+                    [
+                        'prompt' => $case['prompt'] ?? '',
+                        'context_json' => $case['context'] ?? null,
+                        'stub_response' => $case['stub_response'] ?? null,
+                        'assertions_json' => $case['assertions'] ?? [],
+                    ]
+                );
             }
+
+            // Prune cases that were removed from YAML, but only if they have no
+            // historical results. Cases with results are retained as orphans so
+            // prior eval_runs remain auditable.
+            $dataset->cases()
+                ->whereNotIn('slug', $incomingSlugs)
+                ->whereDoesntHave('results')
+                ->delete();
 
             return $dataset->id;
         });
