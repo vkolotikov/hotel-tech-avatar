@@ -15,8 +15,8 @@ class SchemaRollbackTest extends TestCase
         $this->assertTrue(DB::getSchemaBuilder()->hasTable('verticals'));
         $this->assertTrue(DB::getSchemaBuilder()->hasTable('knowledge_chunks'));
 
-        // Rollback all Phase 0 migrations (27 under 2026_04_19_* + 4 eval + 1 cache under 2026_04_20_*).
-        Artisan::call('migrate:rollback', ['--step' => 32]);
+        // Rollback all Phase 0 migrations (27 under 2026_04_19_* + 4 eval + 1 cache + 1 personal_access_tokens under 2026_04_20_*).
+        Artisan::call('migrate:rollback', ['--step' => 33]);
 
         $this->assertFalse(DB::getSchemaBuilder()->hasTable('subscription_entitlements'));
         $this->assertFalse(DB::getSchemaBuilder()->hasTable('verticals'));

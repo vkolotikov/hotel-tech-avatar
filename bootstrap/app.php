@@ -29,13 +29,22 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         \Sentry\Laravel\Integration::handles($exceptions);
         $exceptions->render(function (\Throwable $e, Request $request) {
+            // Let framework exceptions (validation, auth, auth-z, 404, etc.) render
+            // with their native status codes. Only wrap uncategorised 5xx faults.
+            if ($e instanceof \Illuminate\Validation\ValidationException
+                || $e instanceof \Illuminate\Auth\AuthenticationException
+                || $e instanceof \Illuminate\Auth\Access\AuthorizationException
+                || $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                return null;
+            }
+
             if ($request->is('api/*') || $request->expectsJson()) {
                 $debug = config('app.debug');
                 return response()->json([
                     'error'   => $debug ? $e->getMessage() : 'Server error',
                     'message' => $debug ? $e->getMessage() : 'An unexpected error occurred.',
                     'trace'   => $debug ? $e->getTrace() : null,
-                ], method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500);
+                ], 500);
             }
         });
     })->create();
