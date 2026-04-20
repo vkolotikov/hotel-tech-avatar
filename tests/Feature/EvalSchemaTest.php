@@ -111,4 +111,36 @@ class EvalSchemaTest extends TestCase
 
         $this->assertSame(0, DB::table('eval_results')->where('run_id', $runId)->count());
     }
+
+    public function test_eval_models_wire_relationships(): void
+    {
+        $dataset = \App\Models\EvalDataset::create([
+            'slug' => 'rel-demo',
+            'name' => 'Rel demo',
+            'vertical_slug' => 'hotel',
+            'source_path' => 'x.yaml',
+            'source_hash' => str_repeat('b', 64),
+        ]);
+        $case = $dataset->cases()->create([
+            'slug' => 'c1',
+            'prompt' => 'p',
+            'assertions_json' => [],
+        ]);
+        $run = $dataset->runs()->create([
+            'started_at' => now(),
+            'trigger' => 'manual',
+        ]);
+        $result = $run->results()->create([
+            'case_id' => $case->id,
+            'assertion_index' => 0,
+            'assertion_type' => 'contains_text',
+            'passed' => true,
+        ]);
+
+        $this->assertSame($dataset->id, $case->dataset->id);
+        $this->assertSame($run->id, $result->run->id);
+        $this->assertSame($case->id, $result->case->id);
+        $this->assertCount(1, $dataset->cases);
+        $this->assertCount(1, $run->results);
+    }
 }
