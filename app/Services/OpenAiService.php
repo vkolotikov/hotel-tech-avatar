@@ -21,13 +21,14 @@ class OpenAiService
     /**
      * Transcribe audio to text.
      */
-    public function transcribe(string $audioPath, string $model = null): string
+    public function transcribe(string $audioPath, string $model = null, string $filename = null): string
     {
-        $model = $model ?? config('services.openai.transcribe_model', 'gpt-4o-transcribe');
+        $model    = $model ?? config('services.openai.transcribe_model', 'gpt-4o-transcribe');
+        $filename = $filename ?: basename($audioPath);
 
         $response = Http::withToken($this->apiKey)
             ->timeout($this->timeout)
-            ->attach('file', file_get_contents($audioPath), basename($audioPath))
+            ->attach('file', file_get_contents($audioPath), $filename)
             ->post("{$this->baseUrl}/audio/transcriptions", [
                 'model' => $model,
             ]);

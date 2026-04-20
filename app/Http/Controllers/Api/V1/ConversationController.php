@@ -136,8 +136,26 @@ class ConversationController extends Controller
         $file    = $request->file('file');
         $tmpPath = $file->getRealPath();
 
-        $openai = app(OpenAiService::class);
-        $text   = $openai->transcribe($tmpPath);
+        $extMap = [
+            'audio/wav'    => 'wav',
+            'audio/wave'   => 'wav',
+            'audio/x-wav'  => 'wav',
+            'audio/mpeg'   => 'mp3',
+            'audio/mp3'    => 'mp3',
+            'audio/mp4'    => 'm4a',
+            'audio/x-m4a'  => 'm4a',
+            'audio/webm'   => 'webm',
+            'audio/ogg'    => 'ogg',
+            'audio/flac'   => 'flac',
+        ];
+
+        $mime = strtolower((string) $file->getMimeType());
+        $ext  = $extMap[$mime]
+            ?? (strtolower((string) $file->getClientOriginalExtension()) ?: 'wav');
+
+        $openai   = app(OpenAiService::class);
+        $filename = 'voice-input.' . $ext;
+        $text     = $openai->transcribe($tmpPath, null, $filename);
 
         return response()->json(['text' => $text]);
     }
