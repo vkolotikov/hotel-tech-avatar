@@ -317,11 +317,11 @@ Schema::table('messages', function (Blueprint $table) {
 - Safety patterns (hard + soft)
 - Citation validator settings
 
-**New config entries needed:**
-- `services.llm.max_context_messages` (default: 20) — used by GenerationService
-- `services.llm.max_knowledge_chars` (default: 12000) — used by GenerationService
+**Existing config entries used by GenerationService:**
+- `services.openai.max_context_messages` (default: 20) — max number of prior messages to include in context
+- `services.openai.max_knowledge_chars` (default: 12000) — max characters of knowledge base to append to system prompt
 
-These already exist in the codebase from ConversationController. GenerationService will use the same config.
+These already exist in the codebase from ConversationController. GenerationService will use the same config keys and values.
 
 ---
 

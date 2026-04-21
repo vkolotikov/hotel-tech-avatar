@@ -1,0 +1,131 @@
+
+  [39;41;1m FAIL [39;49;22m[39m Tests\Feature\Services\Verification\VerificationServiceTest[39m
+  [31;1m⨯[39;22m[90m [39m[90mverify passes safe grounded response[39m
+  [31;1m⨯[39;22m[90m [39m[90mverify flags diagnosis language[39m
+  [31;1m⨯[39;22m[90m [39m[90mverify flags prescription language[39m
+  [31;1m⨯[39;22m[90m [39m[90mverify adds latency metric[39m
+  [31;1m⨯[39;22m[90m [39m[90mverify respects max revisions[39m
+  [31m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m  
+  [41;1m FAILED [49;22m [1mTests\Feature\Services\Verification\VerificationServiceTest[22m [90m>[39m verify passes safe grounded… [41;1m QueryException [49;22m  
+[39;1m  SQLSTATE[42703]: Undefined column: 7 ERROR:  column "key" does not exist
+LINE 1: select * from "verticals" where ("key" = $1) limit 1
+                                         ^ (Connection: pgsql, SQL: select * from "verticals" where ("key" = wellness) limit 1)[39;22m
+
+  at [32mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39m:[32m825[39m
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+  [33m1   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39;22m:[39;1m825[39;22m
+
+  [33m2   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39;22m:[39;1m412[39;22m
+  [90m    NunoMaduro\Collision\Exceptions\TestException::("SQLSTATE[42703]: Undefined column: 7 ERROR:  column "key" does not exist
+LINE 1: select * from "verticals" where ("key" = $1) limit 1
+                                         ^")[39m
+
+  [31m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m  
+  [41;1m FAILED [49;22m [1mTests\Feature\Services\Verification\VerificationServiceTest[22m [90m>[39m verify flags diagnosis lang… [41;1m QueryException [49;22m  
+[39;1m  SQLSTATE[42703]: Undefined column: 7 ERROR:  column "key" does not exist
+LINE 1: select * from "verticals" where ("key" = $1) limit 1
+                                         ^ (Connection: pgsql, SQL: select * from "verticals" where ("key" = wellness) limit 1)[39;22m
+
+  at [32mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39m:[32m825[39m
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+  [33m1   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39;22m:[39;1m825[39;22m
+
+  [33m2   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39;22m:[39;1m412[39;22m
+  [90m    NunoMaduro\Collision\Exceptions\TestException::("SQLSTATE[42703]: Undefined column: 7 ERROR:  column "key" does not exist
+LINE 1: select * from "verticals" where ("key" = $1) limit 1
+                                         ^")[39m
+
+  [31m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m  
+  [41;1m FAILED [49;22m [1mTests\Feature\Services\Verification\VerificationServiceTest[22m [90m>[39m verify flags prescription l… [41;1m QueryException [49;22m  
+[39;1m  SQLSTATE[42703]: Undefined column: 7 ERROR:  column "key" does not exist
+LINE 1: select * from "verticals" where ("key" = $1) limit 1
+                                         ^ (Connection: pgsql, SQL: select * from "verticals" where ("key" = wellness) limit 1)[39;22m
+
+  at [32mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39m:[32m825[39m
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+  [33m1   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39;22m:[39;1m825[39;22m
+
+  [33m2   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39;22m:[39;1m412[39;22m
+  [90m    NunoMaduro\Collision\Exceptions\TestException::("SQLSTATE[42703]: Undefined column: 7 ERROR:  column "key" does not exist
+LINE 1: select * from "verticals" where ("key" = $1) limit 1
+                                         ^")[39m
+
+  [31m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m  
+  [41;1m FAILED [49;22m [1mTests\Feature\Services\Verification\VerificationServiceTest[22m [90m>[39m verify adds latency metric   [41;1m QueryException [49;22m  
+[39;1m  SQLSTATE[42703]: Undefined column: 7 ERROR:  column "key" does not exist
+LINE 1: select * from "verticals" where ("key" = $1) limit 1
+                                         ^ (Connection: pgsql, SQL: select * from "verticals" where ("key" = wellness) limit 1)[39;22m
+
+  at [32mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39m:[32m825[39m
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+  [33m1   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39;22m:[39;1m825[39;22m
+
+  [33m2   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39;22m:[39;1m412[39;22m
+  [90m    NunoMaduro\Collision\Exceptions\TestException::("SQLSTATE[42703]: Undefined column: 7 ERROR:  column "key" does not exist
+LINE 1: select * from "verticals" where ("key" = $1) limit 1
+                                         ^")[39m
+
+  [31m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m  
+  [41;1m FAILED [49;22m [1mTests\Feature\Services\Verification\VerificationServiceTest[22m [90m>[39m verify respects max revisio… [41;1m QueryException [49;22m  
+[39;1m  SQLSTATE[42703]: Undefined column: 7 ERROR:  column "key" does not exist
+LINE 1: select * from "verticals" where ("key" = $1) limit 1
+                                         ^ (Connection: pgsql, SQL: select * from "verticals" where ("key" = wellness) limit 1)[39;22m
+
+  at [32mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39m:[32m825[39m
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+  [33m1   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39;22m:[39;1m825[39;22m
+
+  [33m2   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39;22m:[39;1m412[39;22m
+  [90m    NunoMaduro\Collision\Exceptions\TestException::("SQLSTATE[42703]: Undefined column: 7 ERROR:  column "key" does not exist
+LINE 1: select * from "verticals" where ("key" = $1) limit 1
+                                         ^")[39m
+
+
+  [90mTests:[39m    [31;1m5 failed[39;22m[90m (0 assertions)[39m
+  [90mDuration:[39m [39m2.47s[39m
+
