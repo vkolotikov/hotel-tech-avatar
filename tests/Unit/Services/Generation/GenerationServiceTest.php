@@ -138,4 +138,54 @@ class GenerationServiceTest extends TestCase
         $this->assertStringContainsString('offline', strtolower($message->content));
         $this->assertEquals('agent', $message->role);
     }
+
+    public function test_saves_message_with_token_counts(): void
+    {
+        $this->llmClient->shouldReceive('chat')->once()->andReturn(
+            new \App\Services\Llm\LlmResponse(
+                content: 'Test response',
+                role: 'assistant',
+                provider: 'openai',
+                model: 'gpt-4o',
+                promptTokens: 50,
+                completionTokens: 25,
+                totalTokens: 75,
+                latencyMs: 500,
+                traceId: 'trace-abc',
+            )
+        );
+
+        $this->verificationService->shouldReceive('verify')->never();
+
+        $message = $this->generationService->generateResponse($this->conversation);
+
+        $this->assertEquals(50, $message->prompt_tokens);
+        $this->assertEquals(25, $message->completion_tokens);
+        $this->assertEquals(75, $message->total_tokens);
+        $this->assertEquals(500, $message->ai_latency_ms);
+    }
+
+    public function test_saves_message_with_ai_provider_and_model(): void
+    {
+        $this->llmClient->shouldReceive('chat')->once()->andReturn(
+            new \App\Services\Llm\LlmResponse(
+                content: 'Response',
+                role: 'assistant',
+                provider: 'anthropic',
+                model: 'claude-opus-4.7',
+                promptTokens: 10,
+                completionTokens: 5,
+                totalTokens: 15,
+                latencyMs: 300,
+                traceId: 'trace-xyz',
+            )
+        );
+
+        $this->verificationService->shouldReceive('verify')->never();
+
+        $message = $this->generationService->generateResponse($this->conversation);
+
+        $this->assertEquals('anthropic', $message->ai_provider);
+        $this->assertEquals('claude-opus-4.7', $message->ai_model);
+    }
 }
