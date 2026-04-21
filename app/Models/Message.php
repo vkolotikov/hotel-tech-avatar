@@ -20,6 +20,7 @@ class Message extends Model
         'retrieval_used', 'retrieval_source_count',
         'verification_status', 'handoff_from_agent_id',
         'claim_count', 'grounded_claim_count', 'red_flag_triggered',
+        'created_at',
     ];
 
     protected function casts(): array

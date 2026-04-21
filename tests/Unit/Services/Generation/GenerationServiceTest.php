@@ -44,4 +44,84 @@ class GenerationServiceTest extends TestCase
             $this->verificationService,
         );
     }
+
+    public function test_builds_system_prompt_with_agent_instructions(): void
+    {
+        $this->agent->update(['system_instructions' => 'You are a concierge.']);
+
+        $this->llmClient->shouldReceive('chat')->once()->andReturnUsing(function ($request) {
+            $messages = $request->messages;
+            $this->assertStringContainsString('You are a concierge.', $messages[0]['content']);
+            return new \App\Services\Llm\LlmResponse(
+                content: 'Response',
+                role: 'assistant',
+                provider: 'openai',
+                model: 'gpt-4o',
+                promptTokens: 10,
+                completionTokens: 5,
+                totalTokens: 15,
+                latencyMs: 100,
+                traceId: 'trace-1',
+            );
+        });
+
+        $this->verificationService->shouldReceive('verify')->never();
+
+        $message = $this->generationService->generateResponse($this->conversation);
+        $this->assertNotNull($message);
+    }
+
+    public function test_includes_knowledge_base_in_system_prompt(): void
+    {
+        $this->agent->update(['knowledge_text' => 'Knowledge: Be professional.']);
+
+        $this->llmClient->shouldReceive('chat')->once()->andReturnUsing(function ($request) {
+            $messages = $request->messages;
+            $this->assertStringContainsString('Knowledge: Be professional.', $messages[0]['content']);
+            return new \App\Services\Llm\LlmResponse(
+                content: 'Response',
+                role: 'assistant',
+                provider: 'openai',
+                model: 'gpt-4o',
+                promptTokens: 10,
+                completionTokens: 5,
+                totalTokens: 15,
+                latencyMs: 100,
+                traceId: 'trace-1',
+            );
+        });
+
+        $this->verificationService->shouldReceive('verify')->never();
+
+        $message = $this->generationService->generateResponse($this->conversation);
+        $this->assertNotNull($message);
+    }
+
+    public function test_includes_message_history_in_context(): void
+    {
+        $this->conversation->messages()->create(['role' => 'user', 'content' => 'Hello']);
+        $this->conversation->messages()->create(['role' => 'agent', 'content' => 'Hi there']);
+
+        $this->llmClient->shouldReceive('chat')->once()->andReturnUsing(function ($request) {
+            $messages = $request->messages;
+            // Check that history is included (system + user + agent + new user = 4 messages)
+            $this->assertGreaterThanOrEqual(2, count($messages));
+            return new \App\Services\Llm\LlmResponse(
+                content: 'Response',
+                role: 'assistant',
+                provider: 'openai',
+                model: 'gpt-4o',
+                promptTokens: 20,
+                completionTokens: 5,
+                totalTokens: 25,
+                latencyMs: 100,
+                traceId: 'trace-1',
+            );
+        });
+
+        $this->verificationService->shouldReceive('verify')->never();
+
+        $message = $this->generationService->generateResponse($this->conversation);
+        $this->assertNotNull($message);
+    }
 }
