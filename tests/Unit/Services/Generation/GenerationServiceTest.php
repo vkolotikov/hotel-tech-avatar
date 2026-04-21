@@ -188,4 +188,74 @@ class GenerationServiceTest extends TestCase
         $this->assertEquals('anthropic', $message->ai_provider);
         $this->assertEquals('claude-opus-4.7', $message->ai_model);
     }
+
+    public function test_skips_verification_for_hotel_vertical(): void
+    {
+        $this->conversation->agent->vertical()->update(['slug' => 'hotel']);
+
+        $this->llmClient->shouldReceive('chat')->once()->andReturn(
+            new \App\Services\Llm\LlmResponse(
+                content: 'Response',
+                role: 'assistant',
+                provider: 'openai',
+                model: 'gpt-4o',
+                promptTokens: 10,
+                completionTokens: 5,
+                totalTokens: 15,
+                latencyMs: 100,
+                traceId: 'trace-1',
+            )
+        );
+
+        $this->verificationService->shouldReceive('verify')->never();
+
+        $message = $this->generationService->generateResponse($this->conversation);
+
+        $this->assertNull($message->is_verified);
+        $this->assertNull($message->verification_failures_json);
+        $this->assertNull($message->verification_latency_ms);
+    }
+
+    public function test_runs_verification_for_wellness_vertical(): void
+    {
+        // Create a wellness vertical and agent
+        $wellnessVertical = Vertical::create(['slug' => 'wellness', 'name' => 'Wellness']);
+        $wellnessAgent = Agent::factory()
+            ->for($wellnessVertical)
+            ->create(['slug' => 'nora']);
+        $wellnessConversation = $wellnessAgent->conversations()->create(['title' => 'Test Wellness']);
+
+        // Verify the relationship is correct
+        $this->assertEquals('wellness', $wellnessAgent->vertical->slug);
+
+        $this->llmClient->shouldReceive('chat')->once()->andReturn(
+            new \App\Services\Llm\LlmResponse(
+                content: 'Protein is essential.',
+                role: 'assistant',
+                provider: 'openai',
+                model: 'gpt-4o',
+                promptTokens: 10,
+                completionTokens: 5,
+                totalTokens: 15,
+                latencyMs: 100,
+                traceId: 'trace-1',
+            )
+        );
+
+        $verificationResult = new \App\Services\Verification\Drivers\VerificationResult(
+            is_verified: true,
+            failures: [],
+            safety_flags: [],
+            revision_count: 0,
+            latency_ms: 200,
+        );
+
+        $this->verificationService->shouldReceive('verify')
+            ->once()
+            ->andReturn($verificationResult);
+
+        $message = $this->generationService->generateResponse($wellnessConversation);
+
+        $this->assertTrue($message->is_verified);
+    }
 }

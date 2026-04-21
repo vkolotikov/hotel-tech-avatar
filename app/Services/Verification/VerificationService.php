@@ -13,13 +13,14 @@ use App\Services\Verification\Contracts\ClaimExtractionServiceInterface;
 use App\Services\Verification\Contracts\GroundingServiceInterface;
 use App\Services\Verification\Contracts\SafetyClassifierInterface;
 use App\Services\Verification\Contracts\StructuredReviewServiceInterface;
+use App\Services\Verification\Contracts\VerificationServiceInterface;
 use App\Services\Verification\Drivers\SafetyFlagSeverity;
 use App\Services\Verification\Drivers\VerificationFailure;
 use App\Services\Verification\Drivers\VerificationFailureType;
 use App\Services\Verification\Drivers\VerificationResult;
 use Illuminate\Support\Facades\Log;
 
-final class VerificationService
+final class VerificationService implements VerificationServiceInterface
 {
     public const MAX_REVISIONS = 2;
 

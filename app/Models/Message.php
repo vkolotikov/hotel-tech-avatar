@@ -18,7 +18,8 @@ class Message extends Model
         'prompt_tokens', 'completion_tokens', 'total_tokens',
         'ai_latency_ms', 'trace_id', 'ui_json',
         'retrieval_used', 'retrieval_source_count',
-        'verification_status', 'handoff_from_agent_id',
+        'verification_status', 'is_verified', 'verification_failures_json', 'verification_latency_ms',
+        'handoff_from_agent_id',
         'claim_count', 'grounded_claim_count', 'red_flag_triggered',
         'created_at',
     ];
@@ -26,17 +27,20 @@ class Message extends Model
     protected function casts(): array
     {
         return [
-            'ui_json'                => 'array',
-            'retrieval_used'         => 'boolean',
-            'prompt_tokens'          => 'integer',
-            'completion_tokens'      => 'integer',
-            'total_tokens'           => 'integer',
-            'ai_latency_ms'          => 'integer',
-            'retrieval_source_count' => 'integer',
-            'claim_count'            => 'integer',
-            'grounded_claim_count'   => 'integer',
-            'red_flag_triggered'     => 'boolean',
-            'created_at'             => 'datetime',
+            'ui_json'                    => 'array',
+            'retrieval_used'             => 'boolean',
+            'prompt_tokens'              => 'integer',
+            'completion_tokens'          => 'integer',
+            'total_tokens'               => 'integer',
+            'ai_latency_ms'              => 'integer',
+            'retrieval_source_count'     => 'integer',
+            'claim_count'                => 'integer',
+            'grounded_claim_count'       => 'integer',
+            'red_flag_triggered'         => 'boolean',
+            'is_verified'                => 'boolean',
+            'verification_failures_json' => 'array',
+            'verification_latency_ms'    => 'integer',
+            'created_at'                 => 'datetime',
         ];
     }
 

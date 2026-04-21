@@ -30,6 +30,11 @@ final class GenerationService
             throw new \LogicException("Conversation {$conversation->id} has no associated agent.");
         }
 
+        // Ensure vertical relationship is loaded
+        if (!$agent->relationLoaded('vertical')) {
+            $agent->load('vertical');
+        }
+
         if (empty(config('services.openai.api_key'))) {
             return $conversation->messages()->create([
                 'agent_id' => $agent->id,
@@ -95,19 +100,44 @@ final class GenerationService
             ]);
         }
 
+        // Conditional verification
+        $responseText = $response->content;
+        $verificationLatencyMs = 0;
+        $isVerified = null;
+        $verificationFailures = null;
+
+        if ($agent->vertical && $agent->vertical->slug === 'wellness') {
+            $verificationStartTime = microtime(true);
+
+            $context = new \App\Services\Knowledge\RetrievedContext(
+                chunks: [],
+                latency_ms: 0,
+                is_high_risk: false,
+                chunk_count: 0,
+            );
+            $verificationResult = $this->verificationService->verify($responseText, $context, $agent);
+
+            $verificationLatencyMs = (int) round((microtime(true) - $verificationStartTime) * 1000);
+            $isVerified = $verificationResult->is_verified;
+            $verificationFailures = !$verificationResult->is_verified ? $verificationResult->failures : null;
+        }
+
         // Save message
         return $conversation->messages()->create([
             'agent_id'               => $agent->id,
             'role'                   => 'agent',
-            'content'                => $response->content,
+            'content'                => $responseText,
             'ai_provider'            => $response->provider,
             'ai_model'               => $response->model,
             'prompt_tokens'          => $response->promptTokens,
             'completion_tokens'      => $response->completionTokens,
             'total_tokens'           => $response->totalTokens,
             'ai_latency_ms'          => $response->latencyMs,
-            'trace_id'               => $response->traceId,
             'verification_status'    => 'not_required',
+            'trace_id'               => $response->traceId,
+            'is_verified'            => $isVerified,
+            'verification_failures_json' => $verificationFailures,
+            'verification_latency_ms' => $verificationLatencyMs > 0 ? $verificationLatencyMs : null,
         ]);
     }
 }
