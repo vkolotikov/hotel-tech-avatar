@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class KnowledgeDocument extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['agent_id', 'title', 'source_url', 'evidence_grade', 'licence', 'locale', 'checksum', 'metadata', 'ingested_at', 'retired_at'];
 
     protected function casts(): array

@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class KnowledgeChunk extends Model
 {
-    protected $fillable = ['document_id', 'agent_id', 'chunk_index', 'content', 'metadata'];
+    use HasFactory;
+
+    protected $fillable = ['document_id', 'agent_id', 'chunk_index', 'content', 'metadata', 'embedding'];
 
     protected function casts(): array
     {

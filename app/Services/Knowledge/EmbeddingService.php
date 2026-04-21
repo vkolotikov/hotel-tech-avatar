@@ -8,7 +8,7 @@ use App\Services\Llm\LlmClient;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-final class EmbeddingService
+class EmbeddingService
 {
     private const EMBEDDING_MODEL = 'text-embedding-3-large';
     private const EMBEDDING_DIMENSION = 3072;
