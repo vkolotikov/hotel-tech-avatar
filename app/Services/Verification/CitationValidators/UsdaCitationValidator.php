@@ -37,8 +37,17 @@ final class UsdaCitationValidator implements CitationValidatorInterface
                     'pageSize' => 1,
                 ]);
 
-            $valid = $response->status() === 200;
-            $detail = $valid ? "USDA FDC ID {$fdc_id} found" : "USDA FDC ID {$fdc_id} not found";
+            // Check for non-success responses and throw to handle as errors
+            if ($response->status() >= 400 && $response->status() < 500) {
+                // Client errors (e.g., 404 Not Found) should be treated as not found
+                $valid = false;
+                $detail = "USDA FDC ID {$fdc_id} not found";
+            } else {
+                // Use throw() to handle server errors
+                $response->throw();
+                $valid = $response->status() === 200;
+                $detail = $valid ? "USDA FDC ID {$fdc_id} found" : "USDA FDC ID {$fdc_id} not found";
+            }
 
             Cache::put($cache_key, ['is_valid' => $valid, 'detail' => $detail], now()->addDay());
 
