@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ai.hoteltech.wellnessai"
+      "bundleIdentifier": "ai.hoteltech.wellnessai",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Allow WellnessAI to record voice messages for your avatar conversations."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +27,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "ai.hoteltech.wellnessai"
+      "package": "ai.hoteltech.wellnessai",
+      "permissions": ["RECORD_AUDIO"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -35,7 +39,13 @@
       }
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow WellnessAI to record voice messages for your avatar conversations."
+        }
+      ]
     ]
   }
 }
