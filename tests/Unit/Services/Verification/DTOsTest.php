@@ -25,6 +25,7 @@ class DTOsTest extends TestCase
 
         $this->assertTrue($result->is_grounded);
         $this->assertEquals(0.78, $result->similarity_score);
+        $this->assertEquals('Some evidence text', $result->supporting_evidence);
     }
 
     public function test_citation_validation_result_can_be_instantiated()
@@ -36,6 +37,7 @@ class DTOsTest extends TestCase
         );
 
         $this->assertTrue($result->is_valid);
+        $this->assertEquals('PMID:12345 resolved', $result->validation_detail);
         $this->assertEquals('pubmed', $result->source_type);
     }
 
@@ -49,6 +51,9 @@ class DTOsTest extends TestCase
         );
 
         $this->assertEquals(SafetyFlagSeverity::HARD, $flag->severity);
+        $this->assertEquals('prescribe', $flag->matched_pattern);
+        $this->assertEquals('Use professional-referral response', $flag->suggested_action);
+        $this->assertEquals('I prescribe magnesium', $flag->matched_text);
     }
 
     public function test_verification_failure_can_be_instantiated()
@@ -60,6 +65,8 @@ class DTOsTest extends TestCase
         );
 
         $this->assertEquals(VerificationFailureType::NOT_GROUNDED, $failure->type);
+        $this->assertEquals('Magnesium improves sleep', $failure->claim_text);
+        $this->assertEquals('No matching chunk in retrieved context', $failure->reason);
     }
 
     public function test_verification_result_can_be_instantiated()
@@ -73,6 +80,9 @@ class DTOsTest extends TestCase
         );
 
         $this->assertTrue($result->is_verified);
+        $this->assertEquals([], $result->failures);
+        $this->assertEquals([], $result->safety_flags);
+        $this->assertEquals(0, $result->revision_count);
         $this->assertEquals(1200, $result->latency_ms);
     }
 }

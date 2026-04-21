@@ -4,6 +4,10 @@ namespace App\Services\Verification\Drivers;
 
 final class VerificationResult
 {
+    /**
+     * @param array<int, VerificationFailure> $failures
+     * @param array<int, SafetyFlag> $safety_flags
+     */
     public function __construct(
         public readonly bool $is_verified,
         public readonly array $failures,
