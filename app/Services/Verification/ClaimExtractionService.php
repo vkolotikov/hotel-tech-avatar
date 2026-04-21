@@ -6,10 +6,11 @@ namespace App\Services\Verification;
 
 use App\Services\Llm\LlmClient;
 use App\Services\Llm\LlmRequest;
+use App\Services\Verification\Contracts\ClaimExtractionServiceInterface;
 use App\Services\Verification\Drivers\Claim;
 use Illuminate\Support\Facades\Log;
 
-final class ClaimExtractionService
+final class ClaimExtractionService implements ClaimExtractionServiceInterface
 {
     public function __construct(
         private readonly LlmClient $llmClient,

@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Verification;
 
+use App\Services\Verification\Contracts\SafetyClassifierInterface;
 use App\Services\Verification\Drivers\SafetyFlag;
 use App\Services\Verification\Drivers\SafetyFlagSeverity;
 
-final class SafetyClassifier
+final class SafetyClassifier implements SafetyClassifierInterface
 {
     /**
      * Hard patterns - immediate safety concern, severe symptoms, crisis indicators.

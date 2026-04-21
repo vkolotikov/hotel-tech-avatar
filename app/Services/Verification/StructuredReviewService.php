@@ -7,9 +7,10 @@ namespace App\Services\Verification;
 use App\Services\Knowledge\RetrievedContext;
 use App\Services\Llm\LlmClient;
 use App\Services\Llm\LlmRequest;
+use App\Services\Verification\Contracts\StructuredReviewServiceInterface;
 use Illuminate\Support\Facades\Log;
 
-final class StructuredReviewService
+final class StructuredReviewService implements StructuredReviewServiceInterface
 {
     public function __construct(
         private readonly LlmClient $llmClient,
@@ -120,16 +121,4 @@ PROMPT;
             );
         }
     }
-}
-
-/**
- * DTO representing the result of a structured review.
- */
-final class StructuredReviewResult
-{
-    public function __construct(
-        public readonly bool $passed,
-        public readonly array $issues,
-        public readonly ?string $revision_suggestion,
-    ) {}
 }

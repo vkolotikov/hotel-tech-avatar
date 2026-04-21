@@ -7,11 +7,12 @@ namespace App\Services\Verification;
 use App\Models\KnowledgeChunk;
 use App\Services\Knowledge\EmbeddingService;
 use App\Services\Knowledge\RetrievedContext;
+use App\Services\Verification\Contracts\GroundingServiceInterface;
 use App\Services\Verification\Drivers\Claim;
 use App\Services\Verification\Drivers\GroundingResult;
 use Illuminate\Support\Facades\Log;
 
-final class GroundingService
+final class GroundingService implements GroundingServiceInterface
 {
     private const GROUNDING_THRESHOLD = 0.65;
 

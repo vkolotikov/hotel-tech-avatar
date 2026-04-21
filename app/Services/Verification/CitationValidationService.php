@@ -7,9 +7,10 @@ use App\Services\Verification\CitationValidators\GenericCitationValidator;
 use App\Services\Verification\CitationValidators\OpenFoodFactsCitationValidator;
 use App\Services\Verification\CitationValidators\PubMedCitationValidator;
 use App\Services\Verification\CitationValidators\UsdaCitationValidator;
+use App\Services\Verification\Contracts\CitationValidationServiceInterface;
 use App\Services\Verification\Drivers\Claim;
 
-final class CitationValidationService
+final class CitationValidationService implements CitationValidationServiceInterface
 {
     private PubMedCitationValidator $pubmedValidator;
     private UsdaCitationValidator $usdaValidator;
