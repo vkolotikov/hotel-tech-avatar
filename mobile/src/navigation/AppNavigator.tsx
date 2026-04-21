@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { AuthUser, me, storedToken } from '../api';
+import { AuthUser, me, onSessionExpired, storedToken } from '../api';
 import { SignInScreen } from '../screens/SignInScreen';
 import { ConversationListScreen } from '../screens/ConversationListScreen';
 import { ChatDetailScreen } from '../screens/ChatDetailScreen';
@@ -37,6 +37,12 @@ export function AppNavigator() {
         setBooting(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    return onSessionExpired(() => {
+      setUser(null);
+    });
   }, []);
 
   if (booting) {

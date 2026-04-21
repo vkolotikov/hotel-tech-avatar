@@ -2,6 +2,20 @@ import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'sanctum_token';
 
+type SessionListener = () => void;
+const sessionListeners = new Set<SessionListener>();
+
+export function onSessionExpired(listener: SessionListener): () => void {
+  sessionListeners.add(listener);
+  return () => {
+    sessionListeners.delete(listener);
+  };
+}
+
+function notifySessionExpired() {
+  sessionListeners.forEach((fn) => fn());
+}
+
 const baseUrl = (): string => {
   const url = process.env.EXPO_PUBLIC_API_URL;
   if (!url) {
@@ -30,6 +44,10 @@ export async function request<T>(
   const body = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
+    if (response.status === 401 && init.auth) {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      notifySessionExpired();
+    }
     const message =
       body?.message ??
       body?.errors?.email?.[0] ??
