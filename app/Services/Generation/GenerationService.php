@@ -35,6 +35,7 @@ final class GenerationService
                 'agent_id' => $agent->id,
                 'role'     => 'agent',
                 'content'  => "I'm currently offline — the AI service is not configured.",
+                'trace_id' => null,
             ]);
         }
 
@@ -90,6 +91,7 @@ final class GenerationService
                 'role'                => 'agent',
                 'content'             => "I encountered an error generating a response. Please try again.",
                 'verification_status' => 'error',
+                'trace_id'            => null,
             ]);
         }
 
@@ -104,6 +106,7 @@ final class GenerationService
             'completion_tokens'      => $response->completionTokens,
             'total_tokens'           => $response->totalTokens,
             'ai_latency_ms'          => $response->latencyMs,
+            'trace_id'               => $response->traceId,
             'verification_status'    => 'not_required',
         ]);
     }

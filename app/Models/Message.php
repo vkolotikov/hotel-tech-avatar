@@ -16,7 +16,7 @@ class Message extends Model
         'conversation_id', 'agent_id', 'role', 'content',
         'ai_provider', 'ai_model',
         'prompt_tokens', 'completion_tokens', 'total_tokens',
-        'ai_latency_ms', 'ui_json',
+        'ai_latency_ms', 'trace_id', 'ui_json',
         'retrieval_used', 'retrieval_source_count',
         'verification_status', 'handoff_from_agent_id',
         'claim_count', 'grounded_claim_count', 'red_flag_triggered',
