@@ -20,6 +20,11 @@ class KnowledgeDocument extends Model
         return $this->belongsTo(Agent::class);
     }
 
+    public function avatar(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class, 'avatar_id');
+    }
+
     public function chunks(): HasMany
     {
         return $this->hasMany(KnowledgeChunk::class, 'document_id');
