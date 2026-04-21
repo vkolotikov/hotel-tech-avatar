@@ -11,9 +11,14 @@ use Illuminate\Support\Carbon;
 
 final class Runner
 {
+    private ?string $currentMode = null;
+
+    public function __construct(private readonly ?LiveResolver $liveResolver = null) {}
+
     public function runDataset(int $datasetId, string $trigger): int
     {
         $dataset = EvalDataset::findOrFail($datasetId);
+        $this->currentMode = $dataset->mode_json?->mode ?? 'stubbed';
 
         $run = EvalRun::create([
             'dataset_id' => $dataset->id,
@@ -53,12 +58,23 @@ final class Runner
 
     private function runCase(int $runId, EvalCase $case): bool
     {
-        $response = $this->resolveResponse($case);
+        $resolvedResponse = $this->resolveResponse($case);
+
         $context = $case->context_json ?? [];
+        if ($resolvedResponse instanceof ResolvedResponse) {
+            $context['red_flag_triggered'] = $resolvedResponse->red_flag_triggered;
+            $context['red_flag_id'] = $resolvedResponse->red_flag_id;
+            $context['handoff_target'] = $resolvedResponse->handoff_target;
+            $responseText = $resolvedResponse->text;
+        } else {
+            $context['red_flag_triggered'] = false;
+            $responseText = $resolvedResponse;
+        }
+
         $allPassed = true;
 
         foreach (($case->assertions_json ?? []) as $i => $config) {
-            $result = $this->evaluateOne($config, $response, $context);
+            $result = $this->evaluateOne($config, $responseText, $context);
             if (!$result->passed) {
                 $allPassed = false;
             }
@@ -69,7 +85,7 @@ final class Runner
                 'assertion_index' => $i,
                 'assertion_type' => $config['type'] ?? 'unknown',
                 'passed' => $result->passed,
-                'actual_response' => $result->passed ? null : $response,
+                'actual_response' => $result->passed ? null : $responseText,
                 'reason' => $result->reason,
             ]);
         }
@@ -77,8 +93,13 @@ final class Runner
         return $allPassed && !empty($case->assertions_json);
     }
 
-    private function resolveResponse(EvalCase $case): string
+    private function resolveResponse(EvalCase $case): string | ResolvedResponse
     {
+        if ($this->currentMode === 'live' && $this->liveResolver) {
+            $agent = $case->dataset->agent; // Assume EvalCase has agent via dataset
+            return $this->liveResolver->resolve($case, $agent);
+        }
+
         return $case->stub_response ?? '';
     }
 

@@ -33,7 +33,7 @@ final class AssertionFactory
             'contains_text', 'does_not_contain' => new $class($config['value'] ?? ''),
             'matches_regex' => new $class($config['pattern'] ?? ''),
             'citation_count_at_least' => new $class((int) ($config['min'] ?? 1)),
-            'red_flag_triggered' => new $class(),
+            'red_flag_triggered' => new $class((bool) ($config['value'] ?? true)),
             'verification_status' => new $class($config['value'] ?? ''),
         };
     }

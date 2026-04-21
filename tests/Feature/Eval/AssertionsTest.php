@@ -53,7 +53,7 @@ class AssertionsTest extends TestCase
     public function test_red_flag_triggered_from_context(): void
     {
         $a = AssertionFactory::make(['type' => 'red_flag_triggered']);
-        $this->assertTrue($a->evaluate('anything', ['red_flag_fired' => true])->passed);
+        $this->assertTrue($a->evaluate('anything', ['red_flag_triggered' => true])->passed);
         $this->assertTrue($a->evaluate('If you are in immediate danger, call 911.', [])->passed);
         $this->assertFalse($a->evaluate('Normal reply.', [])->passed);
     }
