@@ -7,14 +7,16 @@ use App\Models\Agent;
 use App\Models\Conversation;
 use App\Models\ConversationAttachment;
 use App\Models\Message;
-use App\Services\Llm\LlmClient;
-use App\Services\Llm\LlmRequest;
+use App\Services\Generation\GenerationService;
 use App\Services\OpenAiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ConversationController extends Controller
 {
+    public function __construct(
+        private readonly GenerationService $generationService,
+    ) {}
     /** Get or create the latest conversation for an agent. */
     public function latest(Agent $agent): JsonResponse
     {
@@ -91,7 +93,7 @@ class ConversationController extends Controller
 
         // Auto-reply if requested
         if ($request->boolean('auto_reply', true)) {
-            $result['agent_message'] = $this->generateReply($conversation);
+            $result['agent_message'] = $this->generationService->generateResponse($conversation);
         }
 
         return response()->json($result, 201);
@@ -100,7 +102,7 @@ class ConversationController extends Controller
     /** Manually trigger an agent reply. */
     public function agentReply(Conversation $conversation): JsonResponse
     {
-        $agentMsg = $this->generateReply($conversation);
+        $agentMsg = $this->generationService->generateResponse($conversation);
         return response()->json($agentMsg, 201);
     }
 
@@ -177,92 +179,4 @@ class ConversationController extends Controller
         ]);
     }
 
-    /**
-     * Build context and generate an AI reply.
-     */
-    private function generateReply(Conversation $conversation): ?Message
-    {
-        $agent = $conversation->agent;
-
-        if (empty(config('services.openai.api_key'))) {
-            return $conversation->messages()->create([
-                'role'    => 'agent',
-                'content' => "I'm currently offline — the AI service is not configured.",
-            ]);
-        }
-
-        $maxContext = (int) config('services.openai.max_context_messages', 20);
-
-        // Build system prompt
-        $systemPrompt = $agent->system_instructions ?? "You are {$agent->name}, {$agent->role}. {$agent->description}";
-
-        if ($agent->knowledge_text) {
-            $maxChars = (int) config('services.openai.max_knowledge_chars', 12000);
-            $knowledge = mb_substr($agent->knowledge_text, 0, $maxChars);
-            $systemPrompt .= "\n\n--- Knowledge Base ---\n{$knowledge}";
-        }
-
-        // Build message history
-        $history = $conversation->messages()
-            ->orderByDesc('created_at')
-            ->limit($maxContext)
-            ->get()
-            ->reverse()
-            ->map(fn ($m) => [
-                'role'    => $m->role === 'agent' ? 'assistant' : 'user',
-                'content' => $m->content,
-            ])
-            ->values()
-            ->toArray();
-
-        $messages = array_merge(
-            [['role' => 'system', 'content' => $systemPrompt]],
-            $history
-        );
-
-        // Call OpenAI
-        $tools = [];
-        if ($agent->use_advanced_ai && $agent->openai_vector_store_id) {
-            $tools = [[
-                'type'         => 'file_search',
-                'file_search'  => ['vector_store_ids' => [$agent->openai_vector_store_id]],
-            ]];
-        }
-
-        $client = app(LlmClient::class);
-        $response = $client->chat(new LlmRequest(
-            messages: $messages,
-            model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
-            temperature: (float) config('services.openai.temperature', 0.3),
-            maxTokens: (int) config('services.openai.max_output_tokens', 220),
-            tools: $tools ?? [],
-            purpose: 'generation',
-            messageId: null,
-        ));
-
-        $result = [
-            'content'           => $response->content,
-            'role'              => $response->role,
-            'ai_provider'       => $response->provider,
-            'ai_model'          => $response->model,
-            'prompt_tokens'     => $response->promptTokens,
-            'completion_tokens' => $response->completionTokens,
-            'total_tokens'      => $response->totalTokens,
-            'ai_latency_ms'     => $response->latencyMs,
-            'trace_id'          => $response->traceId,
-        ];
-
-        return $conversation->messages()->create([
-            'role'                   => 'agent',
-            'content'                => $result['content'],
-            'ai_provider'            => $result['ai_provider'],
-            'ai_model'               => $result['ai_model'],
-            'prompt_tokens'          => $result['prompt_tokens'],
-            'completion_tokens'      => $result['completion_tokens'],
-            'total_tokens'           => $result['total_tokens'],
-            'ai_latency_ms'          => $result['ai_latency_ms'],
-            'retrieval_used'         => !empty($tools),
-            'retrieval_source_count' => 0,
-        ]);
-    }
 }

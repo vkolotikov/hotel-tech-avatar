@@ -8,6 +8,7 @@ use App\Models\Agent;
 use App\Models\KnowledgeChunk;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\Knowledge\RetrievedContext;
 
 final class RetrievalService
 {
@@ -220,14 +221,4 @@ final class RetrievalService
     {
         return '[' . implode(',', $embedding) . ']';
     }
-}
-
-final class RetrievedContext
-{
-    public function __construct(
-        public readonly array $chunks,
-        public readonly int $latency_ms,
-        public readonly bool $is_high_risk = false,
-        public readonly int $chunk_count = 0,
-    ) {}
 }

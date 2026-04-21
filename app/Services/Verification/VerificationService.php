@@ -126,12 +126,17 @@ final class VerificationService implements VerificationServiceInterface
 
         $latency_ms = (int) round((hrtime(true) - $started_at) / 1_000_000);
 
+        $passed = empty($failures);
         return new VerificationResult(
-            is_verified: empty($failures),
+            passed: $passed,
+            chunks: [],
+            latency_ms: $latency_ms,
+            is_high_risk: false,
+            chunk_count: 0,
             failures: $failures ?? [],
             safety_flags: $safety_flags ?? [],
             revision_count: $revision_count,
-            latency_ms: $latency_ms,
+            is_verified: $passed,
         );
     }
 
