@@ -86,6 +86,36 @@ PROMPT;
                 'aura' => 'skin-primary',
                 'axel' => 'fitness-primary',
             ],
+            'knowledge_sources_json' => [
+                [
+                    'type' => 'usda',
+                    'key' => 'usda_fooddata_central',
+                    'name' => 'USDA FoodData Central',
+                    'cache' => 'cached',
+                    'api_key_env' => 'USDA_API_KEY',
+                ],
+                [
+                    'type' => 'pubmed',
+                    'key' => 'pubmed_wellness',
+                    'name' => 'PubMed (wellness queries)',
+                    'cache' => 'cached',
+                    'api_key_env' => 'PUBMED_API_KEY',
+                ],
+                [
+                    'type' => 'pubmed',
+                    'key' => 'pubmed_drug_interactions',
+                    'name' => 'PubMed (drug interactions)',
+                    'cache' => 'live',
+                    'api_key_env' => 'PUBMED_API_KEY',
+                ],
+                [
+                    'type' => 'open_food_facts',
+                    'key' => 'off_food_search',
+                    'name' => 'Open Food Facts',
+                    'cache' => 'cached',
+                    'api_key_env' => null,
+                ],
+            ],
         ]);
 
         // Create the initial prompt version
