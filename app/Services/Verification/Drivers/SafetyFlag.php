@@ -2,7 +2,7 @@
 
 namespace App\Services\Verification\Drivers;
 
-enum SafetySeverity: string {
+enum SafetyFlagSeverity: string {
     case HARD = 'hard';
     case SOFT = 'soft';
 }
@@ -10,7 +10,7 @@ enum SafetySeverity: string {
 final class SafetyFlag
 {
     public function __construct(
-        public readonly SafetySeverity $severity,
+        public readonly SafetyFlagSeverity $severity,
         public readonly string $matched_pattern,
         public readonly string $suggested_action,
         public readonly string $matched_text,

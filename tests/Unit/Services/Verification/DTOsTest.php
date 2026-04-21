@@ -6,7 +6,7 @@ use App\Services\Verification\Drivers\{
     GroundingResult,
     CitationValidationResult,
     SafetyFlag,
-    SafetySeverity,
+    SafetyFlagSeverity,
     VerificationFailure,
     VerificationFailureType,
     VerificationResult
@@ -42,13 +42,13 @@ class DTOsTest extends TestCase
     public function test_safety_flag_can_be_instantiated()
     {
         $flag = new SafetyFlag(
-            severity: SafetySeverity::HARD,
+            severity: SafetyFlagSeverity::HARD,
             matched_pattern: 'prescribe',
             suggested_action: 'Use professional-referral response',
             matched_text: 'I prescribe magnesium'
         );
 
-        $this->assertEquals(SafetySeverity::HARD, $flag->severity);
+        $this->assertEquals(SafetyFlagSeverity::HARD, $flag->severity);
     }
 
     public function test_verification_failure_can_be_instantiated()
