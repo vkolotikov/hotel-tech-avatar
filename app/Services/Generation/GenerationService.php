@@ -11,6 +11,9 @@ use App\Services\Verification\Contracts\VerificationServiceInterface;
 
 final class GenerationService
 {
+    private const FALLBACK_RESPONSE = 'I recommend consulting a healthcare professional for this question.';
+    private const MAX_REVISIONS = 2;
+
     public function __construct(
         private readonly LlmClient $llmClient,
         private readonly VerificationServiceInterface $verificationService,
@@ -100,7 +103,7 @@ final class GenerationService
             ]);
         }
 
-        // Conditional verification
+        // Conditional verification with revision loop
         $responseText = $response->content;
         $verificationLatencyMs = 0;
         $isVerified = null;
@@ -128,17 +131,69 @@ final class GenerationService
                 ]);
 
                 $verificationResult = new \App\Services\Verification\Drivers\VerificationResult(
-                    is_verified: false,
+                    passed: false,
+                    chunks: [],
+                    latency_ms: 0,
+                    is_high_risk: false,
+                    chunk_count: 0,
                     failures: [],
                     safety_flags: [],
                     revision_count: 0,
-                    latency_ms: 0,
                 );
             }
 
+            $revisionCount = 0;
+            $messages[] = ['role' => 'assistant', 'content' => $responseText];
+
+            // Revision loop: max 2 attempts, only if there's a suggestion
+            while (!$verificationResult->passed && $revisionCount < self::MAX_REVISIONS && $verificationResult->revision_suggestion) {
+                $revisionPrompt = $this->buildRevisionPrompt($verificationResult);
+                $messages[] = $revisionPrompt;
+
+                try {
+                    $response = $this->llmClient->chat(new \App\Services\Llm\LlmRequest(
+                        messages: $messages,
+                        model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
+                        temperature: (float) config('services.openai.temperature', 0.3),
+                        maxTokens: (int) config('services.openai.max_output_tokens', 220),
+                        tools: [],
+                        purpose: 'generation',
+                        messageId: null,
+                    ));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('GenerationService: Revision LLM call failed', [
+                        'conversation_id' => $conversation->id,
+                        'agent_id' => $agent->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    break;
+                }
+
+                $responseText = $response->content;
+                $messages[] = ['role' => 'assistant', 'content' => $responseText];
+
+                try {
+                    $verificationResult = $this->verificationService->verify($responseText, $context, $agent);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('GenerationService: Verification failed during revision', [
+                        'conversation_id' => $conversation->id,
+                        'agent_id' => $agent->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    break;
+                }
+
+                $revisionCount++;
+            }
+
+            // Use fallback if verification still failed
+            if (!$verificationResult->passed) {
+                $responseText = self::FALLBACK_RESPONSE;
+            }
+
             $verificationLatencyMs = (int) round((microtime(true) - $verificationStartTime) * 1000);
-            $isVerified = $verificationResult->is_verified;
-            $verificationFailures = !$verificationResult->is_verified ? $verificationResult->failures : null;
+            $isVerified = $verificationResult->passed;
+            $verificationFailures = !$verificationResult->passed ? $verificationResult->failures : null;
         }
 
         // Save message
@@ -161,5 +216,17 @@ final class GenerationService
             'verification_failures_json' => $verificationFailures,
             'verification_latency_ms' => $verificationLatencyMs > 0 ? $verificationLatencyMs : null,
         ]);
+    }
+
+    private function buildRevisionPrompt(\App\Services\Verification\Drivers\VerificationResult $verificationResult): array
+    {
+        $failuresSummary = collect($verificationResult->failures)
+            ->map(fn ($f) => "{$f->type->name}: {$f->reason}")
+            ->join("\n");
+
+        return [
+            'role'    => 'user',
+            'content' => "The previous response had these issues:\n\n{$failuresSummary}\n\nPlease revise the response to address these concerns. {$verificationResult->revision_suggestion}",
+        ];
     }
 }

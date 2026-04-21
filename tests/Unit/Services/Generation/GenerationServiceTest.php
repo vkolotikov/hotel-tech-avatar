@@ -243,11 +243,14 @@ class GenerationServiceTest extends TestCase
         );
 
         $verificationResult = new \App\Services\Verification\Drivers\VerificationResult(
-            is_verified: true,
+            passed: true,
+            chunks: [],
+            latency_ms: 200,
+            is_high_risk: false,
+            chunk_count: 0,
             failures: [],
             safety_flags: [],
             revision_count: 0,
-            latency_ms: 200,
         );
 
         $this->verificationService->shouldReceive('verify')
@@ -257,5 +260,173 @@ class GenerationServiceTest extends TestCase
         $message = $this->generationService->generateResponse($wellnessConversation);
 
         $this->assertTrue($message->is_verified);
+    }
+
+    public function test_revision_loop_retries_on_verification_failure(): void
+    {
+        $wellnessVertical = Vertical::create(['slug' => 'wellness', 'name' => 'Wellness']);
+        $wellnessAgent = Agent::factory()
+            ->for($wellnessVertical)
+            ->create(['slug' => 'nora']);
+        $wellnessConversation = $wellnessAgent->conversations()->create(['title' => 'Test Wellness']);
+
+        $this->llmClient->shouldReceive('chat')
+            ->twice()
+            ->andReturnUsing(function ($request) {
+                static $count = 0;
+                $count++;
+                return new \App\Services\Llm\LlmResponse(
+                    content: "Response {$count}",
+                    role: 'assistant',
+                    provider: 'openai',
+                    model: 'gpt-4o',
+                    promptTokens: 10,
+                    completionTokens: 5,
+                    totalTokens: 15,
+                    latencyMs: 100,
+                    traceId: "trace-{$count}",
+                );
+            });
+
+        $failedResult = new \App\Services\Verification\Drivers\VerificationResult(
+            passed: false,
+            chunks: [],
+            latency_ms: 100,
+            is_high_risk: false,
+            chunk_count: 0,
+            failures: [
+                new \App\Services\Verification\Drivers\VerificationFailure(
+                    type: \App\Services\Verification\Drivers\VerificationFailureType::NOT_GROUNDED,
+                    claim_text: 'Test claim',
+                    reason: 'No grounding found',
+                ),
+            ],
+            safety_flags: [],
+            revision_count: 0,
+            revision_suggestion: 'Cite a source',
+        );
+
+        $passedResult = new \App\Services\Verification\Drivers\VerificationResult(
+            passed: true,
+            chunks: [],
+            latency_ms: 100,
+            is_high_risk: false,
+            chunk_count: 0,
+            failures: [],
+            safety_flags: [],
+            revision_count: 1,
+            revision_suggestion: null,
+        );
+
+        $this->verificationService->shouldReceive('verify')
+            ->twice()
+            ->andReturnValues([$failedResult, $passedResult]);
+
+        $message = $this->generationService->generateResponse($wellnessConversation);
+
+        $this->assertTrue($message->is_verified);
+        $this->assertEquals('Response 2', $message->content);
+    }
+
+    public function test_respects_max_revisions_limit(): void
+    {
+        $wellnessVertical = Vertical::create(['slug' => 'wellness', 'name' => 'Wellness']);
+        $wellnessAgent = Agent::factory()
+            ->for($wellnessVertical)
+            ->create(['slug' => 'nora']);
+        $wellnessConversation = $wellnessAgent->conversations()->create(['title' => 'Test Wellness']);
+
+        $this->llmClient->shouldReceive('chat')
+            ->times(3)  // Initial + 2 revisions
+            ->andReturn(
+                new \App\Services\Llm\LlmResponse(
+                    content: 'Response',
+                    role: 'assistant',
+                    provider: 'openai',
+                    model: 'gpt-4o',
+                    promptTokens: 10,
+                    completionTokens: 5,
+                    totalTokens: 15,
+                    latencyMs: 100,
+                    traceId: 'trace-1',
+                )
+            );
+
+        $failedResult = new \App\Services\Verification\Drivers\VerificationResult(
+            passed: false,
+            chunks: [],
+            latency_ms: 100,
+            is_high_risk: false,
+            chunk_count: 0,
+            failures: [
+                new \App\Services\Verification\Drivers\VerificationFailure(
+                    type: \App\Services\Verification\Drivers\VerificationFailureType::NOT_GROUNDED,
+                    claim_text: 'Test',
+                    reason: 'No grounding',
+                ),
+            ],
+            safety_flags: [],
+            revision_count: 0,
+            revision_suggestion: 'Revise',
+        );
+
+        $this->verificationService->shouldReceive('verify')
+            ->times(3)
+            ->andReturn($failedResult);
+
+        $message = $this->generationService->generateResponse($wellnessConversation);
+
+        $this->assertFalse($message->is_verified);
+        $this->assertNotNull($message->verification_failures_json);
+    }
+
+    public function test_uses_fallback_response_when_verification_exhausted(): void
+    {
+        $wellnessVertical = Vertical::create(['slug' => 'wellness', 'name' => 'Wellness']);
+        $wellnessAgent = Agent::factory()
+            ->for($wellnessVertical)
+            ->create(['slug' => 'nora']);
+        $wellnessConversation = $wellnessAgent->conversations()->create(['title' => 'Test Wellness']);
+
+        $this->llmClient->shouldReceive('chat')->times(3)->andReturn(
+            new \App\Services\Llm\LlmResponse(
+                content: 'Original response that will fail',
+                role: 'assistant',
+                provider: 'openai',
+                model: 'gpt-4o',
+                promptTokens: 10,
+                completionTokens: 5,
+                totalTokens: 15,
+                latencyMs: 100,
+                traceId: 'trace-1',
+            )
+        );
+
+        $failedResult = new \App\Services\Verification\Drivers\VerificationResult(
+            passed: false,
+            chunks: [],
+            latency_ms: 100,
+            is_high_risk: false,
+            chunk_count: 0,
+            failures: [
+                new \App\Services\Verification\Drivers\VerificationFailure(
+                    type: \App\Services\Verification\Drivers\VerificationFailureType::SAFETY_VIOLATION,
+                    claim_text: 'Dangerous claim',
+                    reason: 'Safety violation detected',
+                ),
+            ],
+            safety_flags: [],
+            revision_count: 0,
+            revision_suggestion: 'Cannot be fixed',
+        );
+
+        $this->verificationService->shouldReceive('verify')
+            ->times(3)
+            ->andReturn($failedResult);
+
+        $message = $this->generationService->generateResponse($wellnessConversation);
+
+        $this->assertFalse($message->is_verified);
+        $this->assertStringContainsString('recommend consulting a healthcare professional', $message->content);
     }
 }
