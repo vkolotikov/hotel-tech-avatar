@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services\Verification;
 
 use App\Services\Verification\Drivers\{
+    Claim,
     GroundingResult,
     CitationValidationResult,
     SafetyFlag,
@@ -84,5 +85,20 @@ class DTOsTest extends TestCase
         $this->assertEquals([], $result->safety_flags);
         $this->assertEquals(0, $result->revision_count);
         $this->assertEquals(1200, $result->latency_ms);
+    }
+
+    public function test_claim_can_be_instantiated()
+    {
+        $claim = new Claim(
+            text: 'Magnesium improves sleep',
+            requires_citation: true,
+            inferred_source_category: 'research'
+        );
+
+        $this->assertEquals('Magnesium improves sleep', $claim->text);
+        $this->assertTrue($claim->requires_citation);
+        $this->assertEquals('research', $claim->inferred_source_category);
+        $this->assertNull($claim->grounding);
+        $this->assertNull($claim->citation);
     }
 }
