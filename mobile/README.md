@@ -1,40 +1,86 @@
-# mobile
+# WellnessAI Mobile (Expo)
 
-Expo (React Native) shell for the WellnessAI vertical. Phase 0 scope is a
-single authenticated round-trip against the Laravel backend — no chat, no
-onboarding, no avatars, no voice.
+React Native (Expo) app for the WellnessAI wellness vertical.
 
-## Requirements
+## Prerequisites
 
 - Node 22+
-- Expo Go app on your Android/iOS device (or an Android emulator)
+- Expo CLI (`npm install -g expo-cli`) or Expo Go app on device
+- iOS Simulator (macOS) or Android emulator
+- Set `EXPO_PUBLIC_API_URL` in `.env` (copy from `.env.example`)
 
-## Run locally against production backend
+## Run
 
 ```bash
 cd mobile
 cp .env.example .env
 npm install
-npm start
+npm start           # Expo dev server
+npm run ios         # iOS simulator
+npm run android     # Android emulator
+npm test            # Jest + Testing Library
 ```
 
-Scan the QR code with Expo Go. Sign in with a user that exists in the
-Laravel database — Phase 0's seeder creates `test@example.com` /
-`password` on the local/test environment. For production, create a user
-via Laravel tinker:
+Sign in with a user in the Laravel database. Phase 0's seeder creates
+`test@example.com` / `password` on local/test environments. For production,
+create a user via tinker:
 
 ```bash
 php artisan tinker
 > \App\Models\User::factory()->create(['email' => 'you@example.com', 'password' => bcrypt('your-pass')]);
 ```
 
-The app calls `POST /api/v1/auth/login`, stores the Sanctum token via
-`expo-secure-store`, and renders the result of `GET /api/v1/me`.
+## Architecture
+
+- **Navigation:** React Navigation native stack (`src/navigation/AppNavigator.tsx`)
+- **State:** React Query for server state, local state for UI
+- **API:** Sanctum bearer token via `src/api/index.ts`; emits `onSessionExpired` on 401
+- **Auth:** expo-secure-store for token persistence
+- **Streaming:** react-native-sse with synchronous POST fallback
+- **Voice:** expo-av recording + backend Whisper transcription
+
+## Features
+
+- Sign in with email/password (Sanctum)
+- Conversation list with pull-to-refresh
+- Avatar picker (6 wellness avatars)
+- Chat with streaming responses (graceful POST fallback)
+- Text + voice input (press-and-hold to record)
+- Citation badges showing verification status
+- Auto-logout on expired session
+
+## Backend endpoints consumed
+
+- `POST /api/v1/auth/login` — sign in
+- `GET  /api/v1/me` — current user
+- `POST /api/v1/auth/logout` — sign out
+- `GET  /api/v1/agents?vertical=wellness` — avatar catalog
+- `GET  /api/v1/conversations` — conversation list
+- `POST /api/v1/conversations` — create conversation
+- `GET  /api/v1/conversations/{id}/messages` — message history
+- `POST /api/v1/conversations/{id}/messages` — send message (`auto_reply`)
+- `GET  /api/v1/conversations/{id}/stream?message_id={id}` — SSE stream *(optional)*
+- `POST /api/v1/transcribe` — audio → transcript *(optional)*
+
+Endpoints marked *(optional)* gracefully degrade when unavailable.
 
 ## Configuration
 
 - `EXPO_PUBLIC_API_URL` — Laravel base URL, e.g. `https://avatars.hotel-tech.ai`
 - EAS project id lives in `app.json` under `expo.extra.eas.projectId`
+
+## Manual smoke test checklist
+
+Run `npx expo start` and verify on a simulator:
+
+- [ ] Sign in with valid credentials → navigates to conversation list
+- [ ] Tap "+" → avatar picker opens → pick Nora → conversation created → chat detail opens
+- [ ] Type "hello" → tap send → typing indicator → agent response arrives
+- [ ] Navigate back → conversation appears in list
+- [ ] Tap conversation → messages reload
+- [ ] Hold record button → release → transcript prefills input
+- [ ] Invalid credentials → error shown
+- [ ] Server returns 401 → app returns to sign-in automatically
 
 ## Build
 
@@ -44,4 +90,6 @@ npx eas-cli build --platform android --profile preview
 
 ## Design notes
 
-See [`../docs/adr/2026-04-20-phase-0-mobile-expo.md`](../docs/adr/2026-04-20-phase-0-mobile-expo.md).
+See [`../docs/adr/2026-04-20-phase-0-mobile-expo.md`](../docs/adr/2026-04-20-phase-0-mobile-expo.md)
+and the implementation plan at
+[`../docs/superpowers/plans/2026-04-21-mobile-chat-ui.md`](../docs/superpowers/plans/2026-04-21-mobile-chat-ui.md).
