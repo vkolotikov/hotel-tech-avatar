@@ -124,4 +124,18 @@ class GenerationServiceTest extends TestCase
         $message = $this->generationService->generateResponse($this->conversation);
         $this->assertNotNull($message);
     }
+
+    public function test_returns_offline_message_when_openai_key_missing(): void
+    {
+        config(['services.openai.api_key' => '']);
+
+        $this->llmClient->shouldReceive('chat')->never();
+        $this->verificationService->shouldReceive('verify')->never();
+
+        $message = $this->generationService->generateResponse($this->conversation);
+
+        $this->assertNotNull($message);
+        $this->assertStringContainsString('offline', strtolower($message->content));
+        $this->assertEquals('agent', $message->role);
+    }
 }

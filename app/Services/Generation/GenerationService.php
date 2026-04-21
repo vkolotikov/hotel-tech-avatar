@@ -26,6 +26,10 @@ final class GenerationService
     {
         $agent = $conversation->agent;
 
+        if (!$agent) {
+            throw new \LogicException("Conversation {$conversation->id} has no associated agent.");
+        }
+
         if (empty(config('services.openai.api_key'))) {
             return $conversation->messages()->create([
                 'role'    => 'agent',
@@ -63,18 +67,34 @@ final class GenerationService
         );
 
         // Call LLM
-        $response = $this->llmClient->chat(new \App\Services\Llm\LlmRequest(
-            messages: $messages,
-            model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
-            temperature: (float) config('services.openai.temperature', 0.3),
-            maxTokens: (int) config('services.openai.max_output_tokens', 220),
-            tools: [],
-            purpose: 'generation',
-            messageId: null,
-        ));
+        try {
+            $response = $this->llmClient->chat(new \App\Services\Llm\LlmRequest(
+                messages: $messages,
+                model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
+                temperature: (float) config('services.openai.temperature', 0.3),
+                maxTokens: (int) config('services.openai.max_output_tokens', 220),
+                tools: [],
+                purpose: 'generation',
+                messageId: null,
+            ));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('GenerationService: LLM call failed', [
+                'conversation_id' => $conversation->id,
+                'agent_id' => $agent->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $conversation->messages()->create([
+                'agent_id'            => $agent->id,
+                'role'                => 'agent',
+                'content'             => "I encountered an error generating a response. Please try again.",
+                'verification_status' => 'error',
+            ]);
+        }
 
         // Save message
         return $conversation->messages()->create([
+            'agent_id'               => $agent->id,
             'role'                   => 'agent',
             'content'                => $response->content,
             'ai_provider'            => $response->provider,
