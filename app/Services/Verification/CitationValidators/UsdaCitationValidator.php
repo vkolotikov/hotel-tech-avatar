@@ -35,24 +35,31 @@ final class UsdaCitationValidator implements CitationValidatorInterface
             $response = Http::timeout(3)
                 ->get('https://fdc.nal.usda.gov/api/food/' . $fdc_id, [
                     'pageSize' => 1,
-                ]);
+                ])
+                ->throw();
 
-            // Check for non-success responses and throw to handle as errors
-            if ($response->status() >= 400 && $response->status() < 500) {
-                // Client errors (e.g., 404 Not Found) should be treated as not found
-                $valid = false;
-                $detail = "USDA FDC ID {$fdc_id} not found";
-            } else {
-                // Use throw() to handle server errors
-                $response->throw();
-                $valid = $response->status() === 200;
-                $detail = $valid ? "USDA FDC ID {$fdc_id} found" : "USDA FDC ID {$fdc_id} not found";
-            }
+            $valid = $response->status() === 200;
+            $detail = $valid ? "USDA FDC ID {$fdc_id} found" : "USDA FDC ID {$fdc_id} not found";
 
             Cache::put($cache_key, ['is_valid' => $valid, 'detail' => $detail], now()->addDay());
 
             return new CitationValidationResult(
                 is_valid: $valid,
+                validation_detail: $detail,
+                source_type: 'usda'
+            );
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            // Handle HTTP errors (4xx/5xx) with user-friendly message for 404
+            if ($e->response->status() === 404) {
+                $detail = "USDA FDC ID {$fdc_id} not found";
+            } else {
+                $detail = 'USDA API error: ' . $e->getMessage();
+            }
+
+            Cache::put($cache_key, ['is_valid' => false, 'detail' => $detail], now()->addDay());
+
+            return new CitationValidationResult(
+                is_valid: false,
                 validation_detail: $detail,
                 source_type: 'usda'
             );
