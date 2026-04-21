@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
+import { VoiceRecordButton } from './VoiceRecordButton';
 import { colors, spacing, radius, fontSize } from '../../theme';
 
 type Props = {
@@ -9,6 +11,7 @@ type Props = {
 
 export function MessageInput({ onSend, disabled }: Props) {
   const [text, setText] = useState('');
+  const recorder = useVoiceRecorder((transcript) => setText(transcript));
 
   const handleSend = () => {
     const trimmed = text.trim();
@@ -19,6 +22,12 @@ export function MessageInput({ onSend, disabled }: Props) {
 
   return (
     <View style={styles.container}>
+      <VoiceRecordButton
+        isRecording={recorder.isRecording}
+        isTranscribing={recorder.isTranscribing}
+        onPressIn={recorder.start}
+        onPressOut={recorder.stop}
+      />
       <TextInput
         style={styles.input}
         value={text}
@@ -26,7 +35,7 @@ export function MessageInput({ onSend, disabled }: Props) {
         placeholder="Message…"
         placeholderTextColor={colors.textMuted}
         multiline
-        editable={!disabled}
+        editable={!disabled && !recorder.isTranscribing}
       />
       <Pressable
         testID="send-button"
@@ -52,6 +61,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    marginHorizontal: spacing.sm,
     backgroundColor: colors.surfaceElevated,
     color: colors.textPrimary,
     borderRadius: radius.md,
@@ -61,7 +71,6 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   sendButton: {
-    marginLeft: spacing.sm,
     width: 44,
     height: 44,
     borderRadius: radius.pill,
