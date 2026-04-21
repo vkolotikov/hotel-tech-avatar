@@ -32,8 +32,9 @@ final class GenerationService
 
         if (empty(config('services.openai.api_key'))) {
             return $conversation->messages()->create([
-                'role'    => 'agent',
-                'content' => "I'm currently offline — the AI service is not configured.",
+                'agent_id' => $agent->id,
+                'role'     => 'agent',
+                'content'  => "I'm currently offline — the AI service is not configured.",
             ]);
         }
 
