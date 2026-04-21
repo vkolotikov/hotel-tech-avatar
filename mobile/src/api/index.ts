@@ -10,7 +10,7 @@ const baseUrl = (): string => {
   return url.replace(/\/$/, '');
 };
 
-async function request<T>(
+export async function request<T>(
   path: string,
   init: RequestInit & { auth?: boolean } = {},
 ): Promise<T> {
