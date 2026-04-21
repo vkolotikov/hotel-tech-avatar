@@ -45,6 +45,7 @@ class VerificationIntegrationTest extends TestCase
         $hotel = Vertical::where('slug', 'hotel')->firstOrFail();
         $agent = Agent::factory()->create([
             'vertical_id' => $hotel->id,
+            'slug' => 'hotel-agent',
         ]);
         $conversation = $agent->conversations()->create(['title' => 'Test']);
 
@@ -100,6 +101,7 @@ class VerificationIntegrationTest extends TestCase
         $wellness = Vertical::where('slug', 'wellness')->firstOrFail();
         $agent = Agent::factory()->create([
             'vertical_id' => $wellness->id,
+            'slug' => 'wellness-agent',
         ]);
         $conversation = $agent->conversations()->create(['title' => 'Test']);
 
@@ -168,6 +170,7 @@ class VerificationIntegrationTest extends TestCase
         $hotel = Vertical::where('slug', 'hotel')->firstOrFail();
         $agent = Agent::factory()->create([
             'vertical_id' => $hotel->id,
+            'slug' => 'reply-agent',
         ]);
         $conversation = $agent->conversations()->create(['title' => 'Test']);
 
@@ -220,6 +223,7 @@ class VerificationIntegrationTest extends TestCase
         $hotel = Vertical::where('slug', 'hotel')->firstOrFail();
         $agent = Agent::factory()->create([
             'vertical_id' => $hotel->id,
+            'slug' => 'test-agent',
         ]);
         $conversation = $agent->conversations()->create(['title' => 'Test']);
 
