@@ -12,7 +12,7 @@ class VerticalFactory extends Factory
     public function definition(): array
     {
         return [
-            'slug' => $this->faker->unique()->slug(),
+            'slug' => $this->faker->unique()->slug(2),
             'name' => $this->faker->word(),
         ];
     }

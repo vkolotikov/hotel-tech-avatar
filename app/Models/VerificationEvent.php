@@ -7,21 +7,44 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VerificationEvent extends Model
 {
-    public $timestamps = false;
-
-    protected $fillable = ['message_id', 'stage', 'passed', 'notes'];
+    protected $fillable = [
+        'conversation_id',
+        'message_id',
+        'avatar_id',
+        'vertical_slug',
+        'response_text',
+        'is_verified',
+        'revision_count',
+        'failures_json',
+        'safety_flags_json',
+        'latency_ms',
+    ];
 
     protected function casts(): array
     {
         return [
-            'passed' => 'boolean',
-            'notes' => 'array',
+            'failures_json' => 'array',
+            'safety_flags_json' => 'array',
+            'is_verified' => 'boolean',
+            'revision_count' => 'integer',
+            'latency_ms' => 'integer',
             'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
+    }
+
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(Conversation::class);
     }
 
     public function message(): BelongsTo
     {
         return $this->belongsTo(Message::class);
+    }
+
+    public function avatar(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class, 'avatar_id');
     }
 }
