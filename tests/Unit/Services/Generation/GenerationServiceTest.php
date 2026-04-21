@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services\Generation;
 
-use App\Http\Controllers\Api\V1\ConversationController;
 use App\Models\Agent;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -44,10 +43,5 @@ class GenerationServiceTest extends TestCase
             $this->llmClient,
             $this->verificationService,
         );
-    }
-
-    public function test_service_can_be_instantiated(): void
-    {
-        $this->assertInstanceOf(GenerationService::class, $this->generationService);
     }
 }
