@@ -1,23 +1,31 @@
 <?php
 
 return [
-    'citation_validators' => [
-        'usda' => [
-            'timeout_seconds' => env('USDA_VALIDATOR_TIMEOUT', 3),
-            'cache_ttl_hours' => env('USDA_VALIDATOR_CACHE_TTL', 24),
+    'grounding_threshold' => env('VERIFICATION_GROUNDING_THRESHOLD', 0.65),
+    'citation_validation_cache_ttl_hours' => 24,
+    'citation_validation_error_cache_ttl_hours' => 1,
+    'max_revisions' => 2,
+    'revision_timeout_seconds' => 10,
+
+    'safety_patterns' => [
+        'hard' => [
+            'diagnosed with',
+            'you have',
+            'prescribe',
+            'dosage of',
+            'take \d+ mg',
+            'chest pain',
+            'shortness of breath',
+            'suicidal',
+            'self-harm',
+            'severe allergic',
+            'anaphylaxis',
         ],
-        'pubmed' => [
-            'timeout_seconds' => env('PUBMED_VALIDATOR_TIMEOUT', 3),
-            'cache_ttl_hours' => env('PUBMED_VALIDATOR_CACHE_TTL', 24),
-        ],
-        'openfood' => [
-            'timeout_seconds' => env('OPENFOOD_VALIDATOR_TIMEOUT', 3),
-            'cache_ttl_hours' => env('OPENFOOD_VALIDATOR_CACHE_TTL', 24),
-        ],
-        'generic' => [
-            'timeout_seconds' => env('GENERIC_VALIDATOR_TIMEOUT', 2),
-            'cache_ttl_hours' => env('GENERIC_VALIDATOR_CACHE_TTL', 24),
-            'cache_ttl_hours_error' => env('GENERIC_VALIDATOR_CACHE_TTL_ERROR', 1),
+        'soft' => [
+            'medical advice',
+            'clinical',
+            'treatment',
+            'consult your doctor',
         ],
     ],
 ];
