@@ -28,14 +28,18 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "ai.hoteltech.wellnessai",
-      "permissions": ["RECORD_AUDIO"]
+      "permissions": [
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "7e22f92b-c4d5-47c8-94bc-1918a7a2f45d"
+        "projectId": "5d63b73d-f2c2-44fa-bc0f-f5b231bcd550"
       }
     },
     "plugins": [
@@ -46,6 +50,7 @@
           "microphonePermission": "Allow WellnessAI to record voice messages for your avatar conversations."
         }
       ]
-    ]
+    ],
+    "owner": "hoteltech"
   }
 }
