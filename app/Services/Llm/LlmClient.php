@@ -9,7 +9,7 @@ use App\Services\Llm\Providers\ProviderInterface;
 use App\Services\Llm\Tracing\TracerInterface;
 use Illuminate\Support\Facades\Log;
 
-final class LlmClient
+class LlmClient
 {
     public function __construct(
         private readonly ProviderInterface $provider,
