@@ -109,13 +109,32 @@ final class GenerationService
         if ($agent->vertical && $agent->vertical->slug === 'wellness') {
             $verificationStartTime = microtime(true);
 
+            // Placeholder: retrieval is wired in Phase 1+.
+            // Until then, verification cannot ground claims against retrieved evidence.
             $context = new \App\Services\Knowledge\RetrievedContext(
                 chunks: [],
                 latency_ms: 0,
                 is_high_risk: false,
                 chunk_count: 0,
             );
-            $verificationResult = $this->verificationService->verify($responseText, $context, $agent);
+
+            try {
+                $verificationResult = $this->verificationService->verify($responseText, $context, $agent);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('GenerationService: Verification failed', [
+                    'conversation_id' => $conversation->id,
+                    'agent_id' => $agent->id,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $verificationResult = new \App\Services\Verification\Drivers\VerificationResult(
+                    is_verified: false,
+                    failures: [],
+                    safety_flags: [],
+                    revision_count: 0,
+                    latency_ms: 0,
+                );
+            }
 
             $verificationLatencyMs = (int) round((microtime(true) - $verificationStartTime) * 1000);
             $isVerified = $verificationResult->is_verified;
@@ -133,7 +152,10 @@ final class GenerationService
             'completion_tokens'      => $response->completionTokens,
             'total_tokens'           => $response->totalTokens,
             'ai_latency_ms'          => $response->latencyMs,
-            'verification_status'    => 'not_required',
+            'verification_status'    => match ($agent->vertical->slug) {
+                'wellness' => $isVerified ? 'passed' : 'failed',
+                default => 'not_required',
+            },
             'trace_id'               => $response->traceId,
             'is_verified'            => $isVerified,
             'verification_failures_json' => $verificationFailures,
