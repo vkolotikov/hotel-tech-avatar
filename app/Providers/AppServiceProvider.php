@@ -11,7 +11,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(\App\Services\Knowledge\EmbeddingService::class, function ($app) {
+            return new \App\Services\Knowledge\EmbeddingService(
+                $app->make(\App\Services\Llm\LlmClient::class)
+            );
+        });
     }
 
     /**
