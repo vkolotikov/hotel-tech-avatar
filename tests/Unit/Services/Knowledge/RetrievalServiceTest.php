@@ -90,8 +90,8 @@ class RetrievalServiceTest extends TestCase
         $context = $this->retrievalService->retrieve($prompt, $this->agent);
 
         // Assert: Should return at least one chunk
-        $this->assertGreater(0, $context->chunk_count);
-        $this->assertGreater(0, $context->latency_ms);
+        $this->assertGreaterThan(0, $context->chunk_count);
+        $this->assertGreaterThan(0, $context->latency_ms);
         $this->assertFalse($context->is_high_risk);
         $this->assertIsArray($context->chunks);
     }

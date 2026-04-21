@@ -17,6 +17,19 @@ class KnowledgeChunk extends Model
         return ['metadata' => 'array'];
     }
 
+    /**
+     * Mutator: Convert embedding array to pgvector string format for storage.
+     * pgvector expects format: "[1.0, 2.0, 3.0, ...]"
+     */
+    public function setEmbeddingAttribute($value): void
+    {
+        if (is_array($value)) {
+            $this->attributes['embedding'] = '[' . implode(',', $value) . ']';
+        } else {
+            $this->attributes['embedding'] = $value;
+        }
+    }
+
     public function document(): BelongsTo
     {
         return $this->belongsTo(KnowledgeDocument::class, 'document_id');

@@ -95,30 +95,31 @@ final class RetrievalService
     private function vectorSearch(string $prompt, Agent $agent): array
     {
         $promptEmbedding = $this->embeddingService->embed($prompt);
+        $embeddingString = $this->embeddingToString($promptEmbedding);
+
+        // Query using raw SQL for pgvector distance operator
+        // pgvector <-> returns distance (0 = identical, 1 = completely opposite)
+        // We use < 1 to get reasonable similarity matches
+        $chunks = DB::select(
+            'SELECT kc.*, 1 - (kc.embedding <-> ?::vector) as similarity ' .
+            'FROM knowledge_chunks kc ' .
+            'WHERE kc.agent_id = ? AND kc.embedding IS NOT NULL ' .
+            'ORDER BY kc.embedding <-> ?::vector ' .
+            'LIMIT 10',
+            [$embeddingString, $agent->id, $embeddingString]
+        );
+
+        // Convert raw results to models and filter by threshold
         $threshold = (float) config('retrieval.vector_similarity_threshold', 0.7);
-
-        // Vector search using pgvector cosine similarity
-        // SELECT ... ORDER BY embedding <=> $1 LIMIT n
-        $chunks = KnowledgeChunk::query()
-            ->where('agent_id', $agent->id)
-            ->whereNotNull('embedding')
-            ->select('knowledge_chunks.*')
-            ->selectRaw(
-                '(embedding <=> ?)::float as similarity',
-                [$this->embeddingToString($promptEmbedding)]
-            )
-            ->having('similarity', '>=', -1) // All similarities are valid, but we'll filter below
-            ->orderByRaw('embedding <=> ?', [$this->embeddingToString($promptEmbedding)])
-            ->limit(10)
-            ->get();
-
-        // Filter by threshold
         $result = [];
-        foreach ($chunks as $chunk) {
-            // similarity from <=> is in range [-1, 1], where 1 = most similar
-            // We need cosine_similarity = 1 - distance, so filter by threshold
-            if ($chunk->similarity >= $threshold) {
-                $result[] = $this->chunkToRetrievedChunk($chunk);
+
+        foreach ($chunks as $row) {
+            if ((float) $row->similarity >= $threshold) {
+                // Convert to KnowledgeChunk model
+                $chunk = KnowledgeChunk::find($row->id);
+                if ($chunk) {
+                    $result[] = $this->chunkToRetrievedChunk($chunk);
+                }
             }
         }
 
@@ -191,7 +192,7 @@ final class RetrievalService
             source_name: $document->title,
             citation_key: $this->generateCitationKey($document),
             evidence_grade: $document->evidence_grade,
-            fetched_at: $document->ingested_at ?? now(),
+            fetched_at: $document->ingested_at?->toDateTimeImmutable() ?? now()->toDateTimeImmutable(),
         );
     }
 
@@ -219,4 +220,14 @@ final class RetrievalService
     {
         return '[' . implode(',', $embedding) . ']';
     }
+}
+
+final class RetrievedContext
+{
+    public function __construct(
+        public readonly array $chunks,
+        public readonly int $latency_ms,
+        public readonly bool $is_high_risk = false,
+        public readonly int $chunk_count = 0,
+    ) {}
 }
