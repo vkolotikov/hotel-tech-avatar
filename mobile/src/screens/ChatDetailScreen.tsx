@@ -14,6 +14,7 @@ import { useChatStream } from '../hooks/useChatStream';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import { MessageInput } from '../components/chat/MessageInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
+import { StreamingMessage } from '../components/chat/StreamingMessage';
 import { colors, spacing, fontSize } from '../theme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 
@@ -25,7 +26,7 @@ export function ChatDetailScreen() {
   const listRef = useRef<FlatList>(null);
 
   const { data, isLoading, isError, refetch } = useMessages(conversationId);
-  const sendMutation = useChatStream();
+  const stream = useChatStream(conversationId);
 
   useEffect(() => {
     if (data?.data.length) {
@@ -34,7 +35,7 @@ export function ChatDetailScreen() {
   }, [data?.data.length]);
 
   const handleSend = (text: string) => {
-    sendMutation.mutate({ conversationId, text });
+    stream.send(text);
   };
 
   if (isLoading) {
@@ -71,11 +72,17 @@ export function ChatDetailScreen() {
         )}
         contentContainerStyle={styles.list}
         ListFooterComponent={
-          sendMutation.isPending ? <TypingIndicator avatarName={avatarName} /> : null
+          stream.isPending ? (
+            stream.streamingText ? (
+              <StreamingMessage text={stream.streamingText} avatarSlug={avatarSlug} />
+            ) : (
+              <TypingIndicator avatarName={avatarName} />
+            )
+          ) : null
         }
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
       />
-      <MessageInput onSend={handleSend} disabled={sendMutation.isPending} />
+      <MessageInput onSend={handleSend} disabled={stream.isPending} />
     </KeyboardAvoidingView>
   );
 }

@@ -43,7 +43,7 @@ export interface Message {
 
 export interface SendMessageResponse {
   user_message: Message;
-  agent_message: Message;
+  agent_message: Message | null;
 }
 
 export interface Paginated<T> {
