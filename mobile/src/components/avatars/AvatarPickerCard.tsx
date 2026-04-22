@@ -1,5 +1,6 @@
-import { Pressable, Text, View, StyleSheet } from 'react-native';
+import { Image, Pressable, Text, View, StyleSheet } from 'react-native';
 import type { Avatar } from '../../types/models';
+import { resolveAssetUrl } from '../../api';
 import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../../theme';
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
 export function AvatarPickerCard({ avatar, onPress }: Props) {
   const slug = avatar.slug as AvatarSlug;
   const accent = slug in avatarColors ? avatarColors[slug] : colors.primary;
+  const imageUrl = resolveAssetUrl(avatar.avatar_image_url);
 
   return (
     <Pressable
@@ -21,7 +23,11 @@ export function AvatarPickerCard({ avatar, onPress }: Props) {
         pressed && styles.pressed,
       ]}
     >
-      <View style={[styles.dot, { backgroundColor: accent }]} />
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={[styles.image, { borderColor: accent }]} />
+      ) : (
+        <View style={[styles.dot, { backgroundColor: accent }]} />
+      )}
       <Text style={styles.name}>{avatar.name}</Text>
       <Text style={styles.role}>{avatar.role}</Text>
       {avatar.description && (
@@ -47,6 +53,14 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: radius.pill,
     marginBottom: spacing.sm,
+  },
+  image: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
   },
   name: {
     color: colors.textPrimary,

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
 import { VoiceRecordButton } from './VoiceRecordButton';
 import { colors, spacing, radius, fontSize } from '../../theme';
@@ -11,6 +12,7 @@ type Props = {
 
 export function MessageInput({ onSend, disabled }: Props) {
   const [text, setText] = useState('');
+  const insets = useSafeAreaInsets();
   const recorder = useVoiceRecorder((transcript) => setText(transcript));
 
   const handleSend = () => {
@@ -21,7 +23,7 @@ export function MessageInput({ onSend, disabled }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: spacing.sm + insets.bottom }]}>
       <VoiceRecordButton
         isRecording={recorder.isRecording}
         isTranscribing={recorder.isTranscribing}

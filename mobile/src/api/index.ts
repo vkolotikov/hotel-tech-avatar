@@ -24,6 +24,12 @@ const baseUrl = (): string => {
   return url.replace(/\/$/, '');
 };
 
+export function resolveAssetUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${baseUrl()}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
 export async function request<T>(
   path: string,
   init: RequestInit & { auth?: boolean } = {},
