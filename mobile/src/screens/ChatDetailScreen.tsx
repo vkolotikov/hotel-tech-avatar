@@ -136,6 +136,7 @@ export function ChatDetailScreen() {
         )}
         <MessageInput
           conversationId={conversationId}
+          accent={accent}
           onSend={handleSend}
           disabled={stream.isPending}
         />

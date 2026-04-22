@@ -68,5 +68,14 @@ export function useVoiceRecorder(
     }
   }, [conversationId, onTranscript]);
 
-  return { ...state, start, stop };
+  const toggle = useCallback(() => {
+    if (state.isTranscribing) return;
+    if (state.isRecording) {
+      void stop();
+    } else {
+      void start();
+    }
+  }, [state.isRecording, state.isTranscribing, start, stop]);
+
+  return { ...state, start, stop, toggle };
 }
