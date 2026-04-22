@@ -31,9 +31,10 @@ export function useChatStream(conversationId: number) {
 
   const appendMessages = useCallback(
     (newMessages: Message[]) => {
-      qc.setQueryData<{ data: Message[] } | undefined>(messagesKey(conversationId), (prev) => ({
-        data: [...(prev?.data ?? []), ...newMessages],
-      }));
+      qc.setQueryData<Message[] | undefined>(messagesKey(conversationId), (prev) => [
+        ...(prev ?? []),
+        ...newMessages,
+      ]);
     },
     [qc, conversationId],
   );

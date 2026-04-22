@@ -1,4 +1,4 @@
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAvatars } from '../hooks/useAvatars';
@@ -16,15 +16,23 @@ export function AvatarPickerModal() {
   const createMutation = useCreateConversation();
 
   const handleSelect = async (avatar: Avatar) => {
-    const conversation = await createMutation.mutateAsync({
-      agentId: avatar.id,
-      title: null,
-    });
-    navigation.replace('ChatDetail', {
-      conversationId: conversation.id,
-      avatarSlug: avatar.slug,
-      avatarName: avatar.name,
-    });
+    try {
+      const conversation = await createMutation.mutateAsync({
+        agentId: avatar.id,
+        title: null,
+      });
+      if (!conversation?.id) {
+        Alert.alert('Could not start chat', 'Server returned no conversation id.');
+        return;
+      }
+      navigation.replace('ChatDetail', {
+        conversationId: conversation.id,
+        avatarSlug: avatar.slug,
+        avatarName: avatar.name,
+      });
+    } catch (err) {
+      Alert.alert('Could not start chat', (err as Error).message ?? 'Unknown error');
+    }
   };
 
   if (isLoading) {
