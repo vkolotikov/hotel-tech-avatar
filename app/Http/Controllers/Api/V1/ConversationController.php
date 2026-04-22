@@ -50,6 +50,95 @@ class ConversationController extends Controller
         return response()->json($conv, 201);
     }
 
+    /** List all conversations for the authenticated user (across agents). */
+    public function indexForUser(Request $request): JsonResponse
+    {
+        $perPage = (int) $request->query('per_page', 20);
+        $perPage = max(1, min($perPage, 100));
+
+        $paginator = Conversation::query()
+            ->where('user_id', $request->user()->id)
+            ->with(['agent.vertical:id,slug'])
+            ->withCount('messages')
+            ->orderByDesc('last_activity_at')
+            ->orderByDesc('updated_at')
+            ->paginate($perPage);
+
+        $data = collect($paginator->items())->map(fn (Conversation $c) => $this->presentConversation($c));
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /** Create a conversation scoped to the authenticated user. */
+    public function storeForUser(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'agent_id' => 'required|integer|exists:agents,id',
+            'title'    => 'nullable|string|max:255',
+        ]);
+
+        $agent = Agent::findOrFail($validated['agent_id']);
+
+        $conv = Conversation::create([
+            'agent_id'    => $agent->id,
+            'vertical_id' => $agent->vertical_id,
+            'user_id'     => $request->user()->id,
+            'title'       => $validated['title'] ?? 'New Chat',
+        ]);
+
+        $conv->load(['agent.vertical:id,slug']);
+
+        return response()->json($this->presentConversation($conv), 201);
+    }
+
+    /** Show a single conversation owned by the authenticated user. */
+    public function showForUser(Request $request, Conversation $conversation): JsonResponse
+    {
+        if ($conversation->user_id !== $request->user()->id) {
+            abort(404);
+        }
+
+        $conversation->load(['agent.vertical:id,slug']);
+        $conversation->loadCount('messages');
+
+        return response()->json($this->presentConversation($conversation));
+    }
+
+    /** Shape a Conversation for mobile clients (flat agent with vertical_slug). */
+    private function presentConversation(Conversation $c): array
+    {
+        $agent = $c->agent;
+        $agentPayload = $agent ? [
+            'id'               => $agent->id,
+            'slug'             => $agent->slug,
+            'name'             => $agent->name,
+            'role'             => $agent->role,
+            'domain'           => $agent->domain ?? null,
+            'description'      => $agent->description,
+            'vertical_slug'    => $agent->vertical?->slug,
+            'avatar_image_url' => $agent->avatar_image_url,
+        ] : null;
+
+        return [
+            'id'               => $c->id,
+            'agent_id'         => $c->agent_id,
+            'title'            => $c->title,
+            'created_at'       => optional($c->created_at)->toIso8601String(),
+            'updated_at'       => optional($c->updated_at)->toIso8601String(),
+            'last_activity_at' => optional($c->last_activity_at)->toIso8601String(),
+            'messages_count'   => $c->messages_count ?? 0,
+            'agent'            => $agentPayload,
+        ];
+    }
+
     /** Rename a conversation. */
     public function update(Request $request, Conversation $conversation): JsonResponse
     {

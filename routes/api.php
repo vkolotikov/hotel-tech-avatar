@@ -21,6 +21,11 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('me',           [AuthController::class, 'me']);
         Route::post('auth/logout', [AuthController::class, 'logout']);
+
+        // User-scoped conversations (mobile)
+        Route::get('conversations',                [ConversationController::class, 'indexForUser']);
+        Route::post('conversations',               [ConversationController::class, 'storeForUser']);
+        Route::get('conversations/{conversation}', [ConversationController::class, 'showForUser']);
     });
 
     // ─── Public Agent Endpoints ────────────────────────────────────────────
