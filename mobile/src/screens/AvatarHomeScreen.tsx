@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAvatars } from '../hooks/useAvatars';
 import { useConversations, useCreateConversation } from '../hooks/useConversations';
-import { resolveAssetUrl } from '../api';
+import { logout, resolveAssetUrl } from '../api';
 import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../theme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { Avatar, Conversation } from '../types/models';
@@ -47,6 +47,27 @@ export function AvatarHomeScreen() {
   }, [conversationsData]);
 
   const handleOpenHistory = () => navigation.navigate('ConversationList');
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign out',
+      'You will be signed out of WellnessAI on this device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (err) {
+              Alert.alert('Sign out failed', (err as Error).message);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleStart = async (avatar: Avatar) => {
     const existing = conversationsByAgent.get(avatar.id);
@@ -120,13 +141,22 @@ export function AvatarHomeScreen() {
       {/* Top bar — history + title floating over the portrait */}
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]} pointerEvents="box-none">
         <Text style={styles.brand}>WellnessAI</Text>
-        <Pressable
-          onPress={handleOpenHistory}
-          style={({ pressed }) => [styles.historyButton, pressed && styles.pressed]}
-          accessibilityLabel="Conversation history"
-        >
-          <Text style={styles.historyIcon}>☰</Text>
-        </Pressable>
+        <View style={styles.topBarActions}>
+          <Pressable
+            onPress={handleOpenHistory}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            accessibilityLabel="Conversation history"
+          >
+            <Text style={styles.iconGlyph}>☰</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleSignOut}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            accessibilityLabel="Sign out"
+          >
+            <Text style={styles.iconGlyph}>⏻</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Pagination dots */}
@@ -170,43 +200,41 @@ function AvatarPage({ avatar, hasExistingChat, onStart, pending }: PageProps) {
         <View style={[StyleSheet.absoluteFill, { backgroundColor: accent, opacity: 0.3 }]} />
       )}
 
-      {/* Gradient-ish legibility overlays */}
-      <View style={pageStyles.topFade} pointerEvents="none" />
-      <View style={pageStyles.bottomFadeLight} pointerEvents="none" />
-      <View style={pageStyles.bottomFadeHeavy} pointerEvents="none" />
-
       <View
         style={[
-          pageStyles.content,
-          { paddingBottom: insets.bottom + 80 }, // leaves room for dots
+          pageStyles.cardWrap,
+          { paddingBottom: insets.bottom + 40, paddingHorizontal: spacing.md },
         ]}
+        pointerEvents="box-none"
       >
-        <View style={[pageStyles.accentBar, { backgroundColor: accent }]} />
-        <Text style={[pageStyles.role, { color: accent }]} numberOfLines={1}>
-          {avatar.role}
-        </Text>
-        <Text style={pageStyles.name} numberOfLines={2}>
-          {avatar.name}
-        </Text>
-        {avatar.description && (
-          <Text style={pageStyles.description} numberOfLines={4}>
-            {avatar.description}
+        <View style={[pageStyles.card, { borderColor: accent + '55' }]}>
+          <View style={[pageStyles.accentBar, { backgroundColor: accent }]} />
+          <Text style={[pageStyles.role, { color: accent }]} numberOfLines={1}>
+            {avatar.role}
           </Text>
-        )}
+          <Text style={pageStyles.name} numberOfLines={2}>
+            {avatar.name}
+          </Text>
+          {avatar.description && (
+            <Text style={pageStyles.description} numberOfLines={4}>
+              {avatar.description}
+            </Text>
+          )}
 
-        <Pressable
-          onPress={onStart}
-          disabled={pending}
-          style={({ pressed }) => [
-            pageStyles.cta,
-            { backgroundColor: accent },
-            (pressed || pending) && pageStyles.ctaPressed,
-          ]}
-        >
-          <Text style={pageStyles.ctaText}>
-            {pending ? 'Starting…' : hasExistingChat ? 'Continue chat' : 'Start chat'}
-          </Text>
-        </Pressable>
+          <Pressable
+            onPress={onStart}
+            disabled={pending}
+            style={({ pressed }) => [
+              pageStyles.cta,
+              { backgroundColor: accent },
+              (pressed || pending) && pageStyles.ctaPressed,
+            ]}
+          >
+            <Text style={pageStyles.ctaText}>
+              {pending ? 'Starting…' : hasExistingChat ? 'Continue chat' : 'Start chat'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -240,7 +268,12 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 6,
   },
-  historyButton: {
+  topBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  iconButton: {
     width: 44,
     height: 44,
     borderRadius: radius.pill,
@@ -250,9 +283,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  historyIcon: {
+  iconGlyph: {
     color: colors.textPrimary,
-    fontSize: 20,
+    fontSize: 18,
   },
   pressed: { opacity: 0.7 },
   dots: {
@@ -277,36 +310,17 @@ const styles = StyleSheet.create({
 });
 
 const pageStyles = StyleSheet.create({
-  topFade: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 140,
-    backgroundColor: 'rgba(11,15,23,0.45)',
-  },
-  bottomFadeLight: {
+  cardWrap: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: '55%',
-    backgroundColor: 'rgba(11,15,23,0.55)',
   },
-  bottomFadeHeavy: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '28%',
-    backgroundColor: 'rgba(11,15,23,0.4)',
-  },
-  content: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: spacing.lg,
+  card: {
+    backgroundColor: 'rgba(11,15,23,0.82)',
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
   },
   accentBar: {
     width: 40,

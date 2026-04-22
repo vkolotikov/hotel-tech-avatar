@@ -92,6 +92,7 @@ export async function logout(): Promise<void> {
     await request('/api/v1/auth/logout', { method: 'POST', auth: true });
   } finally {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
+    notifySessionExpired();
   }
 }
 

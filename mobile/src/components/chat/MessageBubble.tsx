@@ -8,10 +8,22 @@ type Props = {
   avatarSlug: string;
 };
 
+function formatTime(iso: string | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  let h = d.getHours();
+  const m = d.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m} ${ampm}`;
+}
+
 export function MessageBubble({ message, avatarSlug }: Props) {
   const isUser = message.role === 'user';
   const slug = avatarSlug as AvatarSlug;
   const accent = slug in avatarColors ? avatarColors[slug] : colors.primary;
+  const time = formatTime(message.created_at);
 
   return (
     <View style={[styles.row, isUser ? styles.rowUser : styles.rowAgent]}>
@@ -25,12 +37,15 @@ export function MessageBubble({ message, avatarSlug }: Props) {
       >
         <Text style={styles.text}>{message.content}</Text>
       </View>
-      {!isUser && (
-        <CitationBadge
-          citationsCount={message.citations_count ?? 0}
-          isVerified={message.is_verified}
-        />
-      )}
+      <View style={[styles.metaRow, isUser ? styles.metaRowUser : styles.metaRowAgent]}>
+        {!isUser && (
+          <CitationBadge
+            citationsCount={message.citations_count ?? 0}
+            isVerified={message.is_verified}
+          />
+        )}
+        {time !== '' && <Text style={styles.timeText}>{time}</Text>}
+      </View>
     </View>
   );
 }
@@ -59,5 +74,19 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.md,
     lineHeight: 22,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    gap: spacing.xs,
+  },
+  metaRowUser: { justifyContent: 'flex-end' },
+  metaRowAgent: { justifyContent: 'flex-start' },
+  timeText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '500',
+    letterSpacing: 0.3,
   },
 });

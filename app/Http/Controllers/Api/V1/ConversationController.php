@@ -180,7 +180,22 @@ class ConversationController extends Controller
             'role'    => 'user',
             'content' => $validated['content'],
         ]);
-        $conversation->touch();
+
+        // Auto-title from the first user message if the conversation still
+        // has the default placeholder. Keeps "History" readable.
+        $updates = [];
+        if ($conversation->title === null || $conversation->title === 'New Chat') {
+            $trimmed = trim(preg_replace('/\s+/', ' ', $validated['content']) ?? '');
+            if ($trimmed !== '') {
+                $updates['title'] = mb_substr($trimmed, 0, 60);
+            }
+        }
+        $updates['last_activity_at'] = now();
+
+        if (!empty($updates)) {
+            $conversation->fill($updates);
+        }
+        $conversation->save();
 
         $result = ['user_message' => $userMsg, 'agent_message' => null];
 
