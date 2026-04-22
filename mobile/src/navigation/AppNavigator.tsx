@@ -1,19 +1,50 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, Image, Text, View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { AuthUser, me, onSessionExpired, storedToken } from '../api';
+import { AuthUser, me, onSessionExpired, resolveAssetUrl, storedToken } from '../api';
 import { SignInScreen } from '../screens/SignInScreen';
 import { ConversationListScreen } from '../screens/ConversationListScreen';
 import { ChatDetailScreen } from '../screens/ChatDetailScreen';
 import { AvatarPickerModal } from '../screens/AvatarPickerModal';
-import { colors } from '../theme';
+import { colors, radius, spacing, fontSize, avatarColors, AvatarSlug } from '../theme';
 
 export type RootStackParamList = {
   ConversationList: undefined;
-  ChatDetail: { conversationId: number; avatarSlug: string; avatarName: string };
+  ChatDetail: {
+    conversationId: number;
+    avatarSlug: string;
+    avatarName: string;
+    avatarImageUrl?: string | null;
+  };
   AvatarPicker: undefined;
 };
+
+function ChatHeaderTitle({
+  avatarName,
+  avatarSlug,
+  avatarImageUrl,
+}: {
+  avatarName: string;
+  avatarSlug: string;
+  avatarImageUrl?: string | null;
+}) {
+  const uri = resolveAssetUrl(avatarImageUrl);
+  const accent =
+    avatarSlug in avatarColors ? avatarColors[avatarSlug as AvatarSlug] : colors.primary;
+  return (
+    <View style={headerStyles.row}>
+      {uri ? (
+        <Image source={{ uri }} style={[headerStyles.image, { borderColor: accent }]} />
+      ) : (
+        <View style={[headerStyles.dot, { backgroundColor: accent }]} />
+      )}
+      <Text style={headerStyles.name} numberOfLines={1}>
+        {avatarName}
+      </Text>
+    </View>
+  );
+}
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -74,7 +105,16 @@ export function AppNavigator() {
         <Stack.Screen
           name="ChatDetail"
           component={ChatDetailScreen}
-          options={({ route }) => ({ title: route.params.avatarName })}
+          options={({ route }) => ({
+            title: route.params.avatarName,
+            headerTitle: () => (
+              <ChatHeaderTitle
+                avatarName={route.params.avatarName}
+                avatarSlug={route.params.avatarSlug}
+                avatarImageUrl={route.params.avatarImageUrl}
+              />
+            ),
+          })}
         />
         <Stack.Screen
           name="AvatarPicker"
@@ -92,5 +132,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+});
+
+const headerStyles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center' },
+  image: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    marginRight: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
+  },
+  dot: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    marginRight: spacing.sm,
+  },
+  name: {
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    maxWidth: 220,
   },
 });

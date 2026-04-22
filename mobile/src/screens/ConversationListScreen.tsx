@@ -20,6 +20,7 @@ export function ConversationListScreen() {
       conversationId: conversation.id,
       avatarSlug: conversation.agent?.slug ?? 'nora',
       avatarName: conversation.agent?.name ?? 'Agent',
+      avatarImageUrl: conversation.agent?.avatar_image_url,
     });
   };
 
