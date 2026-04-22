@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthUser, me, onSessionExpired, storedToken } from '../api';
@@ -7,7 +7,7 @@ import { SignInScreen } from '../screens/SignInScreen';
 import { AvatarHomeScreen } from '../screens/AvatarHomeScreen';
 import { ConversationListScreen } from '../screens/ConversationListScreen';
 import { ChatDetailScreen } from '../screens/ChatDetailScreen';
-import { colors, fontSize } from '../theme';
+import { colors } from '../theme';
 
 export type RootStackParamList = {
   AvatarHome: undefined;
@@ -84,28 +84,7 @@ export function AppNavigator() {
         <Stack.Screen
           name="ChatDetail"
           component={ChatDetailScreen}
-          options={({ route }) => ({
-            headerTransparent: true,
-            headerStyle: { backgroundColor: 'transparent' },
-            headerShadowVisible: false,
-            headerTintColor: colors.textPrimary,
-            contentStyle: { backgroundColor: 'transparent' },
-            headerBackground: () => <View style={styles.headerScrim} />,
-            headerTitle: () => (
-              <Text
-                numberOfLines={1}
-                style={{
-                  color: colors.textPrimary,
-                  fontSize: fontSize.md,
-                  fontWeight: '600',
-                  textShadowColor: 'rgba(0,0,0,0.7)',
-                  textShadowRadius: 6,
-                }}
-              >
-                {route.params.avatarName}
-              </Text>
-            ),
-          })}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>
@@ -118,9 +97,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerScrim: {
-    flex: 1,
-    backgroundColor: 'rgba(11,15,23,0.35)',
   },
 });
