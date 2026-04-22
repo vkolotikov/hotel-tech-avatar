@@ -67,7 +67,7 @@ export function AvatarPickerModal() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.md },
+  list: { padding: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xxl },
   centered: {
     flex: 1,
     backgroundColor: colors.background,

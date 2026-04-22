@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMessages } from '../hooks/useMessages';
 import { useChatStream } from '../hooks/useChatStream';
 import { MessageBubble } from '../components/chat/MessageBubble';
@@ -19,19 +18,16 @@ import { MessageInput } from '../components/chat/MessageInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
 import { StreamingMessage } from '../components/chat/StreamingMessage';
 import { resolveAssetUrl } from '../api';
-import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../theme';
+import { colors, spacing, fontSize, avatarColors, AvatarSlug } from '../theme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 
 type Route = RouteProp<RootStackParamList, 'ChatDetail'>;
-
-const HERO_FLEX = 0.55;
 
 export function ChatDetailScreen() {
   const route = useRoute<Route>();
   const { conversationId, avatarSlug, avatarName, avatarImageUrl } = route.params;
   const listRef = useRef<FlatList>(null);
   const headerHeight = useHeaderHeight();
-  const insets = useSafeAreaInsets();
 
   const heroUri = resolveAssetUrl(avatarImageUrl);
   const accent =
@@ -50,19 +46,39 @@ export function ChatDetailScreen() {
     stream.send(text);
   };
 
+  const Background = heroUri
+    ? (
+        <ImageBackground
+          source={{ uri: heroUri }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+      )
+    : (
+        <View
+          style={[StyleSheet.absoluteFill, { backgroundColor: accent, opacity: 0.25 }]}
+        />
+      );
+
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={colors.primary} />
+      <View style={styles.container}>
+        {Background}
+        <View style={styles.centerOverlay}>
+          <ActivityIndicator color={colors.textPrimary} size="large" />
+        </View>
       </View>
     );
   }
 
   if (isError) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Couldn't load messages</Text>
-        <Text style={styles.retryText} onPress={() => refetch()}>Tap to retry</Text>
+      <View style={styles.container}>
+        {Background}
+        <View style={styles.centerOverlay}>
+          <Text style={styles.errorText}>Couldn't load messages</Text>
+          <Text style={styles.retryText} onPress={() => refetch()}>Tap to retry</Text>
+        </View>
       </View>
     );
   }
@@ -71,28 +87,17 @@ export function ChatDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.hero, { flex: HERO_FLEX }]}>
-        {heroUri ? (
-          <ImageBackground
-            source={{ uri: heroUri }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          >
-            <View style={[styles.heroFadeSoft, { paddingTop: headerHeight }]} />
-            <View style={styles.heroFadeMid} />
-            <View style={styles.heroFadeEdge} />
-          </ImageBackground>
-        ) : (
-          <View style={[styles.heroImage, { backgroundColor: accent, opacity: 0.3 }]} />
-        )}
-      </View>
+      {Background}
 
-      <View style={[styles.namePill, { borderColor: accent }]}>
-        <Text style={styles.nameText}>{avatarName}</Text>
-      </View>
+      {/* Top dim so back arrow and header name are readable */}
+      <View style={styles.topDim} pointerEvents="none" />
+
+      {/* Bottom dim + gradient-ish fade for chat legibility */}
+      <View style={styles.bottomDimLight} pointerEvents="none" />
+      <View style={styles.bottomDimHeavy} pointerEvents="none" />
 
       <KeyboardAvoidingView
-        style={styles.chatWrap}
+        style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
@@ -103,7 +108,10 @@ export function ChatDetailScreen() {
           renderItem={({ item }) => (
             <MessageBubble message={item} avatarSlug={avatarSlug} />
           )}
-          contentContainerStyle={[styles.list, { paddingBottom: spacing.md }]}
+          contentContainerStyle={[
+            styles.list,
+            { paddingTop: headerHeight + spacing.md },
+          ]}
           ListFooterComponent={
             stream.isPending ? (
               stream.streamingText ? (
@@ -114,6 +122,7 @@ export function ChatDetailScreen() {
             ) : null
           }
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+          showsVerticalScrollIndicator={false}
         />
         <MessageInput
           conversationId={conversationId}
@@ -127,59 +136,43 @@ export function ChatDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  hero: { width: '100%' },
-  heroImage: { flex: 1, width: '100%', height: '100%' },
-  heroFadeSoft: {
+  overlay: { flex: 1 },
+  topDim: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 120,
+    height: 140,
+    backgroundColor: 'rgba(11,15,23,0.45)',
+  },
+  bottomDimLight: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '60%',
+    backgroundColor: 'rgba(11,15,23,0.45)',
+  },
+  bottomDimHeavy: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '30%',
     backgroundColor: 'rgba(11,15,23,0.35)',
   },
-  heroFadeMid: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    height: 80,
-    backgroundColor: 'rgba(11,15,23,0.55)',
-  },
-  heroFadeEdge: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 40,
-    backgroundColor: colors.background,
-  },
-  namePill: {
-    position: 'absolute',
-    top: '55%',
-    alignSelf: 'center',
-    transform: [{ translateY: -18 }],
-    paddingVertical: spacing.xs,
+  list: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
     paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(20,26,38,0.85)',
-    borderWidth: 1,
+    paddingBottom: spacing.md,
   },
-  nameText: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
-  chatWrap: {
-    flex: 1 - HERO_FLEX,
-    backgroundColor: colors.background,
-  },
-  list: { padding: spacing.md, paddingTop: spacing.lg },
-  centered: {
-    flex: 1,
-    backgroundColor: colors.background,
+  centerOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(11,15,23,0.5)',
   },
-  errorText: { color: colors.textSecondary, fontSize: fontSize.md, marginBottom: spacing.sm },
+  errorText: { color: colors.textPrimary, fontSize: fontSize.md, marginBottom: spacing.sm },
   retryText: { color: colors.primary, fontSize: fontSize.md, fontWeight: '600' },
 });

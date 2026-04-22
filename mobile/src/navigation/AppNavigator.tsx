@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthUser, me, onSessionExpired, storedToken } from '../api';
@@ -7,7 +7,7 @@ import { SignInScreen } from '../screens/SignInScreen';
 import { ConversationListScreen } from '../screens/ConversationListScreen';
 import { ChatDetailScreen } from '../screens/ChatDetailScreen';
 import { AvatarPickerModal } from '../screens/AvatarPickerModal';
-import { colors } from '../theme';
+import { colors, fontSize } from '../theme';
 
 export type RootStackParamList = {
   ConversationList: undefined;
@@ -79,14 +79,27 @@ export function AppNavigator() {
         <Stack.Screen
           name="ChatDetail"
           component={ChatDetailScreen}
-          options={{
-            title: '',
+          options={({ route }) => ({
             headerTransparent: true,
             headerStyle: { backgroundColor: 'transparent' },
             headerShadowVisible: false,
             headerTintColor: colors.textPrimary,
             contentStyle: { backgroundColor: 'transparent' },
-          }}
+            headerTitle: () => (
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: colors.textPrimary,
+                  fontSize: fontSize.md,
+                  fontWeight: '600',
+                  textShadowColor: 'rgba(0,0,0,0.6)',
+                  textShadowRadius: 4,
+                }}
+              >
+                {route.params.avatarName}
+              </Text>
+            ),
+          })}
         />
         <Stack.Screen
           name="AvatarPicker"
