@@ -19,8 +19,8 @@ export function MessageBubble({ message, avatarSlug }: Props) {
         style={[
           styles.bubble,
           isUser
-            ? { backgroundColor: colors.primary }
-            : { backgroundColor: colors.surface, borderLeftColor: accent, borderLeftWidth: 3 },
+            ? [styles.bubbleUser, { borderColor: accent }]
+            : [styles.bubbleAgent, { borderLeftColor: accent }],
         ]}
       >
         <Text style={styles.text}>{message.content}</Text>
@@ -36,13 +36,24 @@ export function MessageBubble({ message, avatarSlug }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { marginBottom: spacing.md },
+  row: { marginBottom: spacing.sm + 2 },
   rowUser: { alignItems: 'flex-end' },
   rowAgent: { alignItems: 'flex-start' },
   bubble: {
     maxWidth: '85%',
-    padding: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.lg,
+  },
+  bubbleUser: {
+    backgroundColor: 'rgba(124,92,255,0.26)',
+    borderWidth: 1,
+    borderTopRightRadius: 4,
+  },
+  bubbleAgent: {
+    backgroundColor: 'rgba(20,26,38,0.82)',
+    borderLeftWidth: 3,
+    borderTopLeftRadius: 4,
   },
   text: {
     color: colors.textPrimary,
