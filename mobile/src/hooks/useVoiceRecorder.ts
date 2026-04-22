@@ -9,7 +9,10 @@ type State = {
   error: Error | null;
 };
 
-export function useVoiceRecorder(onTranscript: (text: string) => void) {
+export function useVoiceRecorder(
+  conversationId: number,
+  onTranscript: (text: string) => void,
+) {
   const [state, setState] = useState<State>({
     isRecording: false,
     isTranscribing: false,
@@ -56,14 +59,14 @@ export function useVoiceRecorder(onTranscript: (text: string) => void) {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       if (!uri) throw new Error('No recording URI');
-      const { transcript } = await transcribeAudio(uri);
+      const { transcript } = await transcribeAudio(uri, conversationId);
       onTranscript(transcript);
       setState({ isRecording: false, isTranscribing: false, error: null });
     } catch (error) {
       setState({ isRecording: false, isTranscribing: false, error: error as Error });
       Alert.alert('Transcription failed', (error as Error).message);
     }
-  }, [onTranscript]);
+  }, [conversationId, onTranscript]);
 
   return { ...state, start, stop };
 }

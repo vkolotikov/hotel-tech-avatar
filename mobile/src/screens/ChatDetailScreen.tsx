@@ -82,7 +82,11 @@ export function ChatDetailScreen() {
         }
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
       />
-      <MessageInput onSend={handleSend} disabled={stream.isPending} />
+      <MessageInput
+        conversationId={conversationId}
+        onSend={handleSend}
+        disabled={stream.isPending}
+      />
     </KeyboardAvoidingView>
   );
 }

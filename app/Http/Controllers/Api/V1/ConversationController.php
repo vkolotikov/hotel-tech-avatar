@@ -147,8 +147,12 @@ class ConversationController extends Controller
     }
 
     /** Delete a conversation. */
-    public function destroy(Conversation $conversation): JsonResponse
+    public function destroy(Request $request, Conversation $conversation): JsonResponse
     {
+        $user = $request->user('sanctum');
+        if ($user && $conversation->user_id !== null && $conversation->user_id !== $user->id) {
+            abort(403);
+        }
         $conversation->delete();
         return response()->json(['message' => 'Deleted']);
     }

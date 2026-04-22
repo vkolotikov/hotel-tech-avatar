@@ -1,7 +1,7 @@
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useConversations } from '../hooks/useConversations';
+import { useConversations, useDeleteConversation } from '../hooks/useConversations';
 import { ConversationCard } from '../components/conversations/ConversationCard';
 import { EmptyState } from '../components/conversations/EmptyState';
 import { colors, spacing, radius, fontSize } from '../theme';
@@ -13,6 +13,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'ConversationList'>;
 export function ConversationListScreen() {
   const navigation = useNavigation<Nav>();
   const { data, isLoading, isError, refetch, isRefetching } = useConversations();
+  const deleteMutation = useDeleteConversation();
 
   const handleOpen = (conversation: Conversation) => {
     navigation.navigate('ChatDetail', {
@@ -20,6 +21,28 @@ export function ConversationListScreen() {
       avatarSlug: conversation.agent?.slug ?? 'nora',
       avatarName: conversation.agent?.name ?? 'Agent',
     });
+  };
+
+  const handleLongPress = (conversation: Conversation) => {
+    const label = conversation.title ?? 'this conversation';
+    Alert.alert(
+      'Delete conversation',
+      `Delete "${label}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMutation.mutateAsync(conversation.id);
+            } catch (err) {
+              Alert.alert('Delete failed', (err as Error).message);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleNewChat = () => navigation.navigate('AvatarPicker');
@@ -55,7 +78,11 @@ export function ConversationListScreen() {
         data={conversations}
         keyExtractor={(c) => String(c.id)}
         renderItem={({ item }) => (
-          <ConversationCard conversation={item} onPress={handleOpen} />
+          <ConversationCard
+            conversation={item}
+            onPress={handleOpen}
+            onLongPress={handleLongPress}
+          />
         )}
         contentContainerStyle={styles.list}
         onRefresh={refetch}

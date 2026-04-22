@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createConversation, listConversations } from '../api/conversations';
+import { createConversation, deleteConversation, listConversations } from '../api/conversations';
 
 export const conversationsKey = ['conversations'] as const;
 
@@ -15,6 +15,16 @@ export function useCreateConversation() {
   return useMutation({
     mutationFn: ({ agentId, title }: { agentId: number; title: string | null }) =>
       createConversation(agentId, title),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: conversationsKey });
+    },
+  });
+}
+
+export function useDeleteConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deleteConversation(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: conversationsKey });
     },

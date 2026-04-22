@@ -8,28 +8,35 @@ function baseUrl(): string {
   return url.replace(/\/$/, '');
 }
 
-export async function transcribeAudio(uri: string): Promise<{ transcript: string }> {
+export async function transcribeAudio(
+  uri: string,
+  conversationId: number,
+): Promise<{ transcript: string }> {
   const token = await SecureStore.getItemAsync(TOKEN_KEY);
   if (!token) throw new Error('Not authenticated');
 
   const form = new FormData();
-  form.append('audio', {
+  form.append('file', {
     uri,
     name: 'recording.m4a',
     type: 'audio/m4a',
   } as any);
 
-  const response = await fetch(`${baseUrl()}/api/v1/transcribe`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/json',
+  const response = await fetch(
+    `${baseUrl()}/api/v1/conversations/${conversationId}/voice/transcribe`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      body: form,
     },
-    body: form,
-  });
+  );
 
   if (!response.ok) {
     throw new Error(`Transcribe failed: ${response.status}`);
   }
-  return response.json();
+  const body = await response.json();
+  return { transcript: body.text ?? body.transcript ?? '' };
 }

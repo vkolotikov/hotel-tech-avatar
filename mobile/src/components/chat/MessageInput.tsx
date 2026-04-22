@@ -6,14 +6,15 @@ import { VoiceRecordButton } from './VoiceRecordButton';
 import { colors, spacing, radius, fontSize } from '../../theme';
 
 type Props = {
+  conversationId: number;
   onSend: (text: string) => void;
   disabled: boolean;
 };
 
-export function MessageInput({ onSend, disabled }: Props) {
+export function MessageInput({ conversationId, onSend, disabled }: Props) {
   const [text, setText] = useState('');
   const insets = useSafeAreaInsets();
-  const recorder = useVoiceRecorder((transcript) => setText(transcript));
+  const recorder = useVoiceRecorder(conversationId, (transcript) => setText(transcript));
 
   const handleSend = () => {
     const trimmed = text.trim();

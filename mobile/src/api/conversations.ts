@@ -19,3 +19,10 @@ export async function createConversation(
 export async function getConversation(id: number): Promise<Conversation> {
   return request<Conversation>(`/api/v1/conversations/${id}`, { auth: true });
 }
+
+export async function deleteConversation(id: number): Promise<void> {
+  await request<{ message: string }>(`/api/v1/conversations/${id}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}
