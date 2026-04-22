@@ -1,8 +1,8 @@
 import { request } from './index';
 import type { Message, SendMessageResponse } from '../types/models';
 
-export async function listMessages(conversationId: number): Promise<{ data: Message[] }> {
-  return request<{ data: Message[] }>(
+export async function listMessages(conversationId: number): Promise<Message[]> {
+  return request<Message[]>(
     `/api/v1/conversations/${conversationId}/messages`,
     { auth: true },
   );

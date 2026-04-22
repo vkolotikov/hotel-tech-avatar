@@ -47,7 +47,7 @@ export function AvatarPickerModal() {
     <FlatList
       style={styles.container}
       contentContainerStyle={styles.list}
-      data={data.data}
+      data={data}
       keyExtractor={(a) => a.slug}
       renderItem={({ item }) => (
         <AvatarPickerCard avatar={item} onPress={handleSelect} />

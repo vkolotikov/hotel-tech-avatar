@@ -29,10 +29,10 @@ export function ChatDetailScreen() {
   const stream = useChatStream(conversationId);
 
   useEffect(() => {
-    if (data?.data.length) {
+    if (data?.length) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     }
-  }, [data?.data.length]);
+  }, [data?.length]);
 
   const handleSend = (text: string) => {
     stream.send(text);
@@ -55,7 +55,7 @@ export function ChatDetailScreen() {
     );
   }
 
-  const messages = data?.data ?? [];
+  const messages = data ?? [];
 
   return (
     <KeyboardAvoidingView
