@@ -1,5 +1,4 @@
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useConversations, useDeleteConversation } from '../hooks/useConversations';
@@ -13,7 +12,6 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'ConversationList'>;
 
 export function ConversationListScreen() {
   const navigation = useNavigation<Nav>();
-  const insets = useSafeAreaInsets();
   const { data, isLoading, isError, refetch, isRefetching } = useConversations();
   const deleteMutation = useDeleteConversation();
 
@@ -48,7 +46,7 @@ export function ConversationListScreen() {
     );
   };
 
-  const handleNewChat = () => navigation.navigate('AvatarPicker');
+  const handleNewChat = () => navigation.navigate('AvatarHome');
 
   if (isLoading) {
     return (
@@ -91,13 +89,6 @@ export function ConversationListScreen() {
         onRefresh={refetch}
         refreshing={isRefetching}
       />
-      <Pressable
-        style={[styles.fab, { bottom: spacing.lg + insets.bottom }]}
-        onPress={handleNewChat}
-        accessibilityLabel="Start new chat"
-      >
-        <Text style={styles.fabText}>+</Text>
-      </Pressable>
     </View>
   );
 }
@@ -111,7 +102,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.lg,
   },
-  list: { padding: spacing.md, paddingBottom: spacing.xxl },
+  list: { padding: spacing.md, paddingBottom: spacing.xl },
   errorText: { color: colors.textSecondary, marginBottom: spacing.md },
   retryButton: {
     backgroundColor: colors.primary,
@@ -120,20 +111,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   retryText: { color: colors.textPrimary, fontWeight: '600' },
-  fab: {
-    position: 'absolute',
-    right: spacing.lg,
-    width: 60,
-    height: 60,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-  },
-  fabText: { color: colors.textPrimary, fontSize: 30, fontWeight: '300', marginTop: -2 },
 });

@@ -1,8 +1,10 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Audio } from 'expo-av';
 import EventSource from 'react-native-sse';
 import * as SecureStore from 'expo-secure-store';
 import { sendMessage } from '../api/messages';
+import { fetchSpeechDataUrl } from '../api/voice';
 import { messagesKey } from './useMessages';
 import type { Message, StreamEvent } from '../types/models';
 
@@ -18,7 +20,10 @@ type State = {
   isPending: boolean;
   streamingText: string;
   error: Error | null;
+  isSpeaking: boolean;
 };
+
+type SendOpts = { speak?: boolean };
 
 export function useChatStream(conversationId: number) {
   const qc = useQueryClient();
@@ -26,8 +31,62 @@ export function useChatStream(conversationId: number) {
     isPending: false,
     streamingText: '',
     error: null,
+    isSpeaking: false,
   });
   const esRef = useRef<EventSource | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  useEffect(() => {
+    return () => {
+      soundRef.current?.unloadAsync().catch(() => {});
+      soundRef.current = null;
+    };
+  }, []);
+
+  const stopSpeaking = useCallback(async () => {
+    const s = soundRef.current;
+    soundRef.current = null;
+    if (s) {
+      try {
+        await s.stopAsync();
+      } catch {}
+      try {
+        await s.unloadAsync();
+      } catch {}
+    }
+    setState((prev) => ({ ...prev, isSpeaking: false }));
+  }, []);
+
+  const playReply = useCallback(
+    async (text: string) => {
+      if (!text.trim()) return;
+      await stopSpeaking();
+      try {
+        setState((prev) => ({ ...prev, isSpeaking: true }));
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+        });
+        const dataUrl = await fetchSpeechDataUrl(conversationId, text);
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: dataUrl },
+          { shouldPlay: true },
+        );
+        soundRef.current = sound;
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            sound.unloadAsync().catch(() => {});
+            if (soundRef.current === sound) soundRef.current = null;
+            setState((prev) => ({ ...prev, isSpeaking: false }));
+          }
+        });
+      } catch (err) {
+        console.warn('TTS playback failed', err);
+        setState((prev) => ({ ...prev, isSpeaking: false }));
+      }
+    },
+    [conversationId, stopSpeaking],
+  );
 
   const appendMessages = useCallback(
     (newMessages: Message[]) => {
@@ -40,7 +99,7 @@ export function useChatStream(conversationId: number) {
   );
 
   const openStream = useCallback(
-    async (userMessage: Message, placeholderId: number) => {
+    async (userMessage: Message, placeholderId: number, speak: boolean) => {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const url = `${baseUrl()}/api/v1/conversations/${conversationId}/stream?message_id=${placeholderId}`;
       const es = new EventSource(url, {
@@ -80,16 +139,19 @@ export function useChatStream(conversationId: number) {
             es.close();
             esRef.current = null;
             appendMessages([userMessage, finalMessage]);
-            setState({ isPending: false, streamingText: '', error: null });
+            setState((s) => ({ ...s, isPending: false, streamingText: '', error: null }));
+            if (speak && buffer) {
+              void playReply(buffer);
+            }
           } else if (event.type === 'error') {
             es.close();
             esRef.current = null;
-            setState({ isPending: false, streamingText: '', error: new Error(event.message) });
+            setState((s) => ({ ...s, isPending: false, streamingText: '', error: new Error(event.message) }));
           }
         } catch (err) {
           es.close();
           esRef.current = null;
-          setState({ isPending: false, streamingText: '', error: err as Error });
+          setState((s) => ({ ...s, isPending: false, streamingText: '', error: err as Error }));
         }
       });
 
@@ -99,47 +161,54 @@ export function useChatStream(conversationId: number) {
         setState((s) => ({ ...s, isPending: false, error: new Error('Stream failed') }));
       });
     },
-    [conversationId, appendMessages],
+    [conversationId, appendMessages, playReply],
   );
 
   const sendSync = useCallback(
-    async (text: string) => {
+    async (text: string, speak: boolean) => {
       const response = await sendMessage(conversationId, text);
       const toAppend: Message[] = [response.user_message];
       if (response.agent_message) toAppend.push(response.agent_message);
       appendMessages(toAppend);
-      setState({ isPending: false, streamingText: '', error: null });
+      setState((s) => ({ ...s, isPending: false, streamingText: '', error: null }));
+      if (speak && response.agent_message?.content) {
+        void playReply(response.agent_message.content);
+      }
     },
-    [conversationId, appendMessages],
+    [conversationId, appendMessages, playReply],
   );
 
   const send = useCallback(
-    async (text: string) => {
-      setState({ isPending: true, streamingText: '', error: null });
+    async (text: string, opts?: SendOpts) => {
+      const speak = opts?.speak ?? false;
+      setState((s) => ({ ...s, isPending: true, streamingText: '', error: null }));
       try {
         const response = await sendMessage(conversationId, text);
         if (response.agent_message) {
           appendMessages([response.user_message, response.agent_message]);
-          setState({ isPending: false, streamingText: '', error: null });
+          setState((s) => ({ ...s, isPending: false, streamingText: '', error: null }));
+          if (speak && response.agent_message.content) {
+            void playReply(response.agent_message.content);
+          }
           return;
         }
-        await openStream(response.user_message, 0);
+        await openStream(response.user_message, 0, speak);
       } catch (error) {
         try {
-          await sendSync(text);
+          await sendSync(text, speak);
         } catch (e) {
-          setState({ isPending: false, streamingText: '', error: e as Error });
+          setState((s) => ({ ...s, isPending: false, streamingText: '', error: e as Error }));
         }
       }
     },
-    [conversationId, openStream, sendSync, appendMessages],
+    [conversationId, openStream, sendSync, appendMessages, playReply],
   );
 
   const cancel = useCallback(() => {
     esRef.current?.close();
     esRef.current = null;
-    setState({ isPending: false, streamingText: '', error: null });
+    setState((s) => ({ ...s, isPending: false, streamingText: '', error: null }));
   }, []);
 
-  return { ...state, send, cancel };
+  return { ...state, send, cancel, stopSpeaking };
 }

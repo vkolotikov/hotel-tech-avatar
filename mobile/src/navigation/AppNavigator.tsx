@@ -4,12 +4,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthUser, me, onSessionExpired, storedToken } from '../api';
 import { SignInScreen } from '../screens/SignInScreen';
+import { AvatarHomeScreen } from '../screens/AvatarHomeScreen';
 import { ConversationListScreen } from '../screens/ConversationListScreen';
 import { ChatDetailScreen } from '../screens/ChatDetailScreen';
-import { AvatarPickerModal } from '../screens/AvatarPickerModal';
 import { colors, fontSize } from '../theme';
 
 export type RootStackParamList = {
+  AvatarHome: undefined;
   ConversationList: undefined;
   ChatDetail: {
     conversationId: number;
@@ -17,7 +18,6 @@ export type RootStackParamList = {
     avatarName: string;
     avatarImageUrl?: string | null;
   };
-  AvatarPicker: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -72,9 +72,14 @@ export function AppNavigator() {
         }}
       >
         <Stack.Screen
+          name="AvatarHome"
+          component={AvatarHomeScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="ConversationList"
           component={ConversationListScreen}
-          options={{ title: 'WellnessAI' }}
+          options={{ title: 'History' }}
         />
         <Stack.Screen
           name="ChatDetail"
@@ -85,6 +90,7 @@ export function AppNavigator() {
             headerShadowVisible: false,
             headerTintColor: colors.textPrimary,
             contentStyle: { backgroundColor: 'transparent' },
+            headerBackground: () => <View style={styles.headerScrim} />,
             headerTitle: () => (
               <Text
                 numberOfLines={1}
@@ -92,19 +98,14 @@ export function AppNavigator() {
                   color: colors.textPrimary,
                   fontSize: fontSize.md,
                   fontWeight: '600',
-                  textShadowColor: 'rgba(0,0,0,0.6)',
-                  textShadowRadius: 4,
+                  textShadowColor: 'rgba(0,0,0,0.7)',
+                  textShadowRadius: 6,
                 }}
               >
                 {route.params.avatarName}
               </Text>
             ),
           })}
-        />
-        <Stack.Screen
-          name="AvatarPicker"
-          component={AvatarPickerModal}
-          options={{ presentation: 'modal', title: 'Choose an avatar' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
@@ -117,5 +118,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerScrim: {
+    flex: 1,
+    backgroundColor: 'rgba(11,15,23,0.35)',
   },
 });

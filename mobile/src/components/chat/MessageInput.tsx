@@ -7,14 +7,18 @@ import { colors, spacing, radius, fontSize } from '../../theme';
 
 type Props = {
   conversationId: number;
-  onSend: (text: string) => void;
+  onSend: (text: string, opts?: { voice?: boolean }) => void;
   disabled: boolean;
 };
 
 export function MessageInput({ conversationId, onSend, disabled }: Props) {
   const [text, setText] = useState('');
   const insets = useSafeAreaInsets();
-  const recorder = useVoiceRecorder(conversationId, (transcript) => setText(transcript));
+  const recorder = useVoiceRecorder(conversationId, (transcript) => {
+    const trimmed = transcript.trim();
+    if (!trimmed) return;
+    onSend(trimmed, { voice: true });
+  });
 
   const handleSend = () => {
     const trimmed = text.trim();

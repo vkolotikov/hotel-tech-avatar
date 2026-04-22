@@ -5,6 +5,7 @@ import {
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -42,8 +43,8 @@ export function ChatDetailScreen() {
     }
   }, [data?.length]);
 
-  const handleSend = (text: string) => {
-    stream.send(text);
+  const handleSend = (text: string, opts?: { voice?: boolean }) => {
+    stream.send(text, { speak: opts?.voice === true });
   };
 
   const Background = heroUri
@@ -124,6 +125,15 @@ export function ChatDetailScreen() {
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           showsVerticalScrollIndicator={false}
         />
+        {stream.isSpeaking && (
+          <Pressable
+            onPress={stream.stopSpeaking}
+            style={[styles.speakingPill, { borderColor: accent }]}
+          >
+            <View style={[styles.speakingDot, { backgroundColor: accent }]} />
+            <Text style={styles.speakingText}>{avatarName} is speaking · tap to stop</Text>
+          </Pressable>
+        )}
         <MessageInput
           conversationId={conversationId}
           onSend={handleSend}
@@ -175,4 +185,26 @@ const styles = StyleSheet.create({
   },
   errorText: { color: colors.textPrimary, fontSize: fontSize.md, marginBottom: spacing.sm },
   retryText: { color: colors.primary, fontSize: fontSize.md, fontWeight: '600' },
+  speakingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: 999,
+    borderWidth: 1,
+    backgroundColor: 'rgba(20,26,38,0.85)',
+  },
+  speakingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: spacing.sm,
+  },
+  speakingText: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: '500',
+  },
 });
