@@ -11,28 +11,55 @@ import {
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { AuthUser, login } from '../api';
+import { AuthUser, login, register } from '../api';
 import { colors, spacing, radius, fontSize } from '../theme';
 
 type Props = {
   onSignedIn: (user: AuthUser) => void;
 };
 
+type Mode = 'signin' | 'signup';
+
 export function SignInScreen({ onSignedIn }: Props) {
-  const [email, setEmail] = useState('test@example.com');
-  const [password, setPassword] = useState('password');
+  const [mode, setMode] = useState<Mode>('signin');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSignIn = async () => {
+  const deviceName = `${Platform.OS}-expo`;
+
+  const handleSubmit = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      Alert.alert('Missing info', 'Email and password are required.');
+      return;
+    }
+    if (mode === 'signup' && !name.trim()) {
+      Alert.alert('Missing info', 'Please enter your name.');
+      return;
+    }
+    if (mode === 'signup' && password.length < 8) {
+      Alert.alert('Password too short', 'Pick at least 8 characters.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const user = await login(email, password, `${Platform.OS}-expo`);
+      const user = mode === 'signin'
+        ? await login(trimmedEmail, password, deviceName)
+        : await register(name.trim(), trimmedEmail, password, deviceName);
       onSignedIn(user);
     } catch (error) {
-      Alert.alert('Sign in failed', (error as Error).message);
+      const label = mode === 'signin' ? 'Sign in failed' : 'Sign up failed';
+      Alert.alert(label, (error as Error).message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleMode = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin');
   };
 
   return (
@@ -42,7 +69,44 @@ export function SignInScreen({ onSignedIn }: Props) {
     >
       <View style={styles.card}>
         <Text style={styles.brand}>WellnessAI</Text>
-        <Text style={styles.subheading}>Sign in to continue</Text>
+        <Text style={styles.subheading}>
+          {mode === 'signin' ? 'Sign in to continue' : 'Create your account'}
+        </Text>
+
+        <View style={styles.modeTabs}>
+          <Pressable
+            onPress={() => setMode('signin')}
+            style={[styles.modeTab, mode === 'signin' && styles.modeTabActive]}
+          >
+            <Text style={[styles.modeTabText, mode === 'signin' && styles.modeTabTextActive]}>
+              Sign in
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setMode('signup')}
+            style={[styles.modeTab, mode === 'signup' && styles.modeTabActive]}
+          >
+            <Text style={[styles.modeTabText, mode === 'signup' && styles.modeTabTextActive]}>
+              Sign up
+            </Text>
+          </Pressable>
+        </View>
+
+        {mode === 'signup' && (
+          <>
+            <Text style={styles.label}>Name</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              autoComplete="name"
+              placeholder="Your name"
+              placeholderTextColor={colors.textMuted}
+            />
+          </>
+        )}
+
         <Text style={styles.label}>Email</Text>
         <TextInput
           style={styles.input}
@@ -54,25 +118,38 @@ export function SignInScreen({ onSignedIn }: Props) {
           placeholder="you@example.com"
           placeholderTextColor={colors.textMuted}
         />
+
         <Text style={styles.label}>Password</Text>
         <TextInput
           style={styles.input}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          placeholder="••••••••"
+          autoComplete={mode === 'signup' ? 'new-password' : 'password'}
+          placeholder={mode === 'signup' ? 'At least 8 characters' : '••••••••'}
           placeholderTextColor={colors.textMuted}
         />
+
         <Pressable
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSignIn}
+          onPress={handleSubmit}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color={colors.textPrimary} />
           ) : (
-            <Text style={styles.buttonText}>Sign in</Text>
+            <Text style={styles.buttonText}>
+              {mode === 'signin' ? 'Sign in' : 'Create account'}
+            </Text>
           )}
+        </Pressable>
+
+        <Pressable onPress={toggleMode} style={styles.switchLink}>
+          <Text style={styles.switchLinkText}>
+            {mode === 'signin'
+              ? 'New here? Create an account'
+              : 'Already have an account? Sign in'}
+          </Text>
         </Pressable>
       </View>
       <StatusBar style="light" />
@@ -103,6 +180,30 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     marginBottom: spacing.lg,
   },
+  modeTabs: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.pill,
+    padding: 4,
+    marginBottom: spacing.md,
+  },
+  modeTab: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: radius.pill,
+  },
+  modeTabActive: {
+    backgroundColor: colors.primary,
+  },
+  modeTabText: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  modeTabTextActive: {
+    color: colors.textPrimary,
+  },
   label: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
@@ -129,5 +230,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.md,
     fontWeight: '600',
+  },
+  switchLink: {
+    marginTop: spacing.md,
+    alignItems: 'center',
+  },
+  switchLinkText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
   },
 });

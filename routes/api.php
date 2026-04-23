@@ -17,7 +17,8 @@ Route::prefix('v1')->group(function () {
     ]));
 
     // ─── Mobile Auth (Sanctum personal access tokens) ──────────────────────
-    Route::post('auth/login', [AuthController::class, 'login']);
+    Route::post('auth/register', [AuthController::class, 'register']);
+    Route::post('auth/login',    [AuthController::class, 'login']);
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('me',           [AuthController::class, 'me']);
         Route::post('auth/logout', [AuthController::class, 'logout']);

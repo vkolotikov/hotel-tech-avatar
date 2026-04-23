@@ -13,6 +13,38 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    /**
+     * Register a new user and return a Sanctum token so the mobile client
+     * stays signed in without needing a separate login round-trip. Same
+     * response shape as login().
+     */
+    public function register(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name'        => ['required', 'string', 'max:100'],
+            'email'       => ['required', 'email', 'max:190', 'unique:users,email'],
+            'password'    => ['required', 'string', 'min:8', 'max:120'],
+            'device_name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $user = User::create([
+            'name'     => $data['name'],
+            'email'    => strtolower($data['email']),
+            'password' => Hash::make($data['password']),
+        ]);
+
+        $token = $user->createToken($data['device_name'])->plainTextToken;
+
+        return response()->json([
+            'token' => $token,
+            'user'  => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+            ],
+        ], 201);
+    }
+
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([

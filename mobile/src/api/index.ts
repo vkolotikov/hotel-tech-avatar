@@ -83,6 +83,20 @@ export async function login(
   return body.user;
 }
 
+export async function register(
+  name: string,
+  email: string,
+  password: string,
+  deviceName: string,
+): Promise<AuthUser> {
+  const body = await request<{ token: string; user: AuthUser }>('/api/v1/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ name, email, password, device_name: deviceName }),
+  });
+  await SecureStore.setItemAsync(TOKEN_KEY, body.token);
+  return body.user;
+}
+
 export async function me(): Promise<AuthUser> {
   return request<AuthUser>('/api/v1/me', { auth: true });
 }
