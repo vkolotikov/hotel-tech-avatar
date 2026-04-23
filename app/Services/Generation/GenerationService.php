@@ -58,6 +58,20 @@ final class GenerationService
             $systemPrompt .= "\n\n--- Knowledge Base ---\n{$knowledge}";
         }
 
+        // Conversational style baseline — keeps replies short and offers
+        // tappable follow-ups in the mobile UI. The JSON contract is
+        // enforced by response_format on the API call.
+        $systemPrompt .= "\n\n--- Conversation style ---\n"
+            . "Reply SHORT by default — 2 to 4 sentences, like a real chat. Don't dump lists or long explanations unless the user explicitly asks for detail.\n"
+            . "If useful, end your reply with ONE natural follow-up question.\n"
+            . "Always return a JSON object with this exact shape and nothing else:\n"
+            . "{\n  \"reply\": \"your short answer here\",\n  \"suggestions\": [\"short follow-up 1\", \"short follow-up 2\", \"Tell me more\"]\n}\n"
+            . "Rules for suggestions:\n"
+            . "- 2 to 3 items, each under 50 characters.\n"
+            . "- First two are natural next questions the user might want to tap.\n"
+            . "- If your reply was short (default), include \"Tell me more\" as the last item so the user can request detail.\n"
+            . "- If the user explicitly asked for detail and you gave a longer reply, you may drop \"Tell me more\".";
+
         // Build message history
         $history = $conversation->messages()
             ->orderByDesc('created_at')
@@ -80,12 +94,13 @@ final class GenerationService
         try {
             $response = $this->llmClient->chat(new \App\Services\Llm\LlmRequest(
                 messages: $messages,
-                model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
+                model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-5.4'),
                 temperature: (float) config('services.openai.temperature', 0.3),
-                maxTokens: (int) config('services.openai.max_output_tokens', 220),
+                maxTokens: (int) config('services.openai.max_output_tokens', 180),
                 tools: [],
                 purpose: 'generation',
                 messageId: null,
+                responseFormat: ['type' => 'json_object'],
             ));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('GenerationService: LLM call failed', [
@@ -103,8 +118,10 @@ final class GenerationService
             ]);
         }
 
-        // Conditional verification with revision loop
-        $responseText = $response->content;
+        // The model is instructed to return JSON {reply, suggestions}; parse
+        // it here and keep the freeform text for downstream verification.
+        [$responseText, $suggestions] = $this->parseJsonReply($response->content);
+
         $verificationLatencyMs = 0;
         $isVerified = null;
         $verificationFailures = null;
@@ -153,12 +170,13 @@ final class GenerationService
                 try {
                     $response = $this->llmClient->chat(new \App\Services\Llm\LlmRequest(
                         messages: $messages,
-                        model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
+                        model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-5.4'),
                         temperature: (float) config('services.openai.temperature', 0.3),
-                        maxTokens: (int) config('services.openai.max_output_tokens', 220),
+                        maxTokens: (int) config('services.openai.max_output_tokens', 180),
                         tools: [],
                         purpose: 'generation',
                         messageId: null,
+                        responseFormat: ['type' => 'json_object'],
                     ));
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::error('GenerationService: Revision LLM call failed', [
@@ -169,7 +187,7 @@ final class GenerationService
                     break;
                 }
 
-                $responseText = $response->content;
+                [$responseText, $suggestions] = $this->parseJsonReply($response->content);
                 $messages[] = ['role' => 'assistant', 'content' => $responseText];
 
                 try {
@@ -215,7 +233,51 @@ final class GenerationService
             'is_verified'            => $isVerified,
             'verification_failures_json' => $verificationFailures,
             'verification_latency_ms' => $verificationLatencyMs > 0 ? $verificationLatencyMs : null,
+            'ui_json'                => !empty($suggestions) ? ['suggestions' => $suggestions] : null,
         ]);
+    }
+
+    /**
+     * Parse a JSON-shaped reply ({reply, suggestions}) tolerantly. If the
+     * model slipped into free text or markdown-fenced JSON, recover
+     * gracefully and return the raw text with no suggestions.
+     *
+     * @return array{0:string,1:array<int,string>} [replyText, suggestions]
+     */
+    private function parseJsonReply(string $raw): array
+    {
+        $trimmed = trim($raw);
+
+        // Strip ``` fences if the model added them.
+        if (str_starts_with($trimmed, '```')) {
+            $trimmed = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', $trimmed) ?? $trimmed;
+            $trimmed = trim($trimmed);
+        }
+
+        $decoded = json_decode($trimmed, true);
+        if (!is_array($decoded)) {
+            return [$raw, []];
+        }
+
+        $reply = isset($decoded['reply']) && is_string($decoded['reply'])
+            ? trim($decoded['reply'])
+            : $raw;
+
+        $rawSuggestions = $decoded['suggestions'] ?? [];
+        $suggestions = [];
+        if (is_array($rawSuggestions)) {
+            foreach ($rawSuggestions as $s) {
+                if (is_string($s)) {
+                    $clean = trim($s);
+                    if ($clean !== '') {
+                        $suggestions[] = mb_substr($clean, 0, 80);
+                    }
+                }
+                if (count($suggestions) >= 4) break;
+            }
+        }
+
+        return [$reply === '' ? $raw : $reply, $suggestions];
     }
 
     private function buildRevisionPrompt(\App\Services\Verification\Drivers\VerificationResult $verificationResult): array

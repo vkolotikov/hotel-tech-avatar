@@ -20,6 +20,7 @@ import { MessageInput } from '../components/chat/MessageInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
 import { StreamingMessage } from '../components/chat/StreamingMessage';
 import { StarterPrompts } from '../components/chat/StarterPrompts';
+import { SuggestionChips } from '../components/chat/SuggestionChips';
 import { resolveAssetUrl } from '../api';
 import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../theme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
@@ -163,7 +164,17 @@ export function ChatDetailScreen() {
                 suggestions={promptSuggestions}
                 onPick={(text) => handleSend(text)}
               />
-            ) : null
+            ) : (() => {
+                const last = messages[messages.length - 1];
+                const chips = last?.role === 'agent' ? last.ui_json?.suggestions ?? [] : [];
+                return chips.length > 0 ? (
+                  <SuggestionChips
+                    suggestions={chips}
+                    avatarSlug={avatarSlug}
+                    onPick={(text) => handleSend(text)}
+                  />
+                ) : null;
+              })()
           }
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           showsVerticalScrollIndicator={false}

@@ -41,6 +41,7 @@ export interface Message {
   verification_failures_json: unknown[] | null;
   verification_latency_ms: number | null;
   citations_count?: number;
+  ui_json?: { suggestions?: string[] } | null;
   created_at: string;
 }
 

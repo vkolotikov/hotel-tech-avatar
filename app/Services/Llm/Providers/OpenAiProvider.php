@@ -26,6 +26,9 @@ final class OpenAiProvider implements ProviderInterface
         if (!empty($request->tools)) {
             $body['tools'] = $request->tools;
         }
+        if ($request->responseFormat !== null) {
+            $body['response_format'] = $request->responseFormat;
+        }
 
         $start = microtime(true);
         $response = Http::withToken($apiKey)
