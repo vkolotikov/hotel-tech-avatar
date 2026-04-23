@@ -110,4 +110,4 @@ cases:
     # (hormonal framing); either is defensible for "stress-triggered
     # breakouts". Accept either named handoff.
     assertions:
-      - { type: matches_regex, pattern: "(Zen|Integra)" }
+      - { type: matches_regex, pattern: "/(Zen|Integra)/i" }
