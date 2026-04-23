@@ -34,4 +34,5 @@ Per spec hard-rule #5 (CLAUDE.md, `docs/PROJECT_SPEC.md`): **real wellness-user 
 
 ## Changelog
 
+- 2026-04-23 — still awaiting formal ZDR reply from OpenAI. Gate still non-blocking (Phase 0; no wellness-user data in production yet). Owner to nudge if no reply by 2026-05-03.
 - 2026-04-19 — recorded initial state; formal ZDR request filed.

@@ -19,6 +19,7 @@ import { MessageBubble } from '../components/chat/MessageBubble';
 import { MessageInput } from '../components/chat/MessageInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
 import { StreamingMessage } from '../components/chat/StreamingMessage';
+import { StarterPrompts } from '../components/chat/StarterPrompts';
 import { resolveAssetUrl } from '../api';
 import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../theme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
@@ -149,10 +150,18 @@ export function ChatDetailScreen() {
               ) : (
                 <TypingIndicator avatarName={avatarName} />
               )
+            ) : messages.length === 0 ? (
+              <StarterPrompts
+                avatarSlug={avatarSlug}
+                avatarName={avatarName}
+                onPick={(text) => handleSend(text)}
+              />
             ) : null
           }
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
         />
         {stream.isSpeaking && (
           <Pressable
