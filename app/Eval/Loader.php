@@ -44,16 +44,24 @@ final class Loader
             $existing = EvalDataset::where('slug', $parsed['slug'])->first();
             $unchanged = $existing && $existing->source_hash === $hash;
 
+            $update = [
+                'name' => $parsed['name'],
+                'vertical_slug' => $parsed['vertical'],
+                'avatar_slug' => $parsed['avatar_slug'] ?? null,
+                'description' => $parsed['description'] ?? null,
+                'source_path' => $relativePath,
+                'source_hash' => $hash,
+            ];
+
+            // Persist top-level "mode: live" / "mode: stubbed" from the YAML
+            // into mode_json so Runner picks it up.
+            if (isset($parsed['mode']) && is_string($parsed['mode'])) {
+                $update['mode_json'] = ['mode' => $parsed['mode']];
+            }
+
             $dataset = EvalDataset::updateOrCreate(
                 ['slug' => $parsed['slug']],
-                [
-                    'name' => $parsed['name'],
-                    'vertical_slug' => $parsed['vertical'],
-                    'avatar_slug' => $parsed['avatar_slug'] ?? null,
-                    'description' => $parsed['description'] ?? null,
-                    'source_path' => $relativePath,
-                    'source_hash' => $hash,
-                ]
+                $update,
             );
 
             if ($unchanged && $dataset->cases()->exists()) {

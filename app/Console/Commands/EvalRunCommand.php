@@ -10,7 +10,7 @@ use Symfony\Component\Finder\Finder;
 
 class EvalRunCommand extends Command
 {
-    protected $signature = 'eval:run {--dataset= : Only run the dataset with this slug} {--trigger=manual : manual|scheduled|ci}';
+    protected $signature = 'eval:run {--dataset= : Only run the dataset with this slug} {--trigger=manual : manual|scheduled|ci} {--mode= : Override the dataset mode (stubbed|live)}';
 
     protected $description = 'Sync YAML datasets from docs/eval/datasets and execute them, writing eval_runs + eval_results.';
 
@@ -18,6 +18,11 @@ class EvalRunCommand extends Command
     {
         $slug = $this->option('dataset');
         $trigger = $this->option('trigger') ?: 'manual';
+        $modeOverride = $this->option('mode');
+        if ($modeOverride !== null && !in_array($modeOverride, ['stubbed', 'live'], true)) {
+            $this->error("--mode must be 'stubbed' or 'live', got '{$modeOverride}'");
+            return self::FAILURE;
+        }
 
         $paths = $this->discoverYaml();
         if (empty($paths)) {
@@ -47,12 +52,15 @@ class EvalRunCommand extends Command
         }
 
         foreach ($datasets as $dataset) {
-            $runId = $runner->runDataset($dataset->id, $trigger);
+            $runId = $runner->runDataset($dataset->id, $trigger, $modeOverride);
             $run = \App\Models\EvalRun::find($runId);
+            $datasetMode = is_array($dataset->mode_json) ? ($dataset->mode_json['mode'] ?? null) : null;
+            $effectiveMode = $modeOverride ?? $datasetMode ?? 'stubbed';
             $this->line(sprintf(
-                '[run #%d] %s: %d/%d passed (%s%%)',
+                '[run #%d] %s [%s]: %d/%d passed (%s%%)',
                 $run->id,
                 $dataset->slug,
+                $effectiveMode,
                 $run->cases_passed,
                 $run->cases_total,
                 $run->score_pct ?? 'n/a'

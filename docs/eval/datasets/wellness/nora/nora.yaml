@@ -2,6 +2,7 @@ slug: nora-golden
 name: Nora Golden Dataset (Phase 1)
 vertical: wellness
 avatar_slug: nora
+mode: stubbed   # flip to "live" to call the model via LiveResolver
 description: |
   Phase 1 golden dataset for Nora (nutrition & gut health). 17 cases
   across six buckets:

@@ -15,10 +15,12 @@ final class Runner
 
     public function __construct(private readonly ?LiveResolver $liveResolver = null) {}
 
-    public function runDataset(int $datasetId, string $trigger): int
+    public function runDataset(int $datasetId, string $trigger, ?string $modeOverride = null): int
     {
         $dataset = EvalDataset::findOrFail($datasetId);
-        $this->currentMode = $dataset->mode_json?->mode ?? 'stubbed';
+
+        $datasetMode = is_array($dataset->mode_json) ? ($dataset->mode_json['mode'] ?? null) : null;
+        $this->currentMode = $modeOverride ?? $datasetMode ?? 'stubbed';
 
         $run = EvalRun::create([
             'dataset_id' => $dataset->id,

@@ -9,7 +9,11 @@ class EvalDataset extends Model
 {
     protected $fillable = [
         'slug', 'name', 'vertical_slug', 'avatar_slug',
-        'description', 'source_path', 'source_hash',
+        'description', 'source_path', 'source_hash', 'mode_json',
+    ];
+
+    protected $casts = [
+        'mode_json' => 'array',
     ];
 
     public function cases(): HasMany
