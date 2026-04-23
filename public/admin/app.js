@@ -68,6 +68,8 @@ const elements = {
   safetyPreviewMessage: document.getElementById('safety_preview_message'),
   safetyPreviewRun: document.getElementById('safety_preview_run'),
   safetyPreviewResult: document.getElementById('safety_preview_result'),
+  snapshotVersion: document.getElementById('snapshot_version'),
+  promptVersionsList: document.getElementById('prompt_versions_list'),
 };
 
 // --- Rule editor schema ---
@@ -569,6 +571,7 @@ function clearForm() {
   renderRulesInto(elements.handoffList, 'handoff_rules', []);
   if (elements.safetyPreviewResult) elements.safetyPreviewResult.hidden = true;
   if (elements.safetyPreviewMessage) elements.safetyPreviewMessage.value = '';
+  renderPromptVersions({ versions: [], active_id: null, hint: 'Save the avatar first to enable versioning.' });
   elements.title.textContent = 'Create Avatar';
   elements.deleteAgent.disabled = true;
   state.currentAgentId = null;
@@ -615,6 +618,8 @@ function fillForm(agent) {
 
   const meta = `${formatSyncDate(agent.knowledge_synced_at)} - files: --`;
   setKnowledgeSyncStatus(agent.knowledge_sync_status || 'idle', meta, agent.knowledge_last_error || '');
+
+  void loadPromptVersions();
 }
 
 function renderAgentsList() {
@@ -1008,6 +1013,126 @@ if (elements.verticalFilter) {
 
 if (elements.safetyPreviewRun) {
   elements.safetyPreviewRun.addEventListener('click', runSafetyPreview);
+}
+
+if (elements.snapshotVersion) {
+  elements.snapshotVersion.addEventListener('click', snapshotCurrentVersion);
+}
+
+// --- Prompt versioning ---
+
+async function loadPromptVersions() {
+  if (!elements.promptVersionsList) return;
+  if (state.currentAgentId === null) {
+    renderPromptVersions({ versions: [], active_id: null, hint: 'Save the avatar first to enable versioning.' });
+    return;
+  }
+  try {
+    const payload = await api(`/api/v1/admin/agents/${state.currentAgentId}/prompt-versions`);
+    renderPromptVersions(payload);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Failed to load versions';
+    renderPromptVersions({ versions: [], active_id: null, hint: msg });
+  }
+}
+
+function renderPromptVersions(payload) {
+  const el = elements.promptVersionsList;
+  if (!el) return;
+  el.innerHTML = '';
+
+  const versions = Array.isArray(payload.versions) ? payload.versions : [];
+  if (versions.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'versions-empty';
+    empty.textContent = payload.hint || 'No versions yet — "Save current as new version" to make one.';
+    el.appendChild(empty);
+    return;
+  }
+
+  versions.forEach((version) => {
+    const row = document.createElement('div');
+    row.className = 'version-row' + (version.is_active ? ' version-row--active' : '');
+
+    const number = document.createElement('div');
+    number.className = 'version-row__number';
+    number.textContent = '#' + version.version_number;
+    row.appendChild(number);
+
+    const body = document.createElement('div');
+    body.className = 'version-row__body';
+    const note = document.createElement('div');
+    note.className = 'version-row__note';
+    note.textContent = version.note || '(no note)';
+    body.appendChild(note);
+    const meta = document.createElement('div');
+    meta.className = 'version-row__meta';
+    const when = version.created_at ? new Date(version.created_at).toLocaleString() : '';
+    const author = version.created_by_user_id ? ' • by ' + version.created_by_user_id : '';
+    meta.textContent = when + author;
+    body.appendChild(meta);
+    row.appendChild(body);
+
+    if (version.is_active) {
+      const badge = document.createElement('span');
+      badge.className = 'version-row__badge';
+      badge.textContent = 'Active';
+      row.appendChild(badge);
+    } else {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'version-row__action';
+      btn.textContent = 'Activate';
+      btn.addEventListener('click', () => activateVersion(version.id, version.version_number));
+      row.appendChild(btn);
+    }
+
+    el.appendChild(row);
+  });
+}
+
+async function snapshotCurrentVersion() {
+  if (state.currentAgentId === null) {
+    window.alert('Save the avatar before creating a version.');
+    return;
+  }
+  const note = window.prompt('Optional note for this version (what changed?):', '');
+  if (note === null) return;
+
+  elements.snapshotVersion.disabled = true;
+  try {
+    setStatus('Snapshotting version...');
+    await api(`/api/v1/admin/agents/${state.currentAgentId}/prompt-versions`, {
+      method: 'POST',
+      body: JSON.stringify({ note: note.trim() || null }),
+    });
+    await loadPromptVersions();
+    setStatus('Version saved');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'Snapshot failed', true);
+  } finally {
+    elements.snapshotVersion.disabled = false;
+  }
+}
+
+async function activateVersion(versionId, number) {
+  if (!window.confirm(`Activate version #${number}? This overwrites the current system instructions, persona, scope, red-flag, and handoff rules on this avatar with the snapshot's values.`)) {
+    return;
+  }
+  try {
+    setStatus('Activating version...');
+    const payload = await api(
+      `/api/v1/admin/agents/${state.currentAgentId}/prompt-versions/${versionId}/activate`,
+      { method: 'POST' },
+    );
+    if (payload?.agent) {
+      fillForm(payload.agent);
+    }
+    await loadPromptVersions();
+    setStatus(`Version #${number} activated`);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'Activation failed', true);
+  }
 }
 
 async function runSafetyPreview() {

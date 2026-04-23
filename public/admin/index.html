@@ -151,6 +151,15 @@
             <div id="safety_preview_result" class="safety-preview__result" hidden></div>
           </div>
 
+          <div class="agent-form__full field-group">
+            <div class="rules-header">
+              <span class="field-label">Prompt Versions</span>
+              <button id="snapshot_version" type="button" class="rules-add">Save current as new version</button>
+            </div>
+            <p class="rules-hint">Snapshots of this avatar's system instructions + persona + rules. Activate an older version to roll back.</p>
+            <div id="prompt_versions_list" class="versions-list"></div>
+          </div>
+
           <label class="agent-form__full">
             Knowledge Sources (one URL per line)
             <textarea id="knowledge_sources" name="knowledge_sources" rows="3" placeholder="https://pubmed.ncbi.nlm.nih.gov/..."></textarea>

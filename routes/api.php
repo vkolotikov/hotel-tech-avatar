@@ -67,6 +67,9 @@ Route::prefix('v1')->group(function () {
         Route::get('agents/{agent}/knowledge/status',  [AdminController::class, 'knowledgeStatus']);
         Route::post('agents/{agent}/knowledge/reindex',[AdminController::class, 'reindex']);
         Route::post('agents/{agent}/safety-preview',   [AdminController::class, 'safetyPreview']);
+        Route::get('agents/{agent}/prompt-versions',                       [AdminController::class, 'listPromptVersions']);
+        Route::post('agents/{agent}/prompt-versions',                      [AdminController::class, 'createPromptVersion']);
+        Route::post('agents/{agent}/prompt-versions/{version}/activate',   [AdminController::class, 'activatePromptVersion']);
         Route::get('usage',                            [AdminController::class, 'usage']);
     });
 });

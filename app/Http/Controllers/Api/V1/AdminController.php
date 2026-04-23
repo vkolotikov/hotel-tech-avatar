@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\AgentKnowledgeFile;
+use App\Models\AgentPromptVersion;
 use App\Models\Message;
 use App\Models\Vertical;
 use Illuminate\Http\JsonResponse;
@@ -305,6 +306,88 @@ class AdminController extends Controller
         return response()->json([
             'message' => 'Reindex queued',
             'status'  => 'pending',
+        ]);
+    }
+
+    /** List all prompt versions for an agent, newest first. */
+    public function listPromptVersions(Agent $agent): JsonResponse
+    {
+        $versions = $agent->promptVersions()
+            ->orderByDesc('version_number')
+            ->get([
+                'id', 'version_number', 'is_active', 'note',
+                'created_by_user_id', 'created_at',
+            ]);
+
+        return response()->json([
+            'active_id' => $agent->active_prompt_version_id,
+            'versions'  => $versions,
+        ]);
+    }
+
+    /** Snapshot the agent's current prompt fields as a new version. */
+    public function createPromptVersion(Request $request, Agent $agent): JsonResponse
+    {
+        $validated = $request->validate([
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $nextNumber = ((int) $agent->promptVersions()->max('version_number')) + 1;
+
+        $version = DB::transaction(function () use ($agent, $nextNumber, $validated, $request) {
+            // Deactivate currently-active versions (there should be exactly one).
+            $agent->promptVersions()->where('is_active', true)->update(['is_active' => false]);
+
+            $version = AgentPromptVersion::create([
+                'agent_id'            => $agent->id,
+                'version_number'      => $nextNumber,
+                'system_instructions' => $agent->system_instructions,
+                'persona_json'        => $agent->persona_json,
+                'scope_json'          => $agent->scope_json,
+                'red_flag_rules_json' => $agent->red_flag_rules_json,
+                'handoff_rules_json'  => $agent->handoff_rules_json,
+                'is_active'           => true,
+                'note'                => $validated['note'] ?? null,
+                'created_by_user_id'  => $request->attributes->get('saas_user_id') ?: null,
+            ]);
+
+            $agent->update(['active_prompt_version_id' => $version->id]);
+
+            return $version;
+        });
+
+        return response()->json($version, 201);
+    }
+
+    /**
+     * Activate a specific prompt version — copies its fields back onto the
+     * agent and marks it active. Mirror of createPromptVersion but for an
+     * existing snapshot.
+     */
+    public function activatePromptVersion(Agent $agent, AgentPromptVersion $version): JsonResponse
+    {
+        if ($version->agent_id !== $agent->id) {
+            abort(404);
+        }
+
+        DB::transaction(function () use ($agent, $version) {
+            $agent->promptVersions()->where('is_active', true)->update(['is_active' => false]);
+            $version->update(['is_active' => true]);
+
+            $agent->update([
+                'active_prompt_version_id' => $version->id,
+                'system_instructions'      => $version->system_instructions,
+                'persona_json'             => $version->persona_json,
+                'scope_json'               => $version->scope_json,
+                'red_flag_rules_json'      => $version->red_flag_rules_json,
+                'handoff_rules_json'       => $version->handoff_rules_json,
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'Version activated',
+            'agent'   => $agent->fresh(),
+            'version' => $version->fresh(),
         ]);
     }
 
