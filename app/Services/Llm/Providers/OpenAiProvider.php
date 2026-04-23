@@ -19,10 +19,24 @@ final class OpenAiProvider implements ProviderInterface
         $body = [
             'model' => $request->model,
             'messages' => $request->messages,
-            'temperature' => $request->temperature,
-            'max_tokens' => $request->maxTokens,
             'store' => false,
         ];
+
+        // Token-cap parameter depends on the model family:
+        //   gpt-5 / gpt-5.4 / o1 / o3 / o4 → max_completion_tokens (required)
+        //   gpt-4 / gpt-4o / gpt-3.5       → max_tokens (legacy; others 400)
+        if ($this->usesCompletionTokenParam($request->model)) {
+            $body['max_completion_tokens'] = $request->maxTokens;
+        } else {
+            $body['max_tokens'] = $request->maxTokens;
+        }
+
+        // Reasoning models (o-series) don't accept temperature overrides —
+        // omit the param entirely in that case. GPT-5 family accepts it.
+        if (!$this->isReasoningModel($request->model)) {
+            $body['temperature'] = $request->temperature;
+        }
+
         if (!empty($request->tools)) {
             $body['tools'] = $request->tools;
         }
@@ -70,5 +84,21 @@ final class OpenAiProvider implements ProviderInterface
     public function name(): string
     {
         return 'openai';
+    }
+
+    /**
+     * True when the given model ID is in a family that uses the newer
+     * max_completion_tokens parameter. GPT-5 family (gpt-5, gpt-5.4,
+     * gpt-5-mini, gpt-5-nano, etc.) and all reasoning models.
+     */
+    private function usesCompletionTokenParam(string $model): bool
+    {
+        return (bool) preg_match('/^(gpt-5|o1|o3|o4|o5)([.\-]|$)/i', $model);
+    }
+
+    /** True for o-series reasoning models, which reject temperature overrides. */
+    private function isReasoningModel(string $model): bool
+    {
+        return (bool) preg_match('/^(o1|o3|o4|o5)([.\-]|$)/i', $model);
     }
 }
