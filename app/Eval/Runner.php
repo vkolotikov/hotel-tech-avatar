@@ -98,7 +98,18 @@ final class Runner
     private function resolveResponse(EvalCase $case): string | ResolvedResponse
     {
         if ($this->currentMode === 'live' && $this->liveResolver) {
-            $agent = $case->dataset->agent; // Assume EvalCase has agent via dataset
+            // EvalDataset stores avatar_slug as a plain string; look up the
+            // Agent by slug. Missing or unpublished avatars fall back to the
+            // case's stub_response so the run finishes with a concrete result.
+            $slug = $case->dataset?->avatar_slug;
+            $agent = $slug
+                ? \App\Models\Agent::where('slug', $slug)->first()
+                : null;
+
+            if (!$agent) {
+                return $case->stub_response ?? '';
+            }
+
             return $this->liveResolver->resolve($case, $agent);
         }
 

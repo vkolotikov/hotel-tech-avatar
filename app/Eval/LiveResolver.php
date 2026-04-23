@@ -36,17 +36,25 @@ final class LiveResolver
             }
         }
 
-        // No red-flag match — call the LLM
-        $systemPrompt = $agent->activePromptVersion?->system_prompt ?? '';
+        // No red-flag match — call the LLM. Prefer the active prompt version
+        // snapshot so evals run against whatever the super-admin blessed;
+        // fall back to the agent's live system_instructions when no version
+        // has been snapshotted yet.
+        $systemPrompt = $agent->activePromptVersion?->system_prompt
+            ?? $agent->system_instructions
+            ?? "You are {$agent->name}, {$agent->role}. {$agent->description}";
 
+        // Eval runs deliberately allow longer answers than chat (512 vs the
+        // 180-token chat default) so string-match assertions have enough
+        // text to bite on. One-shot, not a conversation.
         $request = new LlmRequest(
-            model: config('llm.default_model', 'gpt-4'),
+            model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-5.4'),
             messages: [
                 ['role' => 'system', 'content' => $systemPrompt],
                 ['role' => 'user', 'content' => $case->prompt],
             ],
-            temperature: 0.7,
-            maxTokens: 1024,
+            temperature: (float) config('services.openai.temperature', 0.3),
+            maxTokens: 512,
         );
 
         try {
