@@ -19,11 +19,19 @@ export function MessageInput({
   disabled,
 }: Props) {
   const [text, setText] = useState('');
+  // Dictate mode (default): transcript fills the input, user reviews + sends.
+  // Voice mode: transcript auto-sends and the agent reply plays through TTS.
+  const [voiceMode, setVoiceMode] = useState(false);
   const insets = useSafeAreaInsets();
   const recorder = useVoiceRecorder(conversationId, (transcript) => {
     const trimmed = transcript.trim();
     if (!trimmed) return;
-    onSend(trimmed, { voice: true });
+    if (voiceMode) {
+      onSend(trimmed, { voice: true });
+    } else {
+      // Dictate — append to whatever the user had typed.
+      setText((prev) => (prev ? prev + ' ' + trimmed : trimmed));
+    }
   });
 
   const handleSend = () => {
@@ -35,7 +43,9 @@ export function MessageInput({
 
   const voiceActive = recorder.isRecording || recorder.isTranscribing;
   const hint = recorder.isRecording
-    ? 'Listening… tap mic to finish'
+    ? voiceMode
+      ? 'Voice mode · tap mic to send'
+      : 'Listening… tap mic to finish'
     : recorder.isTranscribing
     ? 'Transcribing…'
     : null;
@@ -50,6 +60,30 @@ export function MessageInput({
           <Text style={styles.hintText}>{hint}</Text>
         </View>
       )}
+
+      <View style={styles.modeRow} pointerEvents={voiceActive ? 'none' : 'auto'}>
+        <Pressable
+          onPress={() => setVoiceMode((v) => !v)}
+          style={[
+            styles.modeChip,
+            voiceMode && { borderColor: accent, backgroundColor: accent + '22' },
+          ]}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: voiceMode }}
+          accessibilityLabel="Toggle voice mode"
+        >
+          <View
+            style={[
+              styles.modeDot,
+              { backgroundColor: voiceMode ? accent : 'rgba(255,255,255,0.3)' },
+            ]}
+          />
+          <Text style={[styles.modeChipText, voiceMode && { color: colors.textPrimary }]}>
+            {voiceMode ? 'Voice mode on' : 'Dictate to text'}
+          </Text>
+        </Pressable>
+      </View>
+
       <View style={[styles.container, { paddingBottom: spacing.sm + insets.bottom }]}>
         <VoiceRecordButton
           isRecording={recorder.isRecording}
@@ -60,24 +94,31 @@ export function MessageInput({
         <TextInput
           style={[
             styles.input,
-            voiceActive && { opacity: 0.5 },
+            recorder.isTranscribing && { opacity: 0.5 },
           ]}
           value={text}
           onChangeText={setText}
-          placeholder={voiceActive ? '' : 'Message…'}
+          placeholder={
+            recorder.isTranscribing
+              ? ''
+              : voiceMode
+              ? 'Voice mode — tap mic to speak'
+              : 'Message… or tap mic to dictate'
+          }
           placeholderTextColor={colors.textMuted}
           multiline
-          editable={!disabled && !voiceActive}
+          // In voice mode you can still type, but while transcribing we lock.
+          editable={!disabled && !recorder.isTranscribing}
         />
         <Pressable
           testID="send-button"
           style={[
             styles.sendButton,
             { backgroundColor: accent },
-            (disabled || !text.trim() || voiceActive) && styles.sendDisabled,
+            (disabled || !text.trim() || recorder.isTranscribing) && styles.sendDisabled,
           ]}
           onPress={handleSend}
-          disabled={disabled || !text.trim() || voiceActive}
+          disabled={disabled || !text.trim() || recorder.isTranscribing}
           accessibilityLabel="Send message"
         >
           <Text style={styles.sendIcon}>➤</Text>
@@ -116,6 +157,33 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm - 1,
     fontWeight: '500',
     letterSpacing: 0.2,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingTop: spacing.xs,
+  },
+  modeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(20,26,38,0.6)',
+  },
+  modeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  modeChipText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   container: {
     flexDirection: 'row',
