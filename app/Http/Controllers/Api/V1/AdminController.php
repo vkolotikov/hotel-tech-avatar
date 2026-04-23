@@ -46,17 +46,42 @@ class AdminController extends Controller
             sort($videos);
         }
 
+        // Current OpenAI TTS voice catalog. The full 13 voices are supported
+        // by gpt-4o-mini-tts; tts-1 / tts-1-hd support only 9 (marin, cedar,
+        // ballad, verse are unavailable on the legacy models).
         $voices = [
             'alloy', 'ash', 'ballad', 'coral', 'echo', 'fable',
-            'nova', 'onyx', 'sage', 'shimmer', 'verse',
+            'nova', 'onyx', 'sage', 'shimmer', 'verse', 'marin', 'cedar',
         ];
 
+        // Text generation. gpt-5.4 is the current flagship; the mini and
+        // nano variants are lower-cost for budget-sensitive avatars.
+        $models = [
+            'gpt-5.4',
+            'gpt-5.4-mini',
+            'gpt-5.4-nano',
+            'gpt-4o',
+            'gpt-4o-mini',
+        ];
+
+        // Text-to-speech models (used by /voice/speak).
+        $ttsModels = ['gpt-4o-mini-tts', 'tts-1-hd', 'tts-1'];
+
+        // Speech-to-text models (used by /voice/transcribe).
+        $sttModels = ['gpt-4o-transcribe', 'gpt-4o-mini-transcribe', 'whisper-1'];
+
         return response()->json([
-            'avatars'     => $avatars,
-            'backgrounds' => $backgrounds,
-            'videos'      => $videos,
-            'voices'      => $voices,
-            'models'      => ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini'],
+            'avatars'               => $avatars,
+            'backgrounds'           => $backgrounds,
+            'videos'                => $videos,
+            'voices'                => $voices,
+            'models'                => $models,
+            'tts_models'            => $ttsModels,
+            'stt_models'            => $sttModels,
+            // Defaults pulled from config so the admin picker can pre-select
+            // sensible values on new avatars.
+            'openai_default_model'  => (string) config('services.openai.model', 'gpt-5.4'),
+            'openai_default_voice'  => 'alloy',
         ]);
     }
 

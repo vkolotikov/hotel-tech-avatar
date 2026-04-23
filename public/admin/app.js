@@ -1047,9 +1047,9 @@ async function loadAdmin() {
   ]);
 
   state.assets = assets;
-  fillModelSelect(elements.openAiModel, assets.openai_models || []);
+  fillModelSelect(elements.openAiModel, assets.models ?? assets.openai_models ?? []);
   setModelValue(getDefaultModel());
-  fillVoiceSelect(elements.openAiVoice, assets.openai_voices || []);
+  fillVoiceSelect(elements.openAiVoice, assets.voices ?? assets.openai_voices ?? []);
   setVoiceValue(getDefaultVoice());
   renderAssetGalleries();
 

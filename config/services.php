@@ -38,10 +38,13 @@ return [
     'openai' => [
         'api_key'              => env('OPENAI_API_KEY', ''),
         'base_url'             => env('OPENAI_API_BASE_URL', 'https://api.openai.com/v1'),
-        'model'                => env('OPENAI_MODEL_DEFAULT', 'gpt-4o'),
+        // gpt-5.4 is the current flagship for agentic / professional chat.
+        'model'                => env('OPENAI_MODEL_DEFAULT', 'gpt-5.4'),
         'timeout'              => env('OPENAI_TIMEOUT_SECONDS', 45),
         'temperature'          => env('OPENAI_TEMPERATURE', 0.3),
-        'max_output_tokens'    => env('OPENAI_MAX_OUTPUT_TOKENS', 220),
+        // Tight default; natural chat wants short replies by default, and the
+        // mobile "Tell me more" path can relax it per-turn.
+        'max_output_tokens'    => env('OPENAI_MAX_OUTPUT_TOKENS', 180),
         'max_context_messages' => env('OPENAI_MAX_CONTEXT_MESSAGES', 20),
         'max_knowledge_chars'  => env('OPENAI_MAX_KNOWLEDGE_CHARS', 12000),
         'tts_model'            => env('OPENAI_TTS_MODEL', 'gpt-4o-mini-tts'),
