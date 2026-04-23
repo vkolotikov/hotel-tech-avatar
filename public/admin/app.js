@@ -59,6 +59,69 @@ const elements = {
   usageRefreshButton: document.getElementById('usage-refresh-button'),
   usageCloseButton: document.getElementById('usage-close-button'),
   usageCloseTargets: document.querySelectorAll('[data-usage-close]'),
+  verticalId: document.getElementById('vertical_id'),
+  verticalFilter: document.getElementById('vertical-filter'),
+  knowledgeSources: document.getElementById('knowledge_sources'),
+  redFlagList: document.getElementById('red_flag_rules'),
+  scopeList: document.getElementById('scope_rules'),
+  handoffList: document.getElementById('handoff_rules'),
+};
+
+// --- Rule editor schema ---
+// Each rules container is a list of simple { a, b } objects. The
+// schema map below drives labels/placeholders per field type.
+const RULE_SCHEMAS = {
+  red_flag_rules: {
+    element: 'redFlagList',
+    left: {
+      key: 'keywords',
+      label: 'Keywords',
+      placeholder: 'suicide, kill myself, end it all',
+      multiline: false,
+      splitList: true,
+    },
+    right: {
+      key: 'response',
+      label: 'Canned response',
+      placeholder: 'If you are in crisis, please call ...',
+      multiline: true,
+      splitList: false,
+    },
+  },
+  scope_rules: {
+    element: 'scopeList',
+    left: {
+      key: 'topic',
+      label: 'Refused topic',
+      placeholder: 'prescription dosing',
+      multiline: false,
+      splitList: false,
+    },
+    right: {
+      key: 'response',
+      label: 'Redirect copy',
+      placeholder: 'I can offer general info but dosing needs a clinician ...',
+      multiline: true,
+      splitList: false,
+    },
+  },
+  handoff_rules: {
+    element: 'handoffList',
+    left: {
+      key: 'trigger',
+      label: 'Trigger',
+      placeholder: 'user describes melanoma criteria',
+      multiline: false,
+      splitList: false,
+    },
+    right: {
+      key: 'referral',
+      label: 'Referral copy',
+      placeholder: 'Please see a dermatologist — here is what to ask ...',
+      multiline: true,
+      splitList: false,
+    },
+  },
 };
 
 function setStatus(message, isError = false) {
@@ -379,6 +442,108 @@ function updatePreview() {
   elements.previewRole.textContent = role || 'Role';
 }
 
+// --- Rule editor helpers ---
+
+function escapeAttr(value) {
+  return escapeHtml(value);
+}
+
+function renderRuleRow(schema, rule) {
+  const row = document.createElement('div');
+  row.className = 'rules-row';
+
+  const makeField = (side, value) => {
+    const wrap = document.createElement('label');
+    wrap.className = 'rules-row__field';
+    const label = document.createElement('span');
+    label.textContent = side.label;
+    wrap.appendChild(label);
+
+    const el = side.multiline
+      ? document.createElement('textarea')
+      : document.createElement('input');
+    el.className = 'rules-row__input';
+    if (!side.multiline) el.type = 'text';
+    el.placeholder = side.placeholder || '';
+    el.value = Array.isArray(value) ? value.join(', ') : (value ?? '');
+    el.dataset.ruleField = side.key;
+    if (side.splitList) el.dataset.splitList = '1';
+    wrap.appendChild(el);
+    return wrap;
+  };
+
+  row.appendChild(makeField(schema.left, rule[schema.left.key]));
+  row.appendChild(makeField(schema.right, rule[schema.right.key]));
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'rules-row__remove';
+  remove.setAttribute('aria-label', 'Remove rule');
+  remove.textContent = '×';
+  remove.addEventListener('click', () => row.remove());
+  row.appendChild(remove);
+
+  return row;
+}
+
+function renderRulesInto(listEl, schemaKey, rules) {
+  listEl.innerHTML = '';
+  const schema = RULE_SCHEMAS[schemaKey];
+  if (!rules || rules.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'rules-empty';
+    empty.textContent = 'No rules yet — tap "+ Add rule" to add one.';
+    listEl.appendChild(empty);
+    return;
+  }
+  rules.forEach((rule) => listEl.appendChild(renderRuleRow(schema, rule)));
+}
+
+function collectRulesFrom(listEl, schemaKey) {
+  const schema = RULE_SCHEMAS[schemaKey];
+  const rows = listEl.querySelectorAll('.rules-row');
+  const result = [];
+  rows.forEach((row) => {
+    const inputs = row.querySelectorAll('[data-rule-field]');
+    const obj = {};
+    inputs.forEach((input) => {
+      const key = input.dataset.ruleField;
+      const raw = (input.value || '').trim();
+      if (input.dataset.splitList === '1') {
+        obj[key] = raw
+          ? raw.split(',').map((s) => s.trim()).filter(Boolean)
+          : [];
+      } else {
+        obj[key] = raw;
+      }
+    });
+    const leftVal = obj[schema.left.key];
+    const rightVal = obj[schema.right.key];
+    const leftEmpty = Array.isArray(leftVal) ? leftVal.length === 0 : !leftVal;
+    const rightEmpty = !rightVal;
+    if (leftEmpty && rightEmpty) return; // skip fully-empty rows
+    result.push(obj);
+  });
+  return result;
+}
+
+function bindRulesAddButtons() {
+  document.querySelectorAll('[data-rules-add]').forEach((btn) => {
+    if (btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.rulesAdd;
+      const schema = RULE_SCHEMAS[key];
+      if (!schema) return;
+      const listEl = elements[schema.element];
+      // Remove empty-state if present
+      const emptyNote = listEl.querySelector('.rules-empty');
+      if (emptyNote) emptyNote.remove();
+      listEl.appendChild(renderRuleRow(schema, {}));
+    });
+  });
+}
+
 function clearForm() {
   elements.form.reset();
   setModelValue(getDefaultModel());
@@ -387,6 +552,11 @@ function clearForm() {
   elements.useAdvancedAi.checked = false;
   elements.knowledgeFiles.value = '';
   elements.knowledgeUploadInput.value = '';
+  if (elements.knowledgeSources) elements.knowledgeSources.value = '';
+  if (elements.verticalId) elements.verticalId.value = '';
+  renderRulesInto(elements.redFlagList, 'red_flag_rules', []);
+  renderRulesInto(elements.scopeList, 'scope_rules', []);
+  renderRulesInto(elements.handoffList, 'handoff_rules', []);
   elements.title.textContent = 'Create Avatar';
   elements.deleteAgent.disabled = true;
   state.currentAgentId = null;
@@ -414,6 +584,17 @@ function fillForm(agent) {
   elements.knowledgeFiles.value = Array.isArray(agent.knowledge_files)
     ? agent.knowledge_files.join('\n')
     : '';
+  if (elements.verticalId) {
+    elements.verticalId.value = agent.vertical_id ? String(agent.vertical_id) : '';
+  }
+  if (elements.knowledgeSources) {
+    elements.knowledgeSources.value = Array.isArray(agent.knowledge_sources_json)
+      ? agent.knowledge_sources_json.join('\n')
+      : (agent.knowledge_sources_json || '');
+  }
+  renderRulesInto(elements.redFlagList, 'red_flag_rules', Array.isArray(agent.red_flag_rules_json) ? agent.red_flag_rules_json : []);
+  renderRulesInto(elements.scopeList, 'scope_rules', Array.isArray(agent.scope_json) ? agent.scope_json : []);
+  renderRulesInto(elements.handoffList, 'handoff_rules', Array.isArray(agent.handoff_rules_json) ? agent.handoff_rules_json : []);
   elements.title.textContent = `Edit Avatar #${agent.id}`;
   elements.deleteAgent.disabled = false;
   updateReindexButtonState();
@@ -427,14 +608,19 @@ function fillForm(agent) {
 function renderAgentsList() {
   elements.list.innerHTML = '';
 
-  if (state.agents.length === 0) {
+  const filterVal = elements.verticalFilter?.value || '';
+  const agents = filterVal
+    ? state.agents.filter((a) => String(a.vertical_id ?? '') === filterVal)
+    : state.agents;
+
+  if (agents.length === 0) {
     const empty = document.createElement('p');
-    empty.textContent = 'No avatars yet.';
+    empty.textContent = state.agents.length === 0 ? 'No avatars yet.' : 'No avatars in this vertical.';
     elements.list.appendChild(empty);
     return;
   }
 
-  state.agents.forEach((agent) => {
+  agents.forEach((agent) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'agents-list__item';
@@ -463,16 +649,26 @@ function renderAgentsList() {
 }
 
 function buildPayload() {
+  const sources = (elements.knowledgeSources?.value || '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   return {
     slug: elements.slug.value.trim(),
     name: elements.name.value.trim(),
     role: elements.role.value.trim(),
     description: elements.description.value.trim(),
+    vertical_id: elements.verticalId?.value ? Number(elements.verticalId.value) : null,
     avatar_image_url: elements.avatarImageUrl.value.trim() || null,
     chat_background_url: elements.chatBackgroundUrl.value.trim() || null,
     system_instructions: elements.systemInstructions.value.trim(),
     knowledge_text: elements.knowledgeText.value.trim(),
     knowledge_files: normalizeKnowledgeFiles(elements.knowledgeFiles.value),
+    knowledge_sources_json: sources,
+    red_flag_rules_json: collectRulesFrom(elements.redFlagList, 'red_flag_rules'),
+    scope_json: collectRulesFrom(elements.scopeList, 'scope_rules'),
+    handoff_rules_json: collectRulesFrom(elements.handoffList, 'handoff_rules'),
     openai_model: elements.openAiModel.value.trim() || null,
     openai_voice: elements.openAiVoice.value.trim() || null,
     use_advanced_ai: elements.useAdvancedAi.checked,
@@ -681,6 +877,43 @@ async function loadUsageSummary() {
   }
 }
 
+async function loadVerticals() {
+  try {
+    const verticals = await api('/api/v1/admin/verticals');
+    state.verticals = Array.isArray(verticals) ? verticals : [];
+  } catch (error) {
+    // Non-fatal; form still works, just without the vertical picker options
+    state.verticals = [];
+  }
+
+  const populate = (selectEl, includeAll) => {
+    if (!selectEl) return;
+    const prev = selectEl.value;
+    selectEl.innerHTML = '';
+    if (includeAll) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'All verticals';
+      selectEl.appendChild(opt);
+    } else {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- None --';
+      selectEl.appendChild(opt);
+    }
+    state.verticals.forEach((v) => {
+      const opt = document.createElement('option');
+      opt.value = String(v.id);
+      opt.textContent = v.name + (v.is_active === false ? ' (inactive)' : '');
+      selectEl.appendChild(opt);
+    });
+    selectEl.value = prev;
+  };
+
+  populate(elements.verticalFilter, true);
+  populate(elements.verticalId, false);
+}
+
 async function refreshAgents(selectId = null) {
   state.agents = await api('/api/v1/admin/agents');
 
@@ -710,9 +943,12 @@ async function refreshAgents(selectId = null) {
 async function loadAdmin() {
   setStatus('Loading assets and avatars...');
 
+  bindRulesAddButtons();
+
   const [assets] = await Promise.all([
     api('/api/v1/admin/assets'),
     refreshAgents(),
+    loadVerticals(),
   ]);
 
   state.assets = assets;
@@ -751,6 +987,12 @@ elements.newAgent.addEventListener('click', () => {
   clearForm();
   setStatus('Creating new avatar');
 });
+
+if (elements.verticalFilter) {
+  elements.verticalFilter.addEventListener('change', () => {
+    renderAgentsList();
+  });
+}
 
 elements.form.addEventListener('submit', async (event) => {
   event.preventDefault();

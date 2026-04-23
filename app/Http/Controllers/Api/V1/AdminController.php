@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\AgentKnowledgeFile;
 use App\Models\Message;
+use App\Models\Vertical;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -48,6 +49,15 @@ class AdminController extends Controller
         ]);
     }
 
+    /** List all verticals (for the vertical picker in admin). */
+    public function verticals(): JsonResponse
+    {
+        $verticals = Vertical::orderBy('name')
+            ->get(['id', 'slug', 'name', 'is_active']);
+
+        return response()->json($verticals);
+    }
+
     /** List all agents (admin view with full config). */
     public function index(): JsonResponse
     {
@@ -68,20 +78,7 @@ class AdminController extends Controller
     /** Create a new agent. */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name'                => 'required|string|max:100',
-            'slug'                => 'nullable|string|max:64|unique:agents',
-            'role'                => 'nullable|string|max:100',
-            'description'         => 'nullable|string',
-            'avatar_image_url'    => 'nullable|string|max:255',
-            'chat_background_url' => 'nullable|string|max:255',
-            'system_instructions' => 'nullable|string',
-            'knowledge_text'      => 'nullable|string',
-            'openai_model'        => 'nullable|string|max:120',
-            'openai_voice'        => 'nullable|string|max:64',
-            'use_advanced_ai'     => 'boolean',
-            'is_published'        => 'boolean',
-        ]);
+        $validated = $request->validate($this->agentRules());
 
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
@@ -94,23 +91,39 @@ class AdminController extends Controller
     /** Update an agent. */
     public function update(Request $request, Agent $agent): JsonResponse
     {
-        $validated = $request->validate([
-            'name'                => 'sometimes|string|max:100',
-            'slug'                => 'sometimes|string|max:64|unique:agents,slug,' . $agent->id,
-            'role'                => 'nullable|string|max:100',
-            'description'         => 'nullable|string',
-            'avatar_image_url'    => 'nullable|string|max:255',
-            'chat_background_url' => 'nullable|string|max:255',
-            'system_instructions' => 'nullable|string',
-            'knowledge_text'      => 'nullable|string',
-            'openai_model'        => 'nullable|string|max:120',
-            'openai_voice'        => 'nullable|string|max:64',
-            'use_advanced_ai'     => 'boolean',
-            'is_published'        => 'boolean',
-        ]);
-
+        $validated = $request->validate($this->agentRules($agent->id));
         $agent->update($validated);
         return response()->json($agent);
+    }
+
+    /** Shared validation rules for create/update. */
+    private function agentRules(?int $agentId = null): array
+    {
+        $slugRule = $agentId === null
+            ? 'nullable|string|max:64|unique:agents'
+            : 'sometimes|string|max:64|unique:agents,slug,' . $agentId;
+
+        return [
+            'name'                   => ($agentId === null ? 'required' : 'sometimes') . '|string|max:100',
+            'slug'                   => $slugRule,
+            'role'                   => 'nullable|string|max:100',
+            'description'            => 'nullable|string',
+            'domain'                 => 'nullable|string|max:64',
+            'vertical_id'            => 'nullable|integer|exists:verticals,id',
+            'avatar_image_url'       => 'nullable|string|max:255',
+            'chat_background_url'    => 'nullable|string|max:255',
+            'system_instructions'    => 'nullable|string',
+            'knowledge_text'         => 'nullable|string',
+            'knowledge_sources_json' => 'nullable|array',
+            'persona_json'           => 'nullable|array',
+            'scope_json'             => 'nullable|array',
+            'red_flag_rules_json'    => 'nullable|array',
+            'handoff_rules_json'     => 'nullable|array',
+            'openai_model'           => 'nullable|string|max:120',
+            'openai_voice'           => 'nullable|string|max:64',
+            'use_advanced_ai'        => 'boolean',
+            'is_published'           => 'boolean',
+        ];
     }
 
     /** Delete an agent. */

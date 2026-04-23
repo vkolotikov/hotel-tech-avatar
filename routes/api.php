@@ -57,6 +57,7 @@ Route::prefix('v1')->group(function () {
     // ─── Admin Endpoints (SaaS JWT Auth) ───────────────────────────────────
     Route::prefix('admin')->middleware('saas.auth')->group(function () {
         Route::get('assets',                           [AdminController::class, 'assets']);
+        Route::get('verticals',                        [AdminController::class, 'verticals']);
         Route::get('agents',                           [AdminController::class, 'index']);
         Route::get('agents/{agent}',                   [AdminController::class, 'show']);
         Route::post('agents',                          [AdminController::class, 'store']);

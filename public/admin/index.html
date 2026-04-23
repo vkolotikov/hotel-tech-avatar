@@ -14,6 +14,12 @@
         <h1>AvatarHub Admin</h1>
         <button id="new-agent" type="button">+ New Avatar</button>
       </div>
+      <label class="sidebar-filter">
+        <span>Vertical</span>
+        <select id="vertical-filter">
+          <option value="">All verticals</option>
+        </select>
+      </label>
       <div id="agents-list" class="agents-list"></div>
     </aside>
 
@@ -39,6 +45,12 @@
           <label>
             Role
             <input id="role" name="role" type="text" placeholder="Marketing" required>
+          </label>
+          <label>
+            Vertical
+            <select id="vertical_id" name="vertical_id">
+              <option value="">-- None --</option>
+            </select>
           </label>
           <label>
             OpenAI Model
@@ -95,6 +107,38 @@
           <label class="agent-form__full">
             System Instructions
             <textarea id="system_instructions" name="system_instructions" rows="6" placeholder="Define behavior, tone, and boundaries."></textarea>
+          </label>
+
+          <div class="agent-form__full field-group">
+            <div class="rules-header">
+              <span class="field-label">Red-Flag Rules</span>
+              <button type="button" class="rules-add" data-rules-add="red_flag_rules">+ Add rule</button>
+            </div>
+            <p class="rules-hint">Keywords that always trigger a safe, pre-authored response (crisis, emergencies, high-severity concerns).</p>
+            <div id="red_flag_rules" class="rules-list" data-rules-key="red_flag_rules"></div>
+          </div>
+
+          <div class="agent-form__full field-group">
+            <div class="rules-header">
+              <span class="field-label">Scope Guardrails</span>
+              <button type="button" class="rules-add" data-rules-add="scope_rules">+ Add rule</button>
+            </div>
+            <p class="rules-hint">Topics this avatar should refuse or redirect. For wellness: no diagnosis, no prescriptions, no dosing.</p>
+            <div id="scope_rules" class="rules-list" data-rules-key="scope_rules"></div>
+          </div>
+
+          <div class="agent-form__full field-group">
+            <div class="rules-header">
+              <span class="field-label">Handoff Rules</span>
+              <button type="button" class="rules-add" data-rules-add="handoff_rules">+ Add rule</button>
+            </div>
+            <p class="rules-hint">When to refer the user to a human clinician or specialist with the exact referral copy.</p>
+            <div id="handoff_rules" class="rules-list" data-rules-key="handoff_rules"></div>
+          </div>
+
+          <label class="agent-form__full">
+            Knowledge Sources (one URL per line)
+            <textarea id="knowledge_sources" name="knowledge_sources" rows="3" placeholder="https://pubmed.ncbi.nlm.nih.gov/..."></textarea>
           </label>
           <label class="agent-form__full">
             Knowledge Text

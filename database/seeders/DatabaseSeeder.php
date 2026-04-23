@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(VerticalsSeeder::class);
         $this->call(SubscriptionPlansSeeder::class);
-        $this->call(NoraAvatarSeeder::class);
+        $this->call(WellnessAvatarsSeeder::class);
 
         User::factory()->create([
             'name' => 'Test User',
