@@ -139,9 +139,24 @@ class ConversationController extends Controller
         ];
     }
 
+    /**
+     * If the caller presents a Sanctum user AND the conversation has an
+     * owner, enforce ownership. Unauthenticated callers (the hotel SPA
+     * session flow) stay unaffected — the conversation's user_id is
+     * null for them.
+     */
+    private function ensureOwnership(Request $request, Conversation $conversation): void
+    {
+        $user = $request->user('sanctum');
+        if ($user && $conversation->user_id !== null && $conversation->user_id !== $user->id) {
+            abort(403);
+        }
+    }
+
     /** Rename a conversation. */
     public function update(Request $request, Conversation $conversation): JsonResponse
     {
+        $this->ensureOwnership($request, $conversation);
         $conversation->update($request->only('title'));
         return response()->json($conversation);
     }
@@ -149,17 +164,16 @@ class ConversationController extends Controller
     /** Delete a conversation. */
     public function destroy(Request $request, Conversation $conversation): JsonResponse
     {
-        $user = $request->user('sanctum');
-        if ($user && $conversation->user_id !== null && $conversation->user_id !== $user->id) {
-            abort(403);
-        }
+        $this->ensureOwnership($request, $conversation);
         $conversation->delete();
         return response()->json(['message' => 'Deleted']);
     }
 
     /** Get message history for a conversation. */
-    public function messages(Conversation $conversation): JsonResponse
+    public function messages(Request $request, Conversation $conversation): JsonResponse
     {
+        $this->ensureOwnership($request, $conversation);
+
         $messages = $conversation->messages()
             ->orderBy('created_at')
             ->get();
@@ -170,6 +184,8 @@ class ConversationController extends Controller
     /** Create a user message, optionally trigger auto-reply. */
     public function createMessage(Request $request, Conversation $conversation): JsonResponse
     {
+        $this->ensureOwnership($request, $conversation);
+
         $validated = $request->validate([
             'content'    => 'required|string',
             'auto_reply' => 'boolean',
@@ -208,21 +224,25 @@ class ConversationController extends Controller
     }
 
     /** Manually trigger an agent reply. */
-    public function agentReply(Conversation $conversation): JsonResponse
+    public function agentReply(Request $request, Conversation $conversation): JsonResponse
     {
+        $this->ensureOwnership($request, $conversation);
+
         $agentMsg = $this->generationService->generateResponse($conversation);
         return response()->json($agentMsg, 201);
     }
 
     /** List attachments for a conversation. */
-    public function listAttachments(Conversation $conversation): JsonResponse
+    public function listAttachments(Request $request, Conversation $conversation): JsonResponse
     {
+        $this->ensureOwnership($request, $conversation);
         return response()->json($conversation->attachments);
     }
 
     /** Upload an attachment to a conversation. */
     public function uploadAttachment(Request $request, Conversation $conversation): JsonResponse
     {
+        $this->ensureOwnership($request, $conversation);
         $request->validate(['file' => 'required|file|max:10240']);
 
         $file = $request->file('file');
@@ -241,6 +261,7 @@ class ConversationController extends Controller
     /** Transcribe audio to text. */
     public function transcribe(Request $request, Conversation $conversation): JsonResponse
     {
+        $this->ensureOwnership($request, $conversation);
         $request->validate(['file' => 'required|file|max:6144']);
 
         $file    = $request->file('file');
@@ -273,6 +294,7 @@ class ConversationController extends Controller
     /** Text-to-speech. */
     public function speak(Request $request, Conversation $conversation): mixed
     {
+        $this->ensureOwnership($request, $conversation);
         $request->validate(['text' => 'required|string|max:4096']);
 
         $agent = $conversation->agent;
