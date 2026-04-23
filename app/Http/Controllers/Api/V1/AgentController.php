@@ -12,9 +12,16 @@ class AgentController extends Controller
     public function index(): JsonResponse
     {
         $agents = Agent::published()
-            ->select('id', 'slug', 'name', 'role', 'description', 'avatar_image_url', 'chat_background_url')
+            ->select(
+                'id', 'slug', 'name', 'role', 'description',
+                'avatar_image_url', 'chat_background_url',
+                'prompt_suggestions_json',
+            )
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->map(fn (Agent $a) => array_merge($a->toArray(), [
+                'prompt_suggestions' => $a->prompt_suggestions_json ?? [],
+            ]));
 
         return response()->json($agents);
     }
@@ -22,10 +29,12 @@ class AgentController extends Controller
     /** Get single agent details. */
     public function show(Agent $agent): JsonResponse
     {
-        return response()->json($agent->only([
+        return response()->json(array_merge($agent->only([
             'id', 'slug', 'name', 'role', 'description',
             'avatar_image_url', 'chat_background_url',
             'openai_voice', 'is_published',
+        ]), [
+            'prompt_suggestions' => $agent->prompt_suggestions_json ?? [],
         ]));
     }
 

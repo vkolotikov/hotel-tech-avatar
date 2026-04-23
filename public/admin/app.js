@@ -62,6 +62,7 @@ const elements = {
   verticalId: document.getElementById('vertical_id'),
   verticalFilter: document.getElementById('vertical-filter'),
   knowledgeSources: document.getElementById('knowledge_sources'),
+  promptSuggestions: document.getElementById('prompt_suggestions'),
   redFlagList: document.getElementById('red_flag_rules'),
   scopeList: document.getElementById('scope_rules'),
   handoffList: document.getElementById('handoff_rules'),
@@ -565,6 +566,7 @@ function clearForm() {
   elements.knowledgeFiles.value = '';
   elements.knowledgeUploadInput.value = '';
   if (elements.knowledgeSources) elements.knowledgeSources.value = '';
+  if (elements.promptSuggestions) elements.promptSuggestions.value = '';
   if (elements.verticalId) elements.verticalId.value = '';
   renderRulesInto(elements.redFlagList, 'red_flag_rules', []);
   renderRulesInto(elements.scopeList, 'scope_rules', []);
@@ -606,6 +608,11 @@ function fillForm(agent) {
     elements.knowledgeSources.value = Array.isArray(agent.knowledge_sources_json)
       ? agent.knowledge_sources_json.join('\n')
       : (agent.knowledge_sources_json || '');
+  }
+  if (elements.promptSuggestions) {
+    elements.promptSuggestions.value = Array.isArray(agent.prompt_suggestions_json)
+      ? agent.prompt_suggestions_json.join('\n')
+      : '';
   }
   renderRulesInto(elements.redFlagList, 'red_flag_rules', Array.isArray(agent.red_flag_rules_json) ? agent.red_flag_rules_json : []);
   renderRulesInto(elements.scopeList, 'scope_rules', Array.isArray(agent.scope_json) ? agent.scope_json : []);
@@ -671,6 +678,11 @@ function buildPayload() {
     .map((s) => s.trim())
     .filter(Boolean);
 
+  const starterPrompts = (elements.promptSuggestions?.value || '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   return {
     slug: elements.slug.value.trim(),
     name: elements.name.value.trim(),
@@ -683,6 +695,7 @@ function buildPayload() {
     knowledge_text: elements.knowledgeText.value.trim(),
     knowledge_files: normalizeKnowledgeFiles(elements.knowledgeFiles.value),
     knowledge_sources_json: sources,
+    prompt_suggestions_json: starterPrompts,
     red_flag_rules_json: collectRulesFrom(elements.redFlagList, 'red_flag_rules'),
     scope_json: collectRulesFrom(elements.scopeList, 'scope_rules'),
     handoff_rules_json: collectRulesFrom(elements.handoffList, 'handoff_rules'),

@@ -4,9 +4,11 @@ import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../
 type Props = {
   avatarSlug: string;
   avatarName: string;
+  suggestions?: string[];
   onPick: (text: string) => void;
 };
 
+// Fallback prompt sets used when the backend hasn't authored any yet.
 const PROMPTS_BY_SLUG: Record<string, string[]> = {
   nora: [
     'What foods help with gut health?',
@@ -46,8 +48,10 @@ const DEFAULT_PROMPTS = [
   'What should I ask you first?',
 ];
 
-export function StarterPrompts({ avatarSlug, avatarName, onPick }: Props) {
-  const prompts = PROMPTS_BY_SLUG[avatarSlug] ?? DEFAULT_PROMPTS;
+export function StarterPrompts({ avatarSlug, avatarName, suggestions, onPick }: Props) {
+  // Prefer backend-authored prompts; fall back to built-in per-slug defaults.
+  const provided = Array.isArray(suggestions) && suggestions.length > 0 ? suggestions : null;
+  const prompts = provided ?? PROMPTS_BY_SLUG[avatarSlug] ?? DEFAULT_PROMPTS;
   const slug = avatarSlug as AvatarSlug;
   const accent = slug in avatarColors ? avatarColors[slug] : colors.primary;
 
@@ -69,6 +73,7 @@ export function StarterPrompts({ avatarSlug, avatarName, onPick }: Props) {
           </Pressable>
         ))}
       </View>
+      <Text style={styles.hint}>or tap the mic to talk instead</Text>
     </View>
   );
 }
@@ -108,5 +113,13 @@ const styles = StyleSheet.create({
   chipText: {
     color: colors.textPrimary,
     fontSize: fontSize.sm,
+  },
+  hint: {
+    marginTop: spacing.xs,
+    textAlign: 'center',
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    textShadowColor: 'rgba(0,0,0,0.75)',
+    textShadowRadius: 6,
   },
 });

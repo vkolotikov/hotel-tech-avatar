@@ -21,6 +21,7 @@ class Agent extends Model
         'knowledge_sync_status', 'knowledge_synced_at', 'knowledge_last_error',
         'is_published',
         'persona_json', 'scope_json', 'red_flag_rules_json', 'handoff_rules_json',
+        'prompt_suggestions_json',
         'active_prompt_version_id',
     ];
 
@@ -36,6 +37,7 @@ class Agent extends Model
             'scope_json'               => 'array',
             'red_flag_rules_json'      => 'array',
             'handoff_rules_json'       => 'array',
+            'prompt_suggestions_json'  => 'array',
         ];
     }
 

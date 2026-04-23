@@ -120,6 +120,8 @@ class AdminController extends Controller
             'scope_json'             => 'nullable|array',
             'red_flag_rules_json'    => 'nullable|array',
             'handoff_rules_json'     => 'nullable|array',
+            'prompt_suggestions_json'=> 'nullable|array',
+            'prompt_suggestions_json.*' => 'string|max:200',
             'openai_model'           => 'nullable|string|max:120',
             'openai_voice'           => 'nullable|string|max:64',
             'use_advanced_ai'        => 'boolean',

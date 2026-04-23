@@ -17,6 +17,7 @@ export type RootStackParamList = {
     avatarSlug: string;
     avatarName: string;
     avatarImageUrl?: string | null;
+    promptSuggestions?: string[];
   };
 };
 

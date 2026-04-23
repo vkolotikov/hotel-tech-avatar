@@ -33,7 +33,13 @@ export function ChatDetailScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const { conversationId, avatarSlug, avatarName, avatarImageUrl } = route.params;
+  const {
+    conversationId,
+    avatarSlug,
+    avatarName,
+    avatarImageUrl,
+    promptSuggestions,
+  } = route.params;
   const listRef = useRef<FlatList>(null);
 
   const heroUri = resolveAssetUrl(avatarImageUrl);
@@ -154,6 +160,7 @@ export function ChatDetailScreen() {
               <StarterPrompts
                 avatarSlug={avatarSlug}
                 avatarName={avatarName}
+                suggestions={promptSuggestions}
                 onPick={(text) => handleSend(text)}
               />
             ) : null

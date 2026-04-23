@@ -77,6 +77,7 @@ export function AvatarHomeScreen() {
         avatarSlug: avatar.slug,
         avatarName: avatar.name,
         avatarImageUrl: avatar.avatar_image_url,
+        promptSuggestions: avatar.prompt_suggestions,
       });
       return;
     }
@@ -90,6 +91,7 @@ export function AvatarHomeScreen() {
         avatarSlug: avatar.slug,
         avatarName: avatar.name,
         avatarImageUrl: avatar.avatar_image_url,
+        promptSuggestions: avatar.prompt_suggestions,
       });
     } catch (err) {
       Alert.alert('Could not start chat', (err as Error).message ?? 'Unknown error');

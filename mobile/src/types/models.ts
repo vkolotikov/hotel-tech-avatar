@@ -7,6 +7,7 @@ export interface Avatar {
   description: string | null;
   vertical_slug: string;
   avatar_image_url: string | null;
+  prompt_suggestions?: string[];
 }
 
 export interface Conversation {
