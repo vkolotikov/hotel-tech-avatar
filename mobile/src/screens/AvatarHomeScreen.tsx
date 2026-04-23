@@ -15,16 +15,15 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useAvatars } from '../hooks/useAvatars';
 import { useConversations, useCreateConversation } from '../hooks/useConversations';
 import { IntroVideoModal } from '../components/avatars/IntroVideoModal';
-import { logout, resolveAssetUrl } from '../api';
+import { resolveAssetUrl } from '../api';
 import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../theme';
-import type { RootStackParamList } from '../navigation/AppNavigator';
+import type { HomeStackParamList } from '../navigation/AppNavigator';
 import type { Avatar, Conversation } from '../types/models';
 
-type Nav = NativeStackNavigationProp<RootStackParamList, 'AvatarHome'>;
+type Nav = NativeStackNavigationProp<HomeStackParamList, 'AvatarHome'>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -48,29 +47,6 @@ export function AvatarHomeScreen() {
     });
     return map;
   }, [conversationsData]);
-
-  const handleOpenHistory = () => navigation.navigate('ConversationList');
-
-  const handleSignOut = () => {
-    Alert.alert(
-      'Sign out',
-      'You will be signed out of WellnessAI on this device.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign out',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (err) {
-              Alert.alert('Sign out failed', (err as Error).message);
-            }
-          },
-        },
-      ],
-    );
-  };
 
   const handleStart = async (avatar: Avatar) => {
     const existing = conversationsByAgent.get(avatar.id);
@@ -160,25 +136,10 @@ export function AvatarHomeScreen() {
         onClose={() => setIntroAvatar(null)}
       />
 
-      {/* Top bar — history + title floating over the portrait */}
+      {/* Top bar — brand mark floating over the portrait.
+          History + sign-out moved to bottom tabs + Settings. */}
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]} pointerEvents="box-none">
         <Text style={styles.brand}>WellnessAI</Text>
-        <View style={styles.topBarActions}>
-          <Pressable
-            onPress={handleOpenHistory}
-            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-            accessibilityLabel="Conversation history"
-          >
-            <Ionicons name="time-outline" size={22} color={colors.textPrimary} />
-          </Pressable>
-          <Pressable
-            onPress={handleSignOut}
-            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-            accessibilityLabel="Sign out"
-          >
-            <Ionicons name="log-out-outline" size={22} color={colors.textPrimary} />
-          </Pressable>
-        </View>
       </View>
 
       {/* Pagination dots */}
@@ -294,7 +255,6 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
   },
@@ -306,22 +266,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 6,
   },
-  topBarActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(20,26,38,0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: { opacity: 0.7 },
   dots: {
     position: 'absolute',
     left: 0,
