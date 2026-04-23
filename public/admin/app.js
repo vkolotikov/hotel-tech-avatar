@@ -451,6 +451,9 @@ function escapeAttr(value) {
 function renderRuleRow(schema, rule) {
   const row = document.createElement('div');
   row.className = 'rules-row';
+  // Keep the original rule on the DOM node so unknown fields
+  // (pattern_regex, category, handoff_target, severity, …) survive a save.
+  row.__originalRule = rule && typeof rule === 'object' ? { ...rule } : {};
 
   const makeField = (side, value) => {
     const wrap = document.createElement('label');
@@ -505,24 +508,28 @@ function collectRulesFrom(listEl, schemaKey) {
   const result = [];
   rows.forEach((row) => {
     const inputs = row.querySelectorAll('[data-rule-field]');
-    const obj = {};
+    const edited = {};
     inputs.forEach((input) => {
       const key = input.dataset.ruleField;
       const raw = (input.value || '').trim();
       if (input.dataset.splitList === '1') {
-        obj[key] = raw
+        edited[key] = raw
           ? raw.split(',').map((s) => s.trim()).filter(Boolean)
           : [];
       } else {
-        obj[key] = raw;
+        edited[key] = raw;
       }
     });
-    const leftVal = obj[schema.left.key];
-    const rightVal = obj[schema.right.key];
+    const leftVal = edited[schema.left.key];
+    const rightVal = edited[schema.right.key];
     const leftEmpty = Array.isArray(leftVal) ? leftVal.length === 0 : !leftVal;
     const rightEmpty = !rightVal;
     if (leftEmpty && rightEmpty) return; // skip fully-empty rows
-    result.push(obj);
+
+    // Merge: start from the original (keeps pattern_regex, category, etc.)
+    // and overwrite only the fields the form controls.
+    const original = row.__originalRule || {};
+    result.push({ ...original, ...edited });
   });
   return result;
 }
