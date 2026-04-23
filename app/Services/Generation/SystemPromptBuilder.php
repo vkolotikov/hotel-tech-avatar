@@ -212,7 +212,7 @@ final class SystemPromptBuilder
         if ($isAssoc) {
             foreach ($rules as $target => $tags) {
                 if (!is_string($tags)) continue;
-                $lines[] = "- For topics tagged ({$tags}) → suggest handoff to **{$target}**.";
+                $lines[] = "- For topics tagged ({$tags}) → your FIRST sentence MUST mention **{$target}** by name.";
             }
         } else {
             foreach ($rules as $entry) {
@@ -220,11 +220,15 @@ final class SystemPromptBuilder
                 $trigger = $entry['trigger'] ?? null;
                 $ref     = $entry['referral'] ?? null;
                 if ($trigger && $ref) {
-                    $lines[] = "- When the user's concern is **{$trigger}**, say: \"" . trim($ref) . "\"";
+                    $lines[] = "- When the user's concern is **{$trigger}**, your FIRST sentence MUST start with: \"" . trim($ref) . "\"";
                 }
             }
         }
-        return empty($lines) ? null : "# Handoffs\n" . implode("\n", $lines);
+        if (empty($lines)) return null;
+
+        return "# Handoffs (IMPERATIVE — start your reply with the handoff, then a brief supporting line at most)\n"
+            . implode("\n", $lines)
+            . "\n- Do NOT give direct advice on a handoff topic. The other avatar is the one who goes deep; you set up the handoff, full stop.";
     }
 
     private function renderRetrieval(RetrievedContext $ctx): ?string
