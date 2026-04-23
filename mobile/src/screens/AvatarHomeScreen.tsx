@@ -15,6 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAvatars } from '../hooks/useAvatars';
 import { useConversations, useCreateConversation } from '../hooks/useConversations';
 import { IntroVideoModal } from '../components/avatars/IntroVideoModal';
@@ -168,14 +169,14 @@ export function AvatarHomeScreen() {
             style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
             accessibilityLabel="Conversation history"
           >
-            <Text style={styles.iconGlyph}>☰</Text>
+            <Ionicons name="time-outline" size={22} color={colors.textPrimary} />
           </Pressable>
           <Pressable
             onPress={handleSignOut}
             style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
             accessibilityLabel="Sign out"
           >
-            <Text style={styles.iconGlyph}>⏻</Text>
+            <Ionicons name="log-out-outline" size={22} color={colors.textPrimary} />
           </Pressable>
         </View>
       </View>
@@ -319,10 +320,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconGlyph: {
-    color: colors.textPrimary,
-    fontSize: 18,
   },
   pressed: { opacity: 0.7 },
   dots: {

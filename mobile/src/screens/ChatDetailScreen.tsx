@@ -13,6 +13,7 @@ import {
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useMessages } from '../hooks/useMessages';
 import { useChatStream } from '../hooks/useChatStream';
 import { MessageBubble } from '../components/chat/MessageBubble';
@@ -91,7 +92,7 @@ export function ChatDetailScreen() {
           pressed && { opacity: 0.7 },
         ]}
       >
-        <Text style={styles.backArrow}>‹</Text>
+        <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
       </Pressable>
       <Text style={styles.headerTitle} numberOfLines={1}>
         {avatarName}
@@ -224,13 +225,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backArrow: {
-    color: colors.textPrimary,
-    fontSize: 26,
-    lineHeight: 26,
-    marginTop: -3,
-    fontWeight: '500',
   },
   headerTitle: {
     flex: 1,

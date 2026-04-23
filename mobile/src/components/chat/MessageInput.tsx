@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
 import { VoiceRecordButton } from './VoiceRecordButton';
 import { colors, spacing, radius, fontSize } from '../../theme';
@@ -121,7 +122,7 @@ export function MessageInput({
           disabled={disabled || !text.trim() || recorder.isTranscribing}
           accessibilityLabel="Send message"
         >
-          <Text style={styles.sendIcon}>➤</Text>
+          <Ionicons name="send" size={18} color={colors.textPrimary} />
         </Pressable>
       </View>
     </View>
@@ -210,9 +211,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendDisabled: { opacity: 0.35 },
-  sendIcon: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: '700',
-  },
 });

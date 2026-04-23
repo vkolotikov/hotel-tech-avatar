@@ -26,3 +26,14 @@ export async function deleteConversation(id: number): Promise<void> {
     auth: true,
   });
 }
+
+export async function updateConversation(
+  id: number,
+  title: string,
+): Promise<Conversation> {
+  return request<Conversation>(`/api/v1/conversations/${id}`, {
+    method: 'PUT',
+    auth: true,
+    body: JSON.stringify({ title }),
+  });
+}

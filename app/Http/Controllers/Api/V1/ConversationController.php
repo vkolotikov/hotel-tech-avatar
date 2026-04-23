@@ -56,10 +56,14 @@ class ConversationController extends Controller
         $perPage = (int) $request->query('per_page', 20);
         $perPage = max(1, min($perPage, 100));
 
+        // Only conversations the user has actually started appear in history.
+        // Empty drafts (created when an avatar is tapped but no message sent
+        // yet) stay out of the list — see ChatDetailScreen deferred-send flow.
         $paginator = Conversation::query()
             ->where('user_id', $request->user()->id)
             ->with(['agent.vertical:id,slug'])
             ->withCount('messages')
+            ->whereHas('messages')
             ->orderByDesc('last_activity_at')
             ->orderByDesc('updated_at')
             ->paginate($perPage);

@@ -1,8 +1,15 @@
+import { useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useConversations, useDeleteConversation } from '../hooks/useConversations';
+import {
+  useConversations,
+  useDeleteConversation,
+  useRenameConversation,
+} from '../hooks/useConversations';
 import { ConversationCard } from '../components/conversations/ConversationCard';
+import { ConversationActionsSheet } from '../components/conversations/ConversationActionsSheet';
+import { RenameConversationModal } from '../components/conversations/RenameConversationModal';
 import { EmptyState } from '../components/conversations/EmptyState';
 import { colors, spacing, radius, fontSize } from '../theme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
@@ -14,6 +21,10 @@ export function ConversationListScreen() {
   const navigation = useNavigation<Nav>();
   const { data, isLoading, isError, refetch, isRefetching } = useConversations();
   const deleteMutation = useDeleteConversation();
+  const renameMutation = useRenameConversation();
+
+  const [actionTarget, setActionTarget] = useState<Conversation | null>(null);
+  const [renameTarget, setRenameTarget] = useState<Conversation | null>(null);
 
   const handleOpen = (conversation: Conversation) => {
     navigation.navigate('ChatDetail', {
@@ -25,7 +36,20 @@ export function ConversationListScreen() {
   };
 
   const handleLongPress = (conversation: Conversation) => {
-    const label = conversation.title ?? 'this conversation';
+    setActionTarget(conversation);
+  };
+
+  const handleRenameSelected = () => {
+    const target = actionTarget;
+    setActionTarget(null);
+    if (target) setRenameTarget(target);
+  };
+
+  const handleDeleteSelected = () => {
+    const target = actionTarget;
+    setActionTarget(null);
+    if (!target) return;
+    const label = target.title ?? 'this conversation';
     Alert.alert(
       'Delete conversation',
       `Delete "${label}"? This cannot be undone.`,
@@ -36,7 +60,7 @@ export function ConversationListScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteMutation.mutateAsync(conversation.id);
+              await deleteMutation.mutateAsync(target.id);
             } catch (err) {
               Alert.alert('Delete failed', (err as Error).message);
             }
@@ -44,6 +68,17 @@ export function ConversationListScreen() {
         },
       ],
     );
+  };
+
+  const handleRenameSubmit = async (title: string) => {
+    const target = renameTarget;
+    if (!target) return;
+    try {
+      await renameMutation.mutateAsync({ id: target.id, title });
+      setRenameTarget(null);
+    } catch (err) {
+      Alert.alert('Rename failed', (err as Error).message);
+    }
   };
 
   const handleNewChat = () => navigation.navigate('AvatarHome');
@@ -88,6 +123,21 @@ export function ConversationListScreen() {
         contentContainerStyle={styles.list}
         onRefresh={refetch}
         refreshing={isRefetching}
+      />
+
+      <ConversationActionsSheet
+        visible={actionTarget !== null}
+        conversation={actionTarget}
+        onRename={handleRenameSelected}
+        onDelete={handleDeleteSelected}
+        onClose={() => setActionTarget(null)}
+      />
+
+      <RenameConversationModal
+        visible={renameTarget !== null}
+        initialTitle={renameTarget?.title ?? ''}
+        onSave={handleRenameSubmit}
+        onClose={() => setRenameTarget(null)}
       />
     </View>
   );

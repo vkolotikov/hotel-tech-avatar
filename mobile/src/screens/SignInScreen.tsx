@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthUser, login, register } from '../api';
 import { colors, spacing, radius, fontSize } from '../theme';
 
@@ -68,7 +69,12 @@ export function SignInScreen({ onSignedIn }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.card}>
-        <Text style={styles.brand}>WellnessAI</Text>
+        <View style={styles.brandRow}>
+          <View style={styles.brandIcon}>
+            <Ionicons name="leaf" size={20} color={colors.textPrimary} />
+          </View>
+          <Text style={styles.brand}>WellnessAI</Text>
+        </View>
         <Text style={styles.subheading}>
           {mode === 'signin' ? 'Sign in to continue' : 'Create your account'}
         </Text>
@@ -169,11 +175,24 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  brandIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
   brand: {
     color: colors.textPrimary,
     fontSize: fontSize.xl,
     fontWeight: '700',
-    marginBottom: spacing.xs,
   },
   subheading: {
     color: colors.textMuted,
