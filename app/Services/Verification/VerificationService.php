@@ -8,6 +8,10 @@ use App\Models\Agent;
 use App\Services\Knowledge\RetrievedContext;
 use App\Services\Llm\LlmClient;
 use App\Services\Llm\LlmRequest;
+use App\Services\Verification\CitationValidators\GenericCitationValidator;
+use App\Services\Verification\CitationValidators\OpenFoodFactsCitationValidator;
+use App\Services\Verification\CitationValidators\PubMedCitationValidator;
+use App\Services\Verification\CitationValidators\UsdaCitationValidator;
 use App\Services\Verification\Contracts\CitationValidationServiceInterface;
 use App\Services\Verification\Contracts\ClaimExtractionServiceInterface;
 use App\Services\Verification\Contracts\GroundingServiceInterface;
@@ -31,6 +35,7 @@ final class VerificationService implements VerificationServiceInterface
         private readonly SafetyClassifierInterface $safetyClassifier,
         private readonly StructuredReviewServiceInterface $structuredReviewService,
         private readonly LlmClient $llmClient,
+        private readonly ResponseCitationExtractor $responseCitationExtractor = new ResponseCitationExtractor(),
     ) {}
 
     public function verify(
@@ -45,13 +50,21 @@ final class VerificationService implements VerificationServiceInterface
         while ($revision_count < self::MAX_REVISIONS) {
             $failures = [];
 
+            // Stage 0: Catch fabricated citations in the raw response text.
+            // Independent of retrieval — a hallucinated PMID that never came
+            // from a chunk still fails here, which is the "no invented
+            // sources" guarantee from the Phase-1 spec.
+            foreach ($this->validate_response_text_citations($current_text) as $failure) {
+                $failures[] = $failure;
+            }
+
             // Stage 1: Extract claims
             $claims = $this->claimExtractionService->extract($current_text);
 
             // Stage 2: Ground claims
             $claims = $this->groundingService->ground_all_claims($claims, $context);
 
-            // Stage 3: Validate citations
+            // Stage 3: Validate citations attached to grounded chunks
             $claims = $this->citationValidationService->validate_all_citations($claims);
 
             // Check grounding and citation failures
@@ -138,6 +151,73 @@ final class VerificationService implements VerificationServiceInterface
             revision_count: $revision_count,
             is_verified: $passed,
         );
+    }
+
+    /**
+     * Scan the raw response text for fabricated citations. We hit the same
+     * per-source validators the chunk-citation path uses so PubMed/USDA
+     * lookups are cached (they are shared by key), but we operate on text
+     * that may have no grounding. Network failures return no-op rather
+     * than false positives — upstream transient errors shouldn't block a
+     * response when the core generation pipeline is healthy.
+     *
+     * @return array<int, VerificationFailure>
+     */
+    private function validate_response_text_citations(string $text): array
+    {
+        $citations = $this->responseCitationExtractor->extract($text);
+        if (empty($citations)) {
+            return [];
+        }
+
+        $pubmed   = new PubMedCitationValidator();
+        $usda     = new UsdaCitationValidator();
+        $openFood = new OpenFoodFactsCitationValidator();
+        $generic  = new GenericCitationValidator();
+
+        $failures = [];
+        foreach ($citations as $c) {
+            $validator = match ($c['type']) {
+                'pubmed' => $pubmed,
+                'usda'   => $usda,
+                'url'    => $generic,
+                default  => $generic,
+            };
+
+            try {
+                $result = $validator->validate($c['key']);
+            } catch (\Throwable $e) {
+                Log::warning('VerificationService: response-text citation validator threw', [
+                    'citation_key' => $c['key'],
+                    'citation_type' => $c['type'],
+                    'error' => $e->getMessage(),
+                ]);
+                // Don't fail on transient validator errors — let the chunk
+                // path handle durable validation.
+                continue;
+            }
+
+            if (! $result->is_valid) {
+                // Only flag as a failure when the detail indicates the
+                // source genuinely doesn't exist, not when the upstream
+                // API was temporarily unavailable. PubMedCitationValidator
+                // distinguishes "API temporarily unavailable" from "not
+                // found" in the detail string.
+                $detail = strtolower($result->validation_detail);
+                if (str_contains($detail, 'temporarily unavailable')
+                    || str_contains($detail, 'error validating')) {
+                    continue;
+                }
+
+                $failures[] = new VerificationFailure(
+                    type: VerificationFailureType::CITATION_INVALID,
+                    claim_text: $c['key'],
+                    reason: $result->validation_detail,
+                );
+            }
+        }
+
+        return $failures;
     }
 
     private function revise_response(

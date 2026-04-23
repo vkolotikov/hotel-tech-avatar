@@ -76,6 +76,8 @@ export function MessageBubble({ message, avatarSlug }: Props) {
           <CitationBadge
             citationsCount={message.citations_count ?? 0}
             isVerified={message.is_verified}
+            verificationStatus={message.verification_status}
+            verificationFailures={message.verification_failures_json}
           />
         )}
         {time !== '' && <Text style={styles.timeText}>{time}</Text>}

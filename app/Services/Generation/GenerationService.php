@@ -134,9 +134,10 @@ final class GenerationService
         if ($agent->vertical && $agent->vertical->slug === 'wellness') {
             $verificationStartTime = microtime(true);
 
-            // Placeholder: retrieval is wired in Phase 1+.
-            // Until then, verification cannot ground claims against retrieved evidence.
-            $context = new \App\Services\Knowledge\RetrievedContext(
+            // Pass the actual retrieved context so claims can be grounded
+            // against evidence the agent saw. Falling back to an empty
+            // context only when retrieval itself failed or returned nothing.
+            $context = $retrievedContext ?? new \App\Services\Knowledge\RetrievedContext(
                 chunks: [],
                 latency_ms: 0,
                 is_high_risk: false,
