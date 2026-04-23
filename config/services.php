@@ -70,4 +70,26 @@ return [
         'timeout' => (int) env('LANGFUSE_TIMEOUT_SECONDS', 5),
     ],
 
+    // Wellness knowledge sources. The PubMed + USDA API keys are read
+    // here and injected into the matching drivers
+    // (app/Services/Knowledge/Drivers/{PubMed,Usda}/) when an agent's
+    // knowledge_sources_json is synced.
+    'pubmed' => [
+        'api_key' => env('PUBMED_API_KEY', ''),
+        // NCBI rate-limits unauthenticated requests to 3/sec and
+        // authenticated ones to 10/sec. Stay below to be polite.
+        'rate_per_second' => (int) env('PUBMED_RATE_PER_SECOND', 8),
+    ],
+
+    'usda' => [
+        // USDA FoodData Central (https://fdc.nal.usda.gov/api-key-signup)
+        'api_key' => env('USDA_API_KEY', ''),
+    ],
+
+    'open_food_facts' => [
+        // Open Food Facts is unauthenticated but polite-rate-limits.
+        // Identify ourselves via a User-Agent with this contact email.
+        'contact_email' => env('OPEN_FOOD_FACTS_CONTACT_EMAIL', ''),
+    ],
+
 ];
