@@ -99,7 +99,7 @@ final class GenerationService
         try {
             $response = $this->llmClient->chat(new \App\Services\Llm\LlmRequest(
                 messages: $messages,
-                model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-5.4'),
+                model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
                 temperature: (float) config('services.openai.temperature', 0.3),
                 maxTokens: (int) config('services.openai.max_output_tokens', 180),
                 tools: [],
@@ -175,7 +175,7 @@ final class GenerationService
                 try {
                     $response = $this->llmClient->chat(new \App\Services\Llm\LlmRequest(
                         messages: $messages,
-                        model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-5.4'),
+                        model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
                         temperature: (float) config('services.openai.temperature', 0.3),
                         maxTokens: (int) config('services.openai.max_output_tokens', 180),
                         tools: [],

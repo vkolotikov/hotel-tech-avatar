@@ -47,7 +47,7 @@ final class LiveResolver
         // Eval runs allow longer answers than chat so string-match
         // assertions have enough text to bite on. One-shot, not a chat.
         $request = new LlmRequest(
-            model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-5.4'),
+            model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
             messages: [
                 ['role' => 'system', 'content' => $systemPrompt],
                 ['role' => 'user',   'content' => $case->prompt],
@@ -65,10 +65,14 @@ final class LiveResolver
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('LiveResolver LLM call failed', [
                 'case_id' => $case->id,
+                'agent'   => $agent->slug,
+                'model'   => $request->model,
                 'error'   => $e->getMessage(),
             ]);
+            // Surface the real error inline so eval:debug-case (and the
+            // assertion_log in eval_results) is self-explanatory.
             return new ResolvedResponse(
-                text: '[LLM call failed; see logs]',
+                text: '[LLM call failed: ' . $e->getMessage() . ']',
                 red_flag_triggered: false,
             );
         }

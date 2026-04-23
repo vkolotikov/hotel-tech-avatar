@@ -44,7 +44,10 @@ class WellnessAvatarsSeeder extends Seeder
                 [
                     'vertical_id'  => $wellness->id,
                     'is_published' => true,
-                    'openai_model' => 'gpt-5.4',
+                    // gpt-4o is the known-good default on our OpenAI account.
+                    // Flip to gpt-5.4 here (or override per-avatar via admin)
+                    // once that family is available on your tier.
+                    'openai_model' => 'gpt-4o',
                 ],
                 $data,
                 $configs[$data['slug']] ?? [],

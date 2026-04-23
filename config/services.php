@@ -38,8 +38,10 @@ return [
     'openai' => [
         'api_key'              => env('OPENAI_API_KEY', ''),
         'base_url'             => env('OPENAI_API_BASE_URL', 'https://api.openai.com/v1'),
-        // gpt-5.4 is the current flagship for agentic / professional chat.
-        'model'                => env('OPENAI_MODEL_DEFAULT', 'gpt-5.4'),
+        // gpt-4o is our known-good default for this OpenAI account. gpt-5.4
+        // is the documented flagship, but access isn't universal — switch
+        // via OPENAI_MODEL_DEFAULT in env when your account is cleared.
+        'model'                => env('OPENAI_MODEL_DEFAULT', 'gpt-4o'),
         'timeout'              => env('OPENAI_TIMEOUT_SECONDS', 45),
         'temperature'          => env('OPENAI_TEMPERATURE', 0.3),
         // Tight default; natural chat wants short replies by default, and the

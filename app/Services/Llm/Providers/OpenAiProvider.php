@@ -39,7 +39,14 @@ final class OpenAiProvider implements ProviderInterface
         $latencyMs = (int) round((microtime(true) - $start) * 1000);
 
         if (!$response->successful()) {
-            throw new \RuntimeException("OpenAI chat failed (HTTP {$response->status()})");
+            // Include the response body so upstream catch blocks and logs
+            // surface the actual OpenAI reason (model not available, rate
+            // limit, invalid param, etc.) rather than a bare HTTP code.
+            $body = (string) $response->body();
+            $snippet = mb_strlen($body) > 500 ? mb_substr($body, 0, 500) . '…' : $body;
+            throw new \RuntimeException(
+                "OpenAI chat failed (HTTP {$response->status()}): {$snippet}"
+            );
         }
 
         $json = $response->json() ?? [];

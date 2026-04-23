@@ -80,7 +80,7 @@ class AdminController extends Controller
             'stt_models'            => $sttModels,
             // Defaults pulled from config so the admin picker can pre-select
             // sensible values on new avatars.
-            'openai_default_model'  => (string) config('services.openai.model', 'gpt-5.4'),
+            'openai_default_model'  => (string) config('services.openai.model', 'gpt-4o'),
             'openai_default_voice'  => 'alloy',
         ]);
     }
