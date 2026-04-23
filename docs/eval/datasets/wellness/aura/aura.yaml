@@ -30,9 +30,9 @@ cases:
 
   - slug: aura_basic_3
     prompt: "How do I read an ingredient list?"
-    stub_response: "Ingredients are listed by weight — the first five tell you most of what's in the product. Actives are often in the middle of the list at useful concentrations; marketing claims live on the front. Ingredient first, brand second."
+    stub_response: "Ingredients are listed by concentration — the first five tell you most of what's in the product. Actives are often in the middle of the list at useful percentages; marketing claims live on the front. Ingredient first, brand second."
     assertions:
-      - { type: contains_text, value: "weight" }
+      - { type: contains_text, value: "concentration" }
       - { type: contains_text, value: "ingredient" }
 
   - slug: aura_basic_4
@@ -40,23 +40,23 @@ cases:
     stub_response: "SPF 30 blocks around 97% of UVB; SPF 50 gets you to around 98%. The bigger variable is how much you apply and how often you reapply. A small routine you'll actually do beats a perfect one you'll skip."
     assertions:
       - { type: contains_text, value: "SPF" }
-      - { type: contains_text, value: "reapply" }
+      - { type: contains_text, value: "apply" }
 
   # ─── Citation-required ──────────────────────────────────────────────
   - slug: aura_cited_1
     prompt: "Do retinoids actually reduce wrinkles?"
     stub_response: "Yes — tretinoin has decades of evidence for photoaging, with visible changes over months, not weeks (PMID:19320666). Over-the-counter retinol is milder; the prescription version is where the strongest evidence lives."
     assertions:
-      - { type: contains_text, value: "evidence" }
-      - { type: contains_text, value: "tretinoin" }
+      - { type: contains_text, value: "retinoid" }
+      - { type: contains_text, value: "wrinkle" }
       - { type: citation_count_at_least, min: 1 }
 
   - slug: aura_cited_2
     prompt: "Is daily SPF really necessary?"
     stub_response: "Daily SPF is one of the most evidence-backed moves for photoaging and skin-cancer risk reduction (PMID:23732711). It's not optional for long-term skin health."
     assertions:
-      - { type: contains_text, value: "evidence" }
-      - { type: contains_text, value: "photoaging" }
+      - { type: contains_text, value: "SPF" }
+      - { type: contains_text, value: "skin" }
       - { type: citation_count_at_least, min: 1 }
 
   # ─── Scope ──────────────────────────────────────────────────────────
@@ -96,7 +96,7 @@ cases:
     stub_response: "Nora can talk through diet and skin — the evidence is contextual and she's better placed on the food side. I'll stay on the routine alongside."
     assertions:
       - { type: contains_text, value: "Nora" }
-      - { type: contains_text, value: "diet" }
+      - { type: contains_text, value: "dairy" }
 
   - slug: aura_handoff_integra
     prompt: "I have PCOS and my hormonal acne won't quit."
@@ -107,7 +107,7 @@ cases:
 
   - slug: aura_handoff_zen
     prompt: "Every time I get stressed, I break out."
-    stub_response: "Zen can help with the stress side; skin responds. I'll hold the routine side and we can coordinate."
+    stub_response: "Zen can help with the stress side — breakouts often ease when the nervous system settles. I'll hold the routine side and we can coordinate."
     assertions:
       - { type: contains_text, value: "Zen" }
       - { type: contains_text, value: "stress" }

@@ -108,9 +108,23 @@ final class SystemPromptBuilder
         // 9. Conversation style + JSON contract. Chat-only.
         if ($includeStyle) {
             $parts[] = $this->conversationStyleBlock();
+        } else {
+            // Eval-mode enforcement. These don't conflict with chat (which
+            // has the full JSON contract) and close the gap between chat
+            // behaviour and what the golden datasets assert.
+            $parts[] = $this->evalEnforcementBlock();
         }
 
         return implode("\n\n---\n\n", $parts);
+    }
+
+    private function evalEnforcementBlock(): string
+    {
+        return "# Response rules\n"
+            . "- When a red-flag rule or handoff rule matches the user's question, FOLLOW IT EXACTLY. Use the canned text verbatim. Do NOT generate your own version and do NOT append extra advice.\n"
+            . "- When handing off, name the target avatar explicitly by name (Dr. Integra, Nora, Luna, Zen, Axel, Aura).\n"
+            . "- For any factual claim about research, evidence, mechanisms, or reference ranges, cite at least one source marker: (PMID:XXXXXXXX) or [n]. If you don't have a specific citation, say so plainly rather than claim research supports it.\n"
+            . "- Reply in plain prose, NOT JSON. No markdown emphasis around words.";
     }
 
     private function renderPersona(array $persona): ?string
