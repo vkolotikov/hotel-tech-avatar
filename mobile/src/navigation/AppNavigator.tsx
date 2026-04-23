@@ -9,6 +9,7 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
 import { AuthUser, me, onSessionExpired, storedToken } from '../api';
 import { SignInScreen } from '../screens/SignInScreen';
 import { AvatarHomeScreen } from '../screens/AvatarHomeScreen';
@@ -16,7 +17,10 @@ import { ConversationListScreen } from '../screens/ConversationListScreen';
 import { ChatDetailScreen } from '../screens/ChatDetailScreen';
 import { LibraryScreen } from '../screens/LibraryScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { colors } from '../theme';
+
+const ONBOARDING_KEY = 'onboarding_complete_v1';
 
 export type ChatDetailParams = {
   conversationId: number;
@@ -227,10 +231,16 @@ function RootTabs({ user }: { user: AuthUser | null }) {
 export function AppNavigator() {
   const [booting, setBooting] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [onboarded, setOnboarded] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
-      const token = await storedToken();
+      const [flag, token] = await Promise.all([
+        SecureStore.getItemAsync(ONBOARDING_KEY).catch(() => null),
+        storedToken(),
+      ]);
+      setOnboarded(flag === '1');
+
       if (!token) {
         setBooting(false);
         return;
@@ -252,12 +262,23 @@ export function AppNavigator() {
     });
   }, []);
 
+  const finishOnboarding = () => {
+    setOnboarded(true);
+    // Persist in the background — failure just means we re-show onboarding
+    // on next launch, which is harmless.
+    SecureStore.setItemAsync(ONBOARDING_KEY, '1').catch(() => {});
+  };
+
   if (booting) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator color={colors.primary} />
       </View>
     );
+  }
+
+  if (!onboarded) {
+    return <OnboardingScreen onFinish={finishOnboarding} />;
   }
 
   if (!user) {
