@@ -23,7 +23,10 @@ import type { Attachment } from '../../types/models';
 type Props = {
   conversationId: number;
   accent?: string;
-  onSend: (text: string, opts?: { voice?: boolean; attachmentIds?: number[] }) => void;
+  onSend: (
+    text: string,
+    opts?: { voice?: boolean; attachmentIds?: number[] },
+  ) => Promise<boolean> | void;
   disabled: boolean;
 };
 
@@ -87,11 +90,17 @@ export function MessageInput({
     !uploading &&
     (text.trim().length > 0 || attachments.length > 0);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!canSend) return;
     const trimmed = text.trim();
     const ids = attachments.map((a) => a.id);
-    onSend(trimmed, ids.length > 0 ? { attachmentIds: ids } : undefined);
+    const result = onSend(trimmed, ids.length > 0 ? { attachmentIds: ids } : undefined);
+    // If onSend returned a promise, wait for the outcome before clearing
+    // local state so a failed send keeps the user's text and attachments.
+    if (result && typeof (result as Promise<boolean>).then === 'function') {
+      const ok = await (result as Promise<boolean>);
+      if (ok === false) return;
+    }
     setText('');
     setAttachments([]);
   };

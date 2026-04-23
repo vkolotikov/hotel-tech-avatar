@@ -179,7 +179,7 @@ export function useChatStream(conversationId: number) {
   );
 
   const send = useCallback(
-    async (text: string, opts?: SendOpts) => {
+    async (text: string, opts?: SendOpts): Promise<boolean> => {
       const speak = opts?.speak ?? false;
       const attachmentIds = opts?.attachmentIds;
       setState((s) => ({ ...s, isPending: true, streamingText: '', error: null }));
@@ -191,14 +191,17 @@ export function useChatStream(conversationId: number) {
           if (speak && response.agent_message.content) {
             void playReply(response.agent_message.content);
           }
-          return;
+          return true;
         }
         await openStream(response.user_message, 0, speak);
+        return true;
       } catch (error) {
         try {
           await sendSync(text, speak, attachmentIds);
+          return true;
         } catch (e) {
           setState((s) => ({ ...s, isPending: false, streamingText: '', error: e as Error }));
+          return false;
         }
       }
     },

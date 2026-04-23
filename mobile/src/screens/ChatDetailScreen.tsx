@@ -60,8 +60,8 @@ export function ChatDetailScreen() {
   const handleSend = (
     text: string,
     opts?: { voice?: boolean; attachmentIds?: number[] },
-  ) => {
-    stream.send(text, {
+  ): Promise<boolean> => {
+    return stream.send(text, {
       speak: opts?.voice === true,
       attachmentIds: opts?.attachmentIds,
     });
@@ -197,6 +197,14 @@ export function ChatDetailScreen() {
             <Text style={styles.speakingText}>{avatarName} is speaking · tap to stop</Text>
           </Pressable>
         )}
+        {stream.error && (
+          <View style={styles.errorBanner}>
+            <Ionicons name="alert-circle" size={18} color={colors.danger} />
+            <Text style={styles.errorBannerText} numberOfLines={2}>
+              {stream.error.message}
+            </Text>
+          </View>
+        )}
         <MessageInput
           conversationId={conversationId}
           accent={accent}
@@ -276,5 +284,24 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.sm,
     fontWeight: '500',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.danger + '55',
+    backgroundColor: 'rgba(239,68,68,0.12)',
+    gap: spacing.sm,
+  },
+  errorBannerText: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    flex: 1,
   },
 });
