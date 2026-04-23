@@ -57,8 +57,14 @@ export function ChatDetailScreen() {
     }
   }, [data?.length]);
 
-  const handleSend = (text: string, opts?: { voice?: boolean }) => {
-    stream.send(text, { speak: opts?.voice === true });
+  const handleSend = (
+    text: string,
+    opts?: { voice?: boolean; attachmentIds?: number[] },
+  ) => {
+    stream.send(text, {
+      speak: opts?.voice === true,
+      attachmentIds: opts?.attachmentIds,
+    });
   };
 
   const Background = heroUri

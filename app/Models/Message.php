@@ -64,6 +64,11 @@ class Message extends Model
         return $this->hasMany(MessageCitation::class);
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ConversationAttachment::class);
+    }
+
     public function verificationEvents(): HasMany
     {
         return $this->hasMany(VerificationEvent::class);

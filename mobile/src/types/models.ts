@@ -24,6 +24,17 @@ export interface Conversation {
 
 export type MessageRole = 'user' | 'agent';
 
+export interface Attachment {
+  id: number;
+  conversation_id: number;
+  message_id: number | null;
+  file_path: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_at?: string;
+}
+
 export interface Message {
   id: number;
   conversation_id: number;
@@ -42,6 +53,7 @@ export interface Message {
   verification_latency_ms: number | null;
   citations_count?: number;
   ui_json?: { suggestions?: string[] } | null;
+  attachments?: Attachment[];
   created_at: string;
 }
 

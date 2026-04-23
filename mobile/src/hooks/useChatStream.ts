@@ -23,7 +23,7 @@ type State = {
   isSpeaking: boolean;
 };
 
-type SendOpts = { speak?: boolean };
+type SendOpts = { speak?: boolean; attachmentIds?: number[] };
 
 export function useChatStream(conversationId: number) {
   const qc = useQueryClient();
@@ -165,8 +165,8 @@ export function useChatStream(conversationId: number) {
   );
 
   const sendSync = useCallback(
-    async (text: string, speak: boolean) => {
-      const response = await sendMessage(conversationId, text);
+    async (text: string, speak: boolean, attachmentIds?: number[]) => {
+      const response = await sendMessage(conversationId, text, attachmentIds);
       const toAppend: Message[] = [response.user_message];
       if (response.agent_message) toAppend.push(response.agent_message);
       appendMessages(toAppend);
@@ -181,9 +181,10 @@ export function useChatStream(conversationId: number) {
   const send = useCallback(
     async (text: string, opts?: SendOpts) => {
       const speak = opts?.speak ?? false;
+      const attachmentIds = opts?.attachmentIds;
       setState((s) => ({ ...s, isPending: true, streamingText: '', error: null }));
       try {
-        const response = await sendMessage(conversationId, text);
+        const response = await sendMessage(conversationId, text, attachmentIds);
         if (response.agent_message) {
           appendMessages([response.user_message, response.agent_message]);
           setState((s) => ({ ...s, isPending: false, streamingText: '', error: null }));
@@ -195,7 +196,7 @@ export function useChatStream(conversationId: number) {
         await openStream(response.user_message, 0, speak);
       } catch (error) {
         try {
-          await sendSync(text, speak);
+          await sendSync(text, speak, attachmentIds);
         } catch (e) {
           setState((s) => ({ ...s, isPending: false, streamingText: '', error: e as Error }));
         }

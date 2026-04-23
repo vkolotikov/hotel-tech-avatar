@@ -179,6 +179,7 @@ class ConversationController extends Controller
         $this->ensureOwnership($request, $conversation);
 
         $messages = $conversation->messages()
+            ->with('attachments')
             ->orderBy('created_at')
             ->get();
 
@@ -191,23 +192,48 @@ class ConversationController extends Controller
         $this->ensureOwnership($request, $conversation);
 
         $validated = $request->validate([
-            'content'    => 'required|string',
-            'auto_reply' => 'boolean',
+            'content'          => 'nullable|string',
+            'auto_reply'       => 'boolean',
+            'attachment_ids'   => 'array',
+            'attachment_ids.*' => 'integer',
         ]);
+
+        $content = trim((string) ($validated['content'] ?? ''));
+        $hasAttachments = !empty($validated['attachment_ids'] ?? []);
+        if ($content === '' && !$hasAttachments) {
+            abort(422, 'Either content or attachment_ids is required.');
+        }
 
         // Save user message
         $userMsg = $conversation->messages()->create([
             'role'    => 'user',
-            'content' => $validated['content'],
+            'content' => $content,
         ]);
 
+        // Link any previously-uploaded attachments to this message. Only
+        // attachments in the same conversation and not already linked to
+        // another message are allowed — prevents a forged id from stealing
+        // another user's upload.
+        $attachmentIds = $validated['attachment_ids'] ?? [];
+        if (!empty($attachmentIds)) {
+            ConversationAttachment::where('conversation_id', $conversation->id)
+                ->whereIn('id', $attachmentIds)
+                ->whereNull('message_id')
+                ->update(['message_id' => $userMsg->id]);
+        }
+
+        $userMsg->load('attachments');
+
         // Auto-title from the first user message if the conversation still
-        // has the default placeholder. Keeps "History" readable.
+        // has the default placeholder. Keeps "History" readable. If the
+        // user sent only an attachment, fall back to a short descriptor.
         $updates = [];
         if ($conversation->title === null || $conversation->title === 'New Chat') {
-            $trimmed = trim(preg_replace('/\s+/', ' ', $validated['content']) ?? '');
+            $trimmed = trim((string) preg_replace('/\s+/', ' ', $content));
             if ($trimmed !== '') {
                 $updates['title'] = mb_substr($trimmed, 0, 60);
+            } elseif ($hasAttachments) {
+                $updates['title'] = 'Attachment';
             }
         }
         $updates['last_activity_at'] = now();

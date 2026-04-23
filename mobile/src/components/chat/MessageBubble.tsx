@@ -1,7 +1,32 @@
 import { Text, View, StyleSheet } from 'react-native';
-import type { Message } from '../../types/models';
+import { Ionicons } from '@expo/vector-icons';
+import type { Message, Attachment } from '../../types/models';
 import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../../theme';
 import { CitationBadge } from './CitationBadge';
+
+function iconForMime(mime: string | null | undefined): keyof typeof Ionicons.glyphMap {
+  if (!mime) return 'document-outline';
+  if (mime.startsWith('image/')) return 'image-outline';
+  if (mime.startsWith('video/')) return 'videocam-outline';
+  if (mime.startsWith('audio/')) return 'musical-notes-outline';
+  if (mime.includes('pdf')) return 'document-text-outline';
+  return 'document-outline';
+}
+
+function AttachmentChip({ attachment }: { attachment: Attachment }) {
+  return (
+    <View style={bubbleStyles.attachmentChip}>
+      <Ionicons
+        name={iconForMime(attachment.mime_type)}
+        size={16}
+        color={colors.textPrimary}
+      />
+      <Text style={bubbleStyles.attachmentName} numberOfLines={1}>
+        {attachment.file_name}
+      </Text>
+    </View>
+  );
+}
 
 type Props = {
   message: Message;
@@ -35,7 +60,16 @@ export function MessageBubble({ message, avatarSlug }: Props) {
             : [styles.bubbleAgent, { borderLeftColor: accent }],
         ]}
       >
-        <Text style={styles.text}>{message.content}</Text>
+        {message.content.length > 0 && (
+          <Text style={styles.text}>{message.content}</Text>
+        )}
+        {message.attachments && message.attachments.length > 0 && (
+          <View style={bubbleStyles.attachments}>
+            {message.attachments.map((a) => (
+              <AttachmentChip key={a.id} attachment={a} />
+            ))}
+          </View>
+        )}
       </View>
       <View style={[styles.metaRow, isUser ? styles.metaRowUser : styles.metaRowAgent]}>
         {!isUser && (
@@ -88,5 +122,27 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     letterSpacing: 0.3,
+  },
+});
+
+const bubbleStyles = StyleSheet.create({
+  attachments: {
+    marginTop: spacing.xs + 2,
+    gap: spacing.xs,
+  },
+  attachmentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: radius.md,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    gap: spacing.xs + 2,
+    maxWidth: 260,
+  },
+  attachmentName: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    flexShrink: 1,
   },
 });

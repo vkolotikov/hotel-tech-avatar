@@ -10,7 +10,7 @@ class ConversationAttachment extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'conversation_id', 'file_path', 'file_name', 'mime_type', 'size_bytes',
+        'conversation_id', 'message_id', 'file_path', 'file_name', 'mime_type', 'size_bytes',
     ];
 
     protected function casts(): array
@@ -23,5 +23,10 @@ class ConversationAttachment extends Model
     public function conversation(): BelongsTo
     {
         return $this->belongsTo(Conversation::class);
+    }
+
+    public function message(): BelongsTo
+    {
+        return $this->belongsTo(Message::class);
     }
 }
