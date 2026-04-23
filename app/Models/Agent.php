@@ -14,7 +14,7 @@ class Agent extends Model
     protected $fillable = [
         'vertical_id',
         'slug', 'name', 'role', 'domain', 'description',
-        'avatar_image_url', 'chat_background_url',
+        'avatar_image_url', 'chat_background_url', 'intro_video_url',
         'system_instructions', 'knowledge_text', 'knowledge_files_json', 'knowledge_sources_json',
         'openai_model', 'openai_voice',
         'use_advanced_ai', 'openai_vector_store_id',

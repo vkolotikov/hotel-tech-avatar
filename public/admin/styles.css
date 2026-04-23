@@ -1055,3 +1055,60 @@ body {
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.4);
 }
+
+/* --- Video gallery tiles --- */
+.asset-gallery--video .asset-gallery__item {
+  cursor: pointer;
+}
+
+.video-tile {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.55), rgba(124, 92, 255, 0.45));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.video-tile__play {
+  font-size: 20px;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 3px;
+}
+
+.asset-gallery__item--video .asset-gallery__label {
+  font-size: 11px;
+}
+
+/* --- Sidebar bulk export/import --- */
+.sidebar-bulk {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.sidebar-bulk button {
+  flex: 1;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  color: #e2e8f0;
+  padding: 6px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.sidebar-bulk button:hover {
+  background: rgba(30, 64, 175, 0.3);
+  border-color: rgba(96, 165, 250, 0.5);
+}

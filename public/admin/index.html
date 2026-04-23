@@ -20,6 +20,11 @@
           <option value="">All verticals</option>
         </select>
       </label>
+      <div class="sidebar-bulk">
+        <button id="bulk-export" type="button" title="Download a JSON snapshot of the filtered vertical">Export JSON</button>
+        <button id="bulk-import" type="button" title="Upload a JSON snapshot to create/update agents by slug">Import JSON</button>
+        <input id="bulk-import-input" type="file" accept=".json,application/json" hidden>
+      </div>
       <div id="agents-list" class="agents-list"></div>
     </aside>
 
@@ -85,6 +90,7 @@
           </label>
           <input id="avatar_image_url" name="avatar_image_url" type="hidden" value="">
           <input id="chat_background_url" name="chat_background_url" type="hidden" value="">
+          <input id="intro_video_url" name="intro_video_url" type="hidden" value="">
           <div class="agent-form__full field-group">
             <span class="field-label">Avatar Gallery</span>
             <div id="avatar-gallery" class="asset-gallery"></div>
@@ -92,6 +98,11 @@
           <div class="agent-form__full field-group">
             <span class="field-label">Background Gallery</span>
             <div id="background-gallery" class="asset-gallery asset-gallery--background"></div>
+          </div>
+          <div class="agent-form__full field-group">
+            <span class="field-label">Intro Video Gallery</span>
+            <p class="rules-hint">Plays full-screen when a user taps the "▶ Play intro" pill on the avatar picker.</p>
+            <div id="video-gallery" class="asset-gallery asset-gallery--video"></div>
           </div>
           <div class="agent-form__full field-group">
             <span class="field-label">Chat Preview</span>

@@ -16,11 +16,12 @@ use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
-    /** Get UI assets catalog (avatar images, backgrounds). */
+    /** Get UI assets catalog (avatar images, backgrounds, intro videos). */
     public function assets(): JsonResponse
     {
         $avatars = [];
         $backgrounds = [];
+        $videos = [];
 
         // Scan public asset directories from the old app location or storage
         $avatarDir = public_path('assets/avatars');
@@ -37,6 +38,14 @@ class AdminController extends Controller
             }
         }
 
+        $videoDir = public_path('assets/avatars/videos');
+        if (is_dir($videoDir)) {
+            foreach (glob("{$videoDir}/*.{mp4,mov,webm,m4v}", GLOB_BRACE) as $f) {
+                $videos[] = '/assets/avatars/videos/' . basename($f);
+            }
+            sort($videos);
+        }
+
         $voices = [
             'alloy', 'ash', 'ballad', 'coral', 'echo', 'fable',
             'nova', 'onyx', 'sage', 'shimmer', 'verse',
@@ -45,6 +54,7 @@ class AdminController extends Controller
         return response()->json([
             'avatars'     => $avatars,
             'backgrounds' => $backgrounds,
+            'videos'      => $videos,
             'voices'      => $voices,
             'models'      => ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini'],
         ]);
@@ -113,6 +123,7 @@ class AdminController extends Controller
             'vertical_id'            => 'nullable|integer|exists:verticals,id',
             'avatar_image_url'       => 'nullable|string|max:255',
             'chat_background_url'    => 'nullable|string|max:255',
+            'intro_video_url'        => 'nullable|string|max:255',
             'system_instructions'    => 'nullable|string',
             'knowledge_text'         => 'nullable|string',
             'knowledge_sources_json' => 'nullable|array',
@@ -390,6 +401,111 @@ class AdminController extends Controller
             'message' => 'Version activated',
             'agent'   => $agent->fresh(),
             'version' => $version->fresh(),
+        ]);
+    }
+
+    /**
+     * Bulk export all agents as a JSON bundle (scoped to a vertical if
+     * provided via ?vertical=slug). Intended as a version-controllable
+     * snapshot — put it under docs/verticals/<slug>/ and commit.
+     */
+    public function bulkExport(Request $request): JsonResponse
+    {
+        $verticalSlug = $request->query('vertical');
+
+        $query = Agent::query()->with('vertical:id,slug,name');
+        if ($verticalSlug) {
+            $query->whereHas('vertical', fn ($q) => $q->where('slug', $verticalSlug));
+        }
+
+        $agents = $query->orderBy('name')->get()->map(function (Agent $a) {
+            $row = $a->toArray();
+            // Keep it round-trippable: strip database-specific IDs and
+            // timestamps, but preserve the vertical by slug so import can
+            // re-resolve.
+            unset(
+                $row['id'],
+                $row['vertical_id'],
+                $row['active_prompt_version_id'],
+                $row['created_at'],
+                $row['updated_at'],
+                $row['knowledge_synced_at'],
+                $row['knowledge_sync_status'],
+                $row['knowledge_last_error'],
+                $row['openai_vector_store_id'],
+            );
+            $row['vertical_slug'] = $a->vertical?->slug;
+            return $row;
+        });
+
+        return response()->json([
+            'exported_at'   => now()->toIso8601String(),
+            'vertical_slug' => $verticalSlug,
+            'count'         => $agents->count(),
+            'agents'        => $agents,
+        ]);
+    }
+
+    /**
+     * Bulk import an agent bundle produced by bulkExport. Matches on slug:
+     * existing rows are updated, missing ones are created. Safe to re-run.
+     */
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'agents'              => 'required|array',
+            'agents.*.slug'       => 'required|string|max:64',
+            'agents.*.name'       => 'required|string|max:100',
+            'agents.*.vertical_slug' => 'nullable|string|max:64',
+        ]);
+
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+
+        foreach ($validated['agents'] as $payload) {
+            $slug = $payload['slug'];
+            $verticalSlug = $payload['vertical_slug'] ?? null;
+            $verticalId = $verticalSlug
+                ? Vertical::where('slug', $verticalSlug)->value('id')
+                : null;
+
+            // Drop keys we should never trust from an import.
+            $safe = collect($payload)->except([
+                'vertical_slug',
+                'vertical',
+                'id',
+                'created_at',
+                'updated_at',
+                'knowledge_synced_at',
+                'knowledge_sync_status',
+                'knowledge_last_error',
+                'openai_vector_store_id',
+                'active_prompt_version_id',
+            ])->toArray();
+
+            if ($verticalId) {
+                $safe['vertical_id'] = $verticalId;
+            }
+
+            $existing = Agent::where('slug', $slug)->first();
+            if ($existing) {
+                $existing->update($safe);
+                $updated++;
+            } elseif ($verticalId) {
+                Agent::create($safe);
+                $created++;
+            } else {
+                // No vertical match and no existing row — skip rather than
+                // create an orphaned agent.
+                $skipped++;
+            }
+        }
+
+        return response()->json([
+            'created' => $created,
+            'updated' => $updated,
+            'skipped' => $skipped,
         ]);
     }
 

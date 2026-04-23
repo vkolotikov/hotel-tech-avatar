@@ -38,6 +38,8 @@ const elements = {
   chatBackgroundUrl: document.getElementById('chat_background_url'),
   avatarGallery: document.getElementById('avatar-gallery'),
   backgroundGallery: document.getElementById('background-gallery'),
+  videoGallery: document.getElementById('video-gallery'),
+  introVideoUrl: document.getElementById('intro_video_url'),
   systemInstructions: document.getElementById('system_instructions'),
   knowledgeText: document.getElementById('knowledge_text'),
   knowledgeFiles: document.getElementById('knowledge_files'),
@@ -71,6 +73,9 @@ const elements = {
   safetyPreviewResult: document.getElementById('safety_preview_result'),
   snapshotVersion: document.getElementById('snapshot_version'),
   promptVersionsList: document.getElementById('prompt_versions_list'),
+  bulkExport: document.getElementById('bulk-export'),
+  bulkImport: document.getElementById('bulk-import'),
+  bulkImportInput: document.getElementById('bulk-import-input'),
 };
 
 // --- Rule editor schema ---
@@ -424,9 +429,66 @@ function renderAssetGallery(type) {
   });
 }
 
+function renderVideoGallery() {
+  const gallery = elements.videoGallery;
+  const select = elements.introVideoUrl;
+  if (!gallery || !select) return;
+  const items = state.assets.videos || [];
+
+  gallery.innerHTML = '';
+
+  const noneButton = document.createElement('button');
+  noneButton.type = 'button';
+  noneButton.className = 'asset-gallery__item';
+  if (!select.value) {
+    noneButton.classList.add('asset-gallery__item--selected');
+  }
+  noneButton.innerHTML = `
+    <div class="asset-gallery__blank" aria-hidden="true"></div>
+    <span class="asset-gallery__label">None</span>
+  `;
+  noneButton.addEventListener('click', () => {
+    select.value = '';
+    renderVideoGallery();
+  });
+  gallery.appendChild(noneButton);
+
+  if (items.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'asset-gallery__empty';
+    empty.textContent = 'No videos in public/assets/avatars/videos.';
+    gallery.appendChild(empty);
+    return;
+  }
+
+  items.forEach((path) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'asset-gallery__item asset-gallery__item--video';
+    if (select.value === path) {
+      button.classList.add('asset-gallery__item--selected');
+    }
+
+    button.innerHTML = `
+      <div class="video-tile" aria-hidden="true">
+        <span class="video-tile__play">▶</span>
+      </div>
+      <span class="asset-gallery__label">${basename(path)}</span>
+    `;
+
+    button.addEventListener('click', () => {
+      select.value = path;
+      renderVideoGallery();
+    });
+
+    gallery.appendChild(button);
+  });
+}
+
 function renderAssetGalleries() {
   renderAssetGallery('avatar');
   renderAssetGallery('background');
+  renderVideoGallery();
 }
 
 function updatePreview() {
@@ -568,6 +630,7 @@ function clearForm() {
   if (elements.knowledgeSources) elements.knowledgeSources.value = '';
   if (elements.promptSuggestions) elements.promptSuggestions.value = '';
   if (elements.verticalId) elements.verticalId.value = '';
+  if (elements.introVideoUrl) elements.introVideoUrl.value = '';
   renderRulesInto(elements.redFlagList, 'red_flag_rules', []);
   renderRulesInto(elements.scopeList, 'scope_rules', []);
   renderRulesInto(elements.handoffList, 'handoff_rules', []);
@@ -594,6 +657,7 @@ function fillForm(agent) {
   elements.useAdvancedAi.checked = Boolean(agent.use_advanced_ai);
   elements.avatarImageUrl.value = agent.avatar_image_url || '';
   elements.chatBackgroundUrl.value = agent.chat_background_url || '';
+  if (elements.introVideoUrl) elements.introVideoUrl.value = agent.intro_video_url || '';
   elements.systemInstructions.value = agent.system_instructions || '';
   elements.knowledgeText.value = agent.knowledge_text || '';
   setModelValue(agent.openai_model || getDefaultModel());
@@ -691,6 +755,7 @@ function buildPayload() {
     vertical_id: elements.verticalId?.value ? Number(elements.verticalId.value) : null,
     avatar_image_url: elements.avatarImageUrl.value.trim() || null,
     chat_background_url: elements.chatBackgroundUrl.value.trim() || null,
+    intro_video_url: elements.introVideoUrl?.value?.trim() || null,
     system_instructions: elements.systemInstructions.value.trim(),
     knowledge_text: elements.knowledgeText.value.trim(),
     knowledge_files: normalizeKnowledgeFiles(elements.knowledgeFiles.value),
@@ -1030,6 +1095,56 @@ if (elements.safetyPreviewRun) {
 
 if (elements.snapshotVersion) {
   elements.snapshotVersion.addEventListener('click', snapshotCurrentVersion);
+}
+
+if (elements.bulkExport) {
+  elements.bulkExport.addEventListener('click', async () => {
+    try {
+      setStatus('Exporting...');
+      const vertical = elements.verticalFilter?.value || '';
+      const path = vertical ? `/api/v1/admin/agents-bundle?vertical=${encodeURIComponent(vertical)}` : '/api/v1/admin/agents-bundle';
+      const bundle = await api(path);
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const tag = vertical ? `${vertical}-` : '';
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `avatars-${tag}${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus(`Exported ${bundle.count ?? 0} avatars`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Export failed', true);
+    }
+  });
+}
+
+if (elements.bulkImport && elements.bulkImportInput) {
+  elements.bulkImport.addEventListener('click', () => elements.bulkImportInput.click());
+  elements.bulkImportInput.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!window.confirm(`Import "${file.name}"? Agents are matched on slug — existing ones are UPDATED in place.`)) {
+      return;
+    }
+    try {
+      setStatus('Importing...');
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const result = await api('/api/v1/admin/agents-bundle', {
+        method: 'POST',
+        body: JSON.stringify({ agents: parsed.agents ?? parsed }),
+      });
+      await refreshAgents();
+      setStatus(`Import: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Import failed', true);
+    }
+  });
 }
 
 // --- Prompt versioning ---

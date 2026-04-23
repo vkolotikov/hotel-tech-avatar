@@ -57,6 +57,7 @@ class WellnessAvatarsSeeder extends Seeder
                 'description'         => 'Your guide to chronic-condition education, lab literacy, and supplement/drug-interaction awareness. Educational — not a doctor.',
                 'avatar_image_url'    => '/assets/avatars/business-coach1.png',
                 'chat_background_url' => '/assets/backgrounds/business-coach-office.png',
+                'intro_video_url'     => '/assets/avatars/videos/Integra.mp4',
                 'openai_voice'        => 'onyx',
                 'system_instructions' => <<<'PROMPT'
 You are Dr. Integra, a calm and precise wellness educator focused on functional medicine, labs, and chronic condition education.
@@ -113,6 +114,7 @@ PROMPT,
                 'description'         => 'Plain-English nutrition and gut-health education — food labels, meal composition, ingredient awareness. Not a dietitian.',
                 'avatar_image_url'    => '/assets/avatars/marketing-expert1.png',
                 'chat_background_url' => '/assets/backgrounds/business-coach-office.png',
+                'intro_video_url'     => '/assets/avatars/videos/Nora.mp4',
                 'openai_voice'        => 'nova',
                 'system_instructions' => <<<'PROMPT'
 You are Nora, a warm, energetic nutrition and gut-health educator.
@@ -158,6 +160,7 @@ PROMPT,
                 'description'         => 'Sleep-hygiene and CBT-I-style education — wind-down routines, circadian rhythm, caffeine and light.',
                 'avatar_image_url'    => '/assets/avatars/copywriter.png',
                 'chat_background_url' => '/assets/backgrounds/business-coach-office.png',
+                'intro_video_url'     => '/assets/avatars/videos/Luna.mp4',
                 'openai_voice'        => 'shimmer',
                 'system_instructions' => <<<'PROMPT'
 You are Luna, a gentle sleep guide trained in CBT-I-style education.
@@ -200,6 +203,7 @@ PROMPT,
                 'description'         => 'Mindfulness, breathwork, and emotion-regulation education. A calm companion — not a therapist.',
                 'avatar_image_url'    => '/assets/avatars/acountant.png',
                 'chat_background_url' => '/assets/backgrounds/business-coach-office.png',
+                'intro_video_url'     => '/assets/avatars/videos/Zen.mp4',
                 'openai_voice'        => 'sage',
                 'system_instructions' => <<<'PROMPT'
 You are Zen, a calm, compassionate mindfulness and emotion-regulation guide.
@@ -242,6 +246,7 @@ PROMPT,
                 'description'         => 'Strength, cardio, and movement education with a longevity lens. Not a substitute for a physical therapist or doctor.',
                 'avatar_image_url'    => '/assets/avatars/business-coach2.png',
                 'chat_background_url' => '/assets/backgrounds/business-coach-office.png',
+                'intro_video_url'     => '/assets/avatars/videos/Axel.mp4',
                 'openai_voice'        => 'echo',
                 'system_instructions' => <<<'PROMPT'
 You are Axel, an energetic, grounded fitness and longevity educator.
@@ -284,6 +289,7 @@ PROMPT,
                 'description'         => 'Skincare ingredients, routine design, and know-when-to-see-a-dermatologist education. Not a dermatologist.',
                 'avatar_image_url'    => '/assets/avatars/e-mail-manager.png',
                 'chat_background_url' => '/assets/backgrounds/business-coach-office.png',
+                'intro_video_url'     => '/assets/avatars/videos/Aura.mp4',
                 'openai_voice'        => 'coral',
                 'system_instructions' => <<<'PROMPT'
 You are Aura, a warm, ingredient-literate skin and beauty educator.

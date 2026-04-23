@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAvatars } from '../hooks/useAvatars';
 import { useConversations, useCreateConversation } from '../hooks/useConversations';
+import { IntroVideoModal } from '../components/avatars/IntroVideoModal';
 import { logout, resolveAssetUrl } from '../api';
 import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../theme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
@@ -33,6 +34,7 @@ export function AvatarHomeScreen() {
   const { data: conversationsData } = useConversations();
   const createMutation = useCreateConversation();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [introAvatar, setIntroAvatar] = useState<Avatar | null>(null);
   const listRef = useRef<FlatList<Avatar>>(null);
 
   const conversationsByAgent = useMemo(() => {
@@ -135,9 +137,26 @@ export function AvatarHomeScreen() {
             avatar={item}
             hasExistingChat={conversationsByAgent.has(item.id)}
             onStart={() => handleStart(item)}
+            onPlayIntro={() => setIntroAvatar(item)}
             pending={createMutation.isPending}
           />
         )}
+      />
+
+      <IntroVideoModal
+        visible={introAvatar !== null}
+        videoUrl={introAvatar?.intro_video_url}
+        avatarName={introAvatar?.name ?? ''}
+        avatarSlug={introAvatar?.slug ?? ''}
+        onStartChat={() => {
+          const target = introAvatar;
+          setIntroAvatar(null);
+          if (target) {
+            // Defer so the modal is fully dismissed before navigation animates.
+            setTimeout(() => handleStart(target), 0);
+          }
+        }}
+        onClose={() => setIntroAvatar(null)}
       />
 
       {/* Top bar — history + title floating over the portrait */}
@@ -181,10 +200,11 @@ type PageProps = {
   avatar: Avatar;
   hasExistingChat: boolean;
   onStart: () => void;
+  onPlayIntro: () => void;
   pending: boolean;
 };
 
-function AvatarPage({ avatar, hasExistingChat, onStart, pending }: PageProps) {
+function AvatarPage({ avatar, hasExistingChat, onStart, onPlayIntro, pending }: PageProps) {
   const insets = useSafeAreaInsets();
   const slug = avatar.slug as AvatarSlug;
   const accent = slug in avatarColors ? avatarColors[slug] : colors.primary;
@@ -223,19 +243,34 @@ function AvatarPage({ avatar, hasExistingChat, onStart, pending }: PageProps) {
             </Text>
           )}
 
-          <Pressable
-            onPress={onStart}
-            disabled={pending}
-            style={({ pressed }) => [
-              pageStyles.cta,
-              { backgroundColor: accent },
-              (pressed || pending) && pageStyles.ctaPressed,
-            ]}
-          >
-            <Text style={pageStyles.ctaText}>
-              {pending ? 'Starting…' : hasExistingChat ? 'Continue chat' : 'Start chat'}
-            </Text>
-          </Pressable>
+          <View style={pageStyles.ctaRow}>
+            <Pressable
+              onPress={onStart}
+              disabled={pending}
+              style={({ pressed }) => [
+                pageStyles.cta,
+                { backgroundColor: accent },
+                (pressed || pending) && pageStyles.ctaPressed,
+              ]}
+            >
+              <Text style={pageStyles.ctaText}>
+                {pending ? 'Starting…' : hasExistingChat ? 'Continue chat' : 'Start chat'}
+              </Text>
+            </Pressable>
+            {avatar.intro_video_url && (
+              <Pressable
+                onPress={onPlayIntro}
+                style={({ pressed }) => [
+                  pageStyles.playPill,
+                  { borderColor: accent },
+                  pressed && pageStyles.ctaPressed,
+                ]}
+                accessibilityLabel={`Play intro video for ${avatar.name}`}
+              >
+                <Text style={[pageStyles.playPillText, { color: accent }]}>▶ Play intro</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
     </View>
@@ -351,8 +386,13 @@ const pageStyles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: spacing.lg,
   },
+  ctaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
   cta: {
-    alignSelf: 'flex-start',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: radius.pill,
@@ -368,5 +408,17 @@ const pageStyles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  playPill: {
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    backgroundColor: 'rgba(20,26,38,0.9)',
+  },
+  playPillText: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });

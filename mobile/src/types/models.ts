@@ -7,6 +7,8 @@ export interface Avatar {
   description: string | null;
   vertical_slug: string;
   avatar_image_url: string | null;
+  chat_background_url?: string | null;
+  intro_video_url?: string | null;
   prompt_suggestions?: string[];
 }
 

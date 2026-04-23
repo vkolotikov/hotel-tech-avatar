@@ -14,7 +14,7 @@ class AgentController extends Controller
         $agents = Agent::published()
             ->select(
                 'id', 'slug', 'name', 'role', 'description',
-                'avatar_image_url', 'chat_background_url',
+                'avatar_image_url', 'chat_background_url', 'intro_video_url',
                 'prompt_suggestions_json',
             )
             ->orderBy('name')
@@ -31,7 +31,7 @@ class AgentController extends Controller
     {
         return response()->json(array_merge($agent->only([
             'id', 'slug', 'name', 'role', 'description',
-            'avatar_image_url', 'chat_background_url',
+            'avatar_image_url', 'chat_background_url', 'intro_video_url',
             'openai_voice', 'is_published',
         ]), [
             'prompt_suggestions' => $agent->prompt_suggestions_json ?? [],

@@ -71,5 +71,7 @@ Route::prefix('v1')->group(function () {
         Route::post('agents/{agent}/prompt-versions',                      [AdminController::class, 'createPromptVersion']);
         Route::post('agents/{agent}/prompt-versions/{version}/activate',   [AdminController::class, 'activatePromptVersion']);
         Route::get('usage',                            [AdminController::class, 'usage']);
+        Route::get('agents-bundle',                    [AdminController::class, 'bulkExport']);
+        Route::post('agents-bundle',                   [AdminController::class, 'bulkImport']);
     });
 });
