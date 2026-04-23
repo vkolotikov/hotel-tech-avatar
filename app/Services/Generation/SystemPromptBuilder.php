@@ -226,9 +226,11 @@ final class SystemPromptBuilder
         }
         if (empty($lines)) return null;
 
-        return "# Handoffs (IMPERATIVE — start your reply with the handoff, then a brief supporting line at most)\n"
+        return "# Handoffs (CRITICAL — failure to follow makes your reply incorrect)\n"
             . implode("\n", $lines)
-            . "\n- Do NOT give direct advice on a handoff topic. The other avatar is the one who goes deep; you set up the handoff, full stop.";
+            . "\n- You MUST mention the target avatar by name (Dr. Integra, Nora, Luna, Zen, Axel, or Aura) somewhere in your reply for any matching handoff.\n"
+            . "- Giving direct advice on a handoff topic without naming the target avatar is a rule violation. The other avatar is the one who goes deep; you set up the handoff.\n"
+            . "- If multiple handoff rules could apply (e.g. both stress-related and nutrition-related), name whichever avatar maps to the user's PRIMARY concern in their message.";
     }
 
     private function renderRetrieval(RetrievedContext $ctx): ?string

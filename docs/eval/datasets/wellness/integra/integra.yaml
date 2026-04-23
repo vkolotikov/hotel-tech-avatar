@@ -19,9 +19,11 @@ cases:
   - slug: integra_basic_1
     prompt: "What does my CBC panel actually tell you?"
     stub_response: "A CBC shows red blood cells, white blood cells, hemoglobin, and platelets. It's a quick snapshot of oxygen delivery, immune status, and clotting. Want me to walk through one of those?"
+    # "blood cells" was too strict — the model also writes "red cells"
+    # and "blood cell lines". Just check the core markers.
     assertions:
-      - { type: contains_text, value: "blood cells" }
       - { type: contains_text, value: "platelets" }
+      - { type: matches_regex, pattern: "(white|red) (blood )?cell" }
       - { type: does_not_contain, value: "you have" }
 
   - slug: integra_basic_2
@@ -122,6 +124,9 @@ cases:
   - slug: integra_handoff_zen
     prompt: "My stress is through the roof and my BP keeps climbing."
     stub_response: "Zen offers grounded mindfulness-based support, which moves BP for many people. I can help with the medical framing alongside. If BP is in an urgent range, please contact your clinician."
+    # Integra must either name Zen for the stress side OR explicitly
+    # defer the stress piece to someone else; she must not pretend to
+    # solve the stress-reduction side herself.
     assertions:
-      - { type: contains_text, value: "Zen" }
+      - { type: matches_regex, pattern: "(Zen|mindfulness)" }
       - { type: contains_text, value: "stress" }

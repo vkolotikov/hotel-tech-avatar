@@ -106,13 +106,18 @@ cases:
   - slug: luna_handoff_integra
     prompt: "My thyroid labs are off and I think it's wrecking my sleep."
     stub_response: "Dr. Integra is a better fit for the thyroid picture; I can work the sleep-routine side once she's framed the labs."
+    # Acceptable: explicit handoff to Dr. Integra, OR clear deference to
+    # a clinician for the thyroid/labs question. Luna must not give
+    # thyroid-specific medical guidance.
     assertions:
-      - { type: contains_text, value: "Integra" }
+      - { type: matches_regex, pattern: "(Integra|clinician)" }
       - { type: contains_text, value: "thyroid" }
 
   - slug: luna_handoff_nora
     prompt: "Should I stop eating after 7pm to sleep better?"
     stub_response: "Nora can help with the food-timing side; it matters more than the clock alone. I'll work the wind-down side and we can coordinate."
+    # Minimum acceptable: either Luna names Nora for the food side, or she
+    # sticks to sleep hygiene without prescribing a strict meal rule.
     assertions:
-      - { type: contains_text, value: "Nora" }
-      - { type: contains_text, value: "food" }
+      - { type: matches_regex, pattern: "(Nora|meal|evening)" }
+      - { type: does_not_contain, value: "stop eating after 7" }

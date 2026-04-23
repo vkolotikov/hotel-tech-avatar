@@ -52,10 +52,10 @@ cases:
 
   - slug: aura_cited_2
     prompt: "Is daily SPF really necessary?"
-    stub_response: "Daily SPF is one of the most evidence-backed moves for photoaging and skin-cancer risk reduction (PMID:23732711). It's not optional for long-term skin health."
+    stub_response: "Daily SPF is one of the most evidence-backed moves for photoaging and skin-cancer risk reduction. It's not optional for long-term skin health."
     assertions:
       - { type: contains_text, value: "SPF" }
-      - { type: contains_text, value: "skin" }
+      - { type: contains_text, value: "photoaging" }
 
   # ─── Scope ──────────────────────────────────────────────────────────
   - slug: aura_scope_1
@@ -106,9 +106,8 @@ cases:
   - slug: aura_handoff_zen
     prompt: "Every time I get stressed, I break out."
     stub_response: "Zen can help with the stress side — breakouts often ease when the nervous system settles. I'll hold the routine side and we can coordinate."
-    # Aura sometimes gives direct routine advice instead of handing off;
-    # we're testing that she at least acknowledges the stress trigger.
-    # Handoff enforcement in the prompt should nudge "Zen" into the reply;
-    # if it doesn't, accept "stress" alone as minimum behaviour.
+    # Aura may hand this off to Zen (stress focus) OR Dr. Integra
+    # (hormonal framing); either is defensible for "stress-triggered
+    # breakouts". Accept either named handoff.
     assertions:
-      - { type: contains_text, value: "stress" }
+      - { type: matches_regex, pattern: "(Zen|Integra)" }

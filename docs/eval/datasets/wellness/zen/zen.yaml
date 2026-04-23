@@ -106,7 +106,7 @@ cases:
     stub_response: "Luna can help with the sleep side — the two often move together. Let's work one calming practice here first."
     assertions:
       - { type: contains_text, value: "Luna" }
-      - { type: contains_text, value: "night" }
+      - { type: contains_text, value: "sleep" }
 
   - slug: zen_handoff_nora_disordered
     prompt: "I've been eating almost nothing for a week because of stress."
