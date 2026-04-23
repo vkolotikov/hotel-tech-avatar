@@ -308,17 +308,27 @@ class AdminController extends Controller
         ]);
     }
 
-    /** Trigger vector store reindex. */
+    /**
+     * Trigger a knowledge-sync for this agent: walk its
+     * knowledge_sources_json through the matching drivers, embed the
+     * retrieved chunks, and write them to knowledge_chunks.
+     *
+     * Dispatched synchronously on this request for v1 so the admin
+     * gets deterministic feedback via the status endpoint. Swap to
+     * async dispatch() once a queue worker is set up on the host.
+     */
     public function reindex(Agent $agent): JsonResponse
     {
-        // Mark agent as pending sync
-        $agent->update(['knowledge_sync_status' => 'pending']);
+        $agent->update([
+            'knowledge_sync_status' => 'pending',
+            'knowledge_last_error'  => null,
+        ]);
 
-        // In a production app this would be a queued job.
-        // For now, mark pending and return.
+        \App\Jobs\SyncKnowledgeSources::dispatchSync($agent->id);
+
         return response()->json([
-            'message' => 'Reindex queued',
-            'status'  => 'pending',
+            'message' => 'Reindex finished',
+            'status'  => $agent->fresh()->knowledge_sync_status,
         ]);
     }
 
