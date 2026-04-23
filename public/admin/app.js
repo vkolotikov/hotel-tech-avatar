@@ -65,6 +65,9 @@ const elements = {
   redFlagList: document.getElementById('red_flag_rules'),
   scopeList: document.getElementById('scope_rules'),
   handoffList: document.getElementById('handoff_rules'),
+  safetyPreviewMessage: document.getElementById('safety_preview_message'),
+  safetyPreviewRun: document.getElementById('safety_preview_run'),
+  safetyPreviewResult: document.getElementById('safety_preview_result'),
 };
 
 // --- Rule editor schema ---
@@ -564,6 +567,8 @@ function clearForm() {
   renderRulesInto(elements.redFlagList, 'red_flag_rules', []);
   renderRulesInto(elements.scopeList, 'scope_rules', []);
   renderRulesInto(elements.handoffList, 'handoff_rules', []);
+  if (elements.safetyPreviewResult) elements.safetyPreviewResult.hidden = true;
+  if (elements.safetyPreviewMessage) elements.safetyPreviewMessage.value = '';
   elements.title.textContent = 'Create Avatar';
   elements.deleteAgent.disabled = true;
   state.currentAgentId = null;
@@ -999,6 +1004,66 @@ if (elements.verticalFilter) {
   elements.verticalFilter.addEventListener('change', () => {
     renderAgentsList();
   });
+}
+
+if (elements.safetyPreviewRun) {
+  elements.safetyPreviewRun.addEventListener('click', runSafetyPreview);
+}
+
+async function runSafetyPreview() {
+  if (state.currentAgentId === null) {
+    renderSafetyPreview({ error: 'Save the avatar before running a preview.' });
+    return;
+  }
+  const message = (elements.safetyPreviewMessage?.value || '').trim();
+  if (!message) {
+    renderSafetyPreview({ error: 'Type a test message first.' });
+    return;
+  }
+  elements.safetyPreviewRun.disabled = true;
+  try {
+    const payload = await api(
+      `/api/v1/admin/agents/${state.currentAgentId}/safety-preview`,
+      { method: 'POST', body: JSON.stringify({ message }) },
+    );
+    renderSafetyPreview(payload);
+  } catch (error) {
+    renderSafetyPreview({ error: error instanceof Error ? error.message : 'Preview failed' });
+  } finally {
+    elements.safetyPreviewRun.disabled = false;
+  }
+}
+
+function renderSafetyPreview(payload) {
+  const el = elements.safetyPreviewResult;
+  if (!el) return;
+
+  if (payload.error) {
+    el.hidden = false;
+    el.className = 'safety-preview__result';
+    el.innerHTML = `<span class="safety-preview__hit">Error: ${escapeHtml(payload.error)}</span>`;
+    return;
+  }
+
+  el.hidden = false;
+  if (payload.matched) {
+    el.className = 'safety-preview__result safety-preview__result--matched';
+    const category = payload.category || 'matched';
+    const badge = `<span class="safety-preview__badge safety-preview__badge--${escapeAttr(category)}">${escapeHtml(category.replace('_', ' '))}</span>`;
+    const response = payload.response
+      ? `<div class="safety-preview__response">${escapeHtml(payload.response)}</div>`
+      : '<span class="safety-preview__hit">No canned response is defined for this rule.</span>';
+    const note = payload.note
+      ? `<span class="safety-preview__hit">${escapeHtml(payload.note)}</span>`
+      : '';
+    el.innerHTML = badge + response + note;
+  } else {
+    el.className = 'safety-preview__result safety-preview__result--clean';
+    el.innerHTML = `
+      <span class="safety-preview__badge safety-preview__badge--clean">clean</span>
+      <span class="safety-preview__hit">${escapeHtml(payload.note || 'No rule matched.')}</span>
+    `;
+  }
 }
 
 elements.form.addEventListener('submit', async (event) => {

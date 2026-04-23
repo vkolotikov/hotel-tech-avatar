@@ -133,6 +133,127 @@ class AdminController extends Controller
         return response()->json(['message' => 'Agent deleted']);
     }
 
+    /**
+     * Run a test message against the agent's red-flag / scope / handoff rules
+     * and return which rule (if any) would fire first + its canned response.
+     *
+     * This is a dry-run classifier only — it does not generate a model
+     * response or touch any conversation. Uses the currently-saved rules on
+     * the agent row, not any unsaved form state.
+     */
+    public function safetyPreview(Request $request, Agent $agent): JsonResponse
+    {
+        $validated = $request->validate([
+            'message' => 'required|string|max:2000',
+        ]);
+
+        $message = (string) $validated['message'];
+        $normalised = mb_strtolower($message);
+
+        $matched = $this->firstMatchingRule('red_flag', $agent->red_flag_rules_json ?? [], $normalised, $message);
+        if (!$matched) {
+            $matched = $this->firstMatchingRule('handoff', $agent->handoff_rules_json ?? [], $normalised, $message);
+        }
+        if (!$matched) {
+            $matched = $this->firstMatchingRule('scope', $agent->scope_json ?? [], $normalised, $message);
+        }
+
+        return response()->json([
+            'matched'  => $matched !== null,
+            'category' => $matched['category'] ?? null,
+            'rule'     => $matched['rule'] ?? null,
+            'response' => $matched['response'] ?? null,
+            'note'     => $matched
+                ? 'A canned safety response would be sent; the model is NOT called.'
+                : 'No rule matched. The message would be forwarded to the model.',
+        ]);
+    }
+
+    /**
+     * Walk the given rule list in order and return the first matching rule
+     * along with a normalised category + response. Supports both the simple
+     * admin shape ({keywords|topic|trigger, response|referral}) and legacy
+     * richer shapes ({pattern_regex, canned_response_key, ...}).
+     *
+     * @param  array<int,array<string,mixed>>|array<string,mixed>  $rules
+     */
+    private function firstMatchingRule(string $category, $rules, string $normalised, string $raw): ?array
+    {
+        if (!is_array($rules)) {
+            return null;
+        }
+
+        // Handle the legacy handoff_rules_json shape where it was a flat
+        // { target: "tag1,tag2" } map. Not directly pattern-matchable here.
+        $isAssoc = array_keys($rules) !== range(0, count($rules) - 1);
+        if ($isAssoc) {
+            return null;
+        }
+
+        foreach ($rules as $rule) {
+            if (!is_array($rule)) {
+                continue;
+            }
+
+            $hit = null;
+
+            // Regex-based rule (legacy NoraAvatarSeeder shape).
+            if (!empty($rule['pattern_regex']) && is_string($rule['pattern_regex'])) {
+                $pattern = $rule['pattern_regex'];
+                // Only attempt if it looks like a PCRE pattern with delimiters;
+                // otherwise fall through to keyword matching.
+                if (@preg_match($pattern, '') !== false && @preg_match($pattern, $raw)) {
+                    $hit = 'regex';
+                }
+            }
+
+            // Keyword list (simple admin shape).
+            if (!$hit && !empty($rule['keywords']) && is_array($rule['keywords'])) {
+                foreach ($rule['keywords'] as $kw) {
+                    $kw = is_string($kw) ? trim(mb_strtolower($kw)) : '';
+                    if ($kw !== '' && str_contains($normalised, $kw)) {
+                        $hit = 'keyword:' . $kw;
+                        break;
+                    }
+                }
+            }
+
+            // Scope/handoff shape: treat "topic" or "trigger" as a single
+            // keyword for preview purposes. Admin-entered trigger phrases
+            // aren't necessarily strict literal matches in production — this
+            // is a dry-run hint only.
+            if (!$hit) {
+                foreach (['topic', 'trigger'] as $field) {
+                    if (!empty($rule[$field]) && is_string($rule[$field])) {
+                        $needle = trim(mb_strtolower($rule[$field]));
+                        if ($needle !== '' && str_contains($normalised, $needle)) {
+                            $hit = $field . ':' . $needle;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!$hit) {
+                continue;
+            }
+
+            $response = $rule['response']
+                ?? $rule['referral']
+                ?? $rule['canned_response_key']
+                ?? null;
+
+            return [
+                'category' => $category,
+                'rule'     => $rule,
+                'response' => $response,
+                'hit'      => $hit,
+            ];
+        }
+
+        return null;
+    }
+
     /** Upload knowledge files for an agent. */
     public function uploadKnowledgeFiles(Request $request): JsonResponse
     {

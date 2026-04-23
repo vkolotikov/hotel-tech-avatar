@@ -862,3 +862,107 @@ body {
     justify-self: flex-end;
   }
 }
+
+/* --- Safety preview --- */
+.safety-preview {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.safety-preview__input {
+  flex: 1;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  border-radius: 10px !important;
+  background: rgba(9, 15, 26, 0.85) !important;
+  color: #f8fafc !important;
+  padding: 9px 10px !important;
+  font: inherit !important;
+  resize: vertical;
+}
+
+.safety-preview__run {
+  align-self: flex-start;
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  border-radius: 10px;
+  background: rgba(30, 64, 175, 0.25);
+  color: #e2e8f0;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.safety-preview__run:hover {
+  background: rgba(37, 99, 235, 0.4);
+}
+
+.safety-preview__run:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.safety-preview__result {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.6);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.safety-preview__result--matched {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.safety-preview__result--clean {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.safety-preview__badge {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 600;
+}
+
+.safety-preview__badge--red_flag {
+  background: rgba(239, 68, 68, 0.2);
+  color: rgba(254, 202, 202, 0.95);
+}
+
+.safety-preview__badge--handoff {
+  background: rgba(234, 179, 8, 0.2);
+  color: rgba(253, 224, 71, 0.95);
+}
+
+.safety-preview__badge--scope {
+  background: rgba(96, 165, 250, 0.2);
+  color: rgba(191, 219, 254, 0.95);
+}
+
+.safety-preview__badge--clean {
+  background: rgba(16, 185, 129, 0.2);
+  color: rgba(167, 243, 208, 0.95);
+}
+
+.safety-preview__response {
+  white-space: pre-wrap;
+  padding: 8px 10px;
+  background: rgba(9, 15, 26, 0.6);
+  border-radius: 8px;
+  color: #e2e8f0;
+}
+
+.safety-preview__hit {
+  color: rgba(148, 163, 184, 0.9);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+}

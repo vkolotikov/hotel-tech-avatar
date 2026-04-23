@@ -136,6 +136,21 @@
             <div id="handoff_rules" class="rules-list" data-rules-key="handoff_rules"></div>
           </div>
 
+          <div class="agent-form__full field-group">
+            <span class="field-label">Safety Preview</span>
+            <p class="rules-hint">Dry-run a message against this avatar's currently saved rules. No model call, no conversation touched.</p>
+            <div class="safety-preview">
+              <textarea
+                id="safety_preview_message"
+                class="safety-preview__input"
+                rows="2"
+                placeholder="Try: 'I only eat 500 calories a day'"
+              ></textarea>
+              <button id="safety_preview_run" type="button" class="safety-preview__run">Run preview</button>
+            </div>
+            <div id="safety_preview_result" class="safety-preview__result" hidden></div>
+          </div>
+
           <label class="agent-form__full">
             Knowledge Sources (one URL per line)
             <textarea id="knowledge_sources" name="knowledge_sources" rows="3" placeholder="https://pubmed.ncbi.nlm.nih.gov/..."></textarea>

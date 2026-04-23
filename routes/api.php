@@ -66,6 +66,7 @@ Route::prefix('v1')->group(function () {
         Route::post('knowledge-files',                 [AdminController::class, 'uploadKnowledgeFiles']);
         Route::get('agents/{agent}/knowledge/status',  [AdminController::class, 'knowledgeStatus']);
         Route::post('agents/{agent}/knowledge/reindex',[AdminController::class, 'reindex']);
+        Route::post('agents/{agent}/safety-preview',   [AdminController::class, 'safetyPreview']);
         Route::get('usage',                            [AdminController::class, 'usage']);
     });
 });
