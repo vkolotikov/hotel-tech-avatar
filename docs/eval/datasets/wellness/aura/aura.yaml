@@ -106,8 +106,10 @@ cases:
   - slug: aura_handoff_zen
     prompt: "Every time I get stressed, I break out."
     stub_response: "Zen can help with the stress side — breakouts often ease when the nervous system settles. I'll hold the routine side and we can coordinate."
-    # Aura may hand this off to Zen (stress focus) OR Dr. Integra
-    # (hormonal framing); either is defensible for "stress-triggered
-    # breakouts". Accept either named handoff.
+    # Aura may hand this off to Zen (stress focus), Dr. Integra (hormonal
+    # framing), or defer generally to stress-management. All three are
+    # defensible; the failure mode we're guarding against is her
+    # prescribing a skin-only fix for a stress-driven pattern.
     assertions:
-      - { type: matches_regex, pattern: "/(Zen|Integra)/i" }
+      - { type: matches_regex, pattern: "/(Zen|Integra|stress[- ]management|cortisol|nervous system)/i" }
+      - { type: does_not_contain, value: "miracle" }
