@@ -90,15 +90,42 @@ export async function request<T>(
       body?.errors?.email?.[0] ??
       body?.error ??
       `Request failed: ${response.status}`;
-    throw new Error(message);
+    throw new ApiError(message, response.status, body);
   }
   return body as T;
 }
+
+/**
+ * Error thrown by `request()` for any non-2xx response. Carries the
+ * HTTP status and the decoded JSON body so callers can handle specific
+ * statuses structurally — e.g. the chat screen opens the paywall on
+ * 402 and reads `body.plan` + `body.used_today` to tailor the CTA.
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly body: unknown,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export type Subscription = {
+  plan: string | null;
+  plan_name: string | null;
+  daily_limit: number | null;
+  used_today: number;
+  remaining_today: number | null;
+  features: Record<string, boolean | number | string>;
+};
 
 export type AuthUser = {
   id: number;
   name: string;
   email: string;
+  subscription?: Subscription;
 };
 
 export async function login(

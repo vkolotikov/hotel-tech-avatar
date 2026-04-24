@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +19,8 @@ import { useMessages } from '../hooks/useMessages';
 import { useChatStream } from '../hooks/useChatStream';
 import { useAvatars } from '../hooks/useAvatars';
 import { useCreateConversation } from '../hooks/useConversations';
+import { ApiError } from '../api';
+import { PaywallScreen } from './PaywallScreen';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import { MessageInput } from '../components/chat/MessageInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
@@ -55,6 +57,36 @@ export function ChatDetailScreen() {
   const stream = useChatStream(conversationId);
   const { data: avatars } = useAvatars();
   const createConversation = useCreateConversation();
+
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<string | null>(null);
+
+  // When the backend rejects a send with 402 (free-tier daily limit),
+  // open the paywall automatically with the exact message the backend
+  // returned — "You've used your 10 free messages for today." — so the
+  // user doesn't have to guess why the send didn't go through.
+  useEffect(() => {
+    const err = stream.error;
+    if (err instanceof ApiError && err.status === 402) {
+      const body = (err.body ?? {}) as {
+        message?: string;
+        used_today?: number;
+        daily_limit?: number;
+      };
+      setPaywallReason(
+        body.message ??
+          `You've used your ${body.daily_limit} free messages for today. Upgrade for unlimited.`,
+      );
+      setPaywallOpen(true);
+    }
+  }, [stream.error]);
+
+  const showPaywallDismiss = useMemo(() => {
+    return () => {
+      setPaywallOpen(false);
+      setPaywallReason(null);
+    };
+  }, []);
 
   const handleNewChat = () => {
     Alert.alert(
@@ -271,6 +303,12 @@ export function ChatDetailScreen() {
           disabled={stream.isPending}
         />
       </KeyboardAvoidingView>
+
+      <PaywallScreen
+        visible={paywallOpen}
+        reason={paywallReason}
+        onClose={showPaywallDismiss}
+      />
     </View>
   );
 }

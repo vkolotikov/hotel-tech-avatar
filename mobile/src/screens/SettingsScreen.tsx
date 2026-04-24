@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import {
   Alert,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,16 +11,34 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthUser, logout } from '../api';
+import { PaywallScreen } from './PaywallScreen';
 import { colors, spacing, radius, fontSize } from '../theme';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json') as { version?: string };
 
 type Props = {
   user: AuthUser | null;
+  onRefreshUser: () => Promise<void>;
 };
 
-export function SettingsScreen({ user }: Props) {
+export function SettingsScreen({ user, onRefreshUser }: Props) {
   const version = pkg.version ?? 'dev';
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const plan = user?.subscription?.plan ?? 'free';
+  const planName = user?.subscription?.plan_name ?? 'Free';
+  const isPremium = plan === 'premium';
+  const remaining = user?.subscription?.remaining_today;
+  const dailyLimit = user?.subscription?.daily_limit;
+
+  const handleManageSubscription = () => {
+    const url =
+      Platform.OS === 'ios'
+        ? 'https://apps.apple.com/account/subscriptions'
+        : 'https://play.google.com/store/account/subscriptions';
+    Linking.openURL(url).catch(() =>
+      Alert.alert("Couldn't open subscription settings", url),
+    );
+  };
 
   const handleSignOut = () => {
     Alert.alert(
@@ -58,6 +78,61 @@ export function SettingsScreen({ user }: Props) {
             {user?.email && <Text style={styles.rowSub}>{user.email}</Text>}
           </View>
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionHeading}>Subscription</Text>
+        <View style={styles.row}>
+          <Ionicons
+            name={isPremium ? 'sparkles' : 'flash-outline'}
+            size={18}
+            color={isPremium ? colors.primary : colors.textMuted}
+          />
+          <View style={styles.rowText}>
+            <View style={styles.planRow}>
+              <Text style={styles.rowLabel}>{planName}</Text>
+              {isPremium && (
+                <View style={styles.premiumPill}>
+                  <Text style={styles.premiumPillText}>PREMIUM</Text>
+                </View>
+              )}
+            </View>
+            {!isPremium && dailyLimit != null && remaining != null && (
+              <Text style={styles.rowSub}>
+                {remaining} of {dailyLimit} messages left today
+              </Text>
+            )}
+            {isPremium && (
+              <Text style={styles.rowSub}>Unlimited messages, all features</Text>
+            )}
+          </View>
+        </View>
+        {isPremium ? (
+          <Pressable
+            onPress={handleManageSubscription}
+            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+          >
+            <Ionicons name="settings-outline" size={18} color={colors.textMuted} />
+            <Text style={styles.rowLink}>Manage subscription</Text>
+            <Ionicons
+              name="open-outline"
+              size={14}
+              color={colors.textMuted}
+              style={styles.rowChevron}
+            />
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={() => setPaywallOpen(true)}
+            style={({ pressed }) => [
+              styles.upgradeCta,
+              pressed && styles.rowPressed,
+            ]}
+          >
+            <Ionicons name="sparkles" size={16} color={colors.textPrimary} />
+            <Text style={styles.upgradeCtaText}>Upgrade to Premium</Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -114,6 +189,12 @@ export function SettingsScreen({ user }: Props) {
         <Ionicons name="log-out-outline" size={18} color={colors.danger} />
         <Text style={styles.signOutLabel}>Sign out</Text>
       </Pressable>
+
+      <PaywallScreen
+        visible={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        onEntitlementChanged={onRefreshUser}
+      />
     </ScrollView>
   );
 }
@@ -195,6 +276,38 @@ const styles = StyleSheet.create({
   },
   signOutLabel: {
     color: colors.danger,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  premiumPill: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  premiumPillText: {
+    color: colors.textPrimary,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  upgradeCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md - 2,
+    borderRadius: radius.md,
+    marginTop: spacing.sm,
+  },
+  upgradeCtaText: {
+    color: colors.textPrimary,
     fontSize: fontSize.md,
     fontWeight: '700',
   },

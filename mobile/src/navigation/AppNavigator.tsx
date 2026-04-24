@@ -11,6 +11,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { AuthUser, me, onSessionExpired, storedToken } from '../api';
+import { configurePurchases } from '../billing/purchases';
 import { SignInScreen } from '../screens/SignInScreen';
 import { AvatarHomeScreen } from '../screens/AvatarHomeScreen';
 import { ConversationListScreen } from '../screens/ConversationListScreen';
@@ -121,14 +122,20 @@ function HistoryStackScreen() {
   );
 }
 
-function SettingsStackScreenFactory({ user }: { user: AuthUser | null }) {
+function SettingsStackScreenFactory({
+  user,
+  onRefreshUser,
+}: {
+  user: AuthUser | null;
+  onRefreshUser: () => Promise<void>;
+}) {
   // Wrap so we can close over the authenticated user without touching
   // route params. Each mount returns a stable component ref.
   return function SettingsStackScreen() {
     return (
       <SettingsStack.Navigator screenOptions={stackScreenOptions}>
         <SettingsStack.Screen name="SettingsHome" options={{ title: 'Settings' }}>
-          {() => <SettingsScreen user={user} />}
+          {() => <SettingsScreen user={user} onRefreshUser={onRefreshUser} />}
         </SettingsStack.Screen>
       </SettingsStack.Navigator>
     );
@@ -153,8 +160,14 @@ function tabBarStyleForRoute(route: RouteProp<RootTabParamList, keyof RootTabPar
   return undefined;
 }
 
-function RootTabs({ user }: { user: AuthUser | null }) {
-  const SettingsStackScreen = SettingsStackScreenFactory({ user });
+function RootTabs({
+  user,
+  onRefreshUser,
+}: {
+  user: AuthUser | null;
+  onRefreshUser: () => Promise<void>;
+}) {
+  const SettingsStackScreen = SettingsStackScreenFactory({ user, onRefreshUser });
 
   return (
     <Tab.Navigator
@@ -248,6 +261,11 @@ export function AppNavigator() {
       try {
         const current = await me();
         setUser(current);
+        // RevenueCat's appUserID must match the one our backend expects
+        // on incoming webhooks — we set it to the user's numeric id so
+        // webhook resolution is unambiguous. No-op in Expo Go (native
+        // module not linked).
+        configurePurchases(String(current.id));
       } catch {
         // token invalid — fall through to sign-in
       } finally {
@@ -255,6 +273,27 @@ export function AppNavigator() {
       }
     })();
   }, []);
+
+  /**
+   * Refetch /me and update state. Used after a successful paywall
+   * purchase / restore so the rest of the UI (remaining messages,
+   * Premium badge, gated attach button) reflects the new entitlement
+   * without a cold restart.
+   */
+  const refreshUser = async () => {
+    try {
+      const current = await me();
+      setUser(current);
+    } catch {
+      // If me() fails here (network blip, token expired), leave state
+      // alone — session-expired flow will fire on the next 401.
+    }
+  };
+
+  const handleSignedIn = (authed: AuthUser) => {
+    setUser(authed);
+    configurePurchases(String(authed.id));
+  };
 
   useEffect(() => {
     return onSessionExpired(() => {
@@ -282,12 +321,12 @@ export function AppNavigator() {
   }
 
   if (!user) {
-    return <SignInScreen onSignedIn={setUser} />;
+    return <SignInScreen onSignedIn={handleSignedIn} />;
   }
 
   return (
     <NavigationContainer>
-      <RootTabs user={user} />
+      <RootTabs user={user} onRefreshUser={refreshUser} />
     </NavigationContainer>
   );
 }
