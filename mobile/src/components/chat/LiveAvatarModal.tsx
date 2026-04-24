@@ -173,6 +173,14 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
   }, [visible, avatarSlug]);
 
   const isWebViewAvailable = WebViewComponent !== null;
+  // Pulled out of JSX into locals so react-native/no-raw-text stops
+  // mis-flagging the string literals inside `state.kind === '...'`
+  // guards as bare JSX text.
+  const isLoading = state.kind === 'loading';
+  const isError = state.kind === 'error';
+  const isReady = state.kind === 'ready';
+  const readySession = state.kind === 'ready' ? state.session : null;
+  const errorView = state.kind === 'error' ? state : null;
 
   return (
     <Modal
@@ -198,7 +206,7 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
         </View>
 
         <View style={styles.stage}>
-          {state.kind === 'loading' && (
+          {isLoading && (
             <View style={styles.centered}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={styles.loadingText}>
@@ -207,13 +215,13 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
             </View>
           )}
 
-          {state.kind === 'error' && (
-            <ErrorPanel title={state.title} body={state.body} onClose={onClose} />
+          {isError && errorView && (
+            <ErrorPanel title={errorView.title} body={errorView.body} onClose={onClose} />
           )}
 
-          {state.kind === 'ready' && isWebViewAvailable && state.session.session.url && (
+          {isReady && isWebViewAvailable && readySession?.session.url && (
             <WebViewComponent
-              source={{ uri: state.session.session.url }}
+              source={{ uri: readySession.session.url }}
               style={styles.webview}
               // Android: let the embed ask for mic permission from the
               // WebView. iOS handles this at the OS level once NSMicrophone
@@ -240,7 +248,7 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
             />
           )}
 
-          {state.kind === 'ready' && !isWebViewAvailable && (
+          {isReady && !isWebViewAvailable && (
             <ErrorPanel
               title="WebView not available"
               body="Live Avatar needs a development build (`eas build --profile development`) — the WebView native module isn't linked in Expo Go. Sign-in and chat still work, just not the video layer."
@@ -249,7 +257,7 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
           )}
         </View>
 
-        {state.kind === 'ready' && state.session.session.sandbox && (
+        {isReady && readySession?.session.sandbox && (
           <View style={styles.sandboxPill}>
             <Ionicons name="flask-outline" size={12} color={colors.warning} />
             <Text style={styles.sandboxText}>
