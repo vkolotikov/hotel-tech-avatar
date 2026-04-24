@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Message, Attachment } from '../../types/models';
 import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../../theme';
 import { CitationBadge } from './CitationBadge';
+import { parseContent } from '../../utils/citations';
 
 function iconForMime(mime: string | null | undefined): keyof typeof Ionicons.glyphMap {
   if (!mime) return 'document-outline';
@@ -50,6 +52,25 @@ export function MessageBubble({ message, avatarSlug }: Props) {
   const accent = slug in avatarColors ? avatarColors[slug] : colors.primary;
   const time = formatTime(message.created_at);
 
+  // Only agent replies need citation parsing; user messages display raw.
+  // Parsing is cheap but memoised anyway because FlatList may re-render
+  // the bubble when the viewport shifts.
+  const parsed = useMemo(() => {
+    if (isUser) return { cleaned: message.content, citations: [] };
+    return parseContent(message.content);
+  }, [isUser, message.content]);
+
+  const displayText = parsed.cleaned;
+
+  // Citations extracted from the reply text are the authoritative list
+  // for the info icon; fall back to the count the backend returned if
+  // for some reason the model emitted citations we didn't match (e.g.
+  // a new format we haven't parsed yet).
+  const citationsForBadge = parsed.citations;
+  const countForBadge = parsed.citations.length > 0
+    ? parsed.citations.length
+    : (message.citations_count ?? 0);
+
   return (
     <View style={[styles.row, isUser ? styles.rowUser : styles.rowAgent]}>
       <View
@@ -60,8 +81,8 @@ export function MessageBubble({ message, avatarSlug }: Props) {
             : [styles.bubbleAgent, { borderLeftColor: accent }],
         ]}
       >
-        {message.content.length > 0 && (
-          <Text style={styles.text}>{message.content}</Text>
+        {displayText.length > 0 && (
+          <Text style={styles.text}>{displayText}</Text>
         )}
         {message.attachments && message.attachments.length > 0 && (
           <View style={bubbleStyles.attachments}>
@@ -74,7 +95,8 @@ export function MessageBubble({ message, avatarSlug }: Props) {
       <View style={[styles.metaRow, isUser ? styles.metaRowUser : styles.metaRowAgent]}>
         {!isUser && (
           <CitationBadge
-            citationsCount={message.citations_count ?? 0}
+            citationsCount={countForBadge}
+            citations={citationsForBadge}
             isVerified={message.is_verified}
             verificationStatus={message.verification_status}
             verificationFailures={message.verification_failures_json}

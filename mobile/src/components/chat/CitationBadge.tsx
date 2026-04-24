@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize } from '../../theme';
+import type { ParsedCitation } from '../../utils/citations';
+import { labelForCitation, sourceNameForCitation } from '../../utils/citations';
 
 type VerificationStatus = 'passed' | 'failed' | 'not_required' | null;
 
@@ -13,33 +15,40 @@ type VerificationFailure = {
 
 type Props = {
   citationsCount: number;
+  citations?: ParsedCitation[];
   isVerified: boolean | null;
   verificationStatus?: VerificationStatus;
   verificationFailures?: unknown[] | null;
 };
 
 /**
- * Compact badge under an agent bubble showing the verification outcome.
- * Tap to see which claims failed (when applicable). Hidden entirely on
- * messages that don't go through the verification pipeline (hotel vertical,
- * legacy rows with status=null).
+ * Compact badge under an agent bubble that doubles as the entry point
+ * to the source list. Tapping either the passed or failed state opens
+ * a modal — sources for passed, failure reasons for failed. Hidden for
+ * messages the verification pipeline doesn't touch (hotel vertical,
+ * legacy rows with no verification status).
  */
 export function CitationBadge({
   citationsCount,
+  citations,
   isVerified,
   verificationStatus,
   verificationFailures,
 }: Props) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [failuresOpen, setFailuresOpen] = useState(false);
 
-  // Hide entirely for messages the verification pipeline didn't touch.
-  if (verificationStatus === 'not_required' || (verificationStatus == null && isVerified === null)) {
+  if (
+    verificationStatus === 'not_required' ||
+    (verificationStatus == null && isVerified === null)
+  ) {
     return null;
   }
 
   const passed = verificationStatus === 'passed' || (verificationStatus == null && isVerified === true);
   const failed = verificationStatus === 'failed' || (verificationStatus == null && isVerified === false);
   const hasFailures = Array.isArray(verificationFailures) && verificationFailures.length > 0;
+  const hasCitations = Array.isArray(citations) && citations.length > 0;
 
   let iconName: keyof typeof Ionicons.glyphMap;
   let label: string;
@@ -57,36 +66,118 @@ export function CitationBadge({
     tint = colors.warning;
     label = 'Fallback response';
   } else {
-    // Shouldn't reach here given the early returns — render nothing.
     return null;
   }
+
+  const showSourcesAffordance = passed && hasCitations;
+  const showFailuresAffordance = failed && hasFailures;
+  const isTappable = showSourcesAffordance || showFailuresAffordance;
 
   const content = (
     <View style={[styles.badge, { borderColor: tint + '66' }]}>
       <Ionicons name={iconName} size={12} color={tint} />
       <Text style={[styles.text, { color: tint }]}>{label}</Text>
-      {failed && hasFailures && (
-        <Ionicons name="chevron-forward" size={11} color={tint} />
+      {isTappable && (
+        <Ionicons
+          name={showSourcesAffordance ? 'information-circle-outline' : 'chevron-forward'}
+          size={13}
+          color={tint}
+        />
       )}
     </View>
   );
 
-  if (failed && hasFailures) {
+  if (showSourcesAffordance) {
     return (
       <>
-        <Pressable onPress={() => setDetailsOpen(true)} hitSlop={8}>
+        <Pressable
+          onPress={() => setSourcesOpen(true)}
+          hitSlop={8}
+          accessibilityLabel="View sources"
+        >
+          {content}
+        </Pressable>
+        <SourcesModal
+          visible={sourcesOpen}
+          citations={citations as ParsedCitation[]}
+          onClose={() => setSourcesOpen(false)}
+        />
+      </>
+    );
+  }
+
+  if (showFailuresAffordance) {
+    return (
+      <>
+        <Pressable
+          onPress={() => setFailuresOpen(true)}
+          hitSlop={8}
+          accessibilityLabel="Why the fallback"
+        >
           {content}
         </Pressable>
         <VerificationFailuresModal
-          visible={detailsOpen}
+          visible={failuresOpen}
           failures={(verificationFailures as VerificationFailure[]) ?? []}
-          onClose={() => setDetailsOpen(false)}
+          onClose={() => setFailuresOpen(false)}
         />
       </>
     );
   }
 
   return content;
+}
+
+function openExternal(url: string) {
+  Linking.openURL(url).catch(() => Alert.alert("Couldn't open link", url));
+}
+
+function SourcesModal({
+  visible,
+  citations,
+  onClose,
+}: {
+  visible: boolean;
+  citations: ParsedCitation[];
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={modalStyles.backdrop} onPress={onClose}>
+        <Pressable style={modalStyles.card} onPress={(e) => e.stopPropagation()}>
+          <View style={modalStyles.header}>
+            <Ionicons name="document-text-outline" size={18} color={colors.success} />
+            <Text style={modalStyles.heading}>Sources</Text>
+          </View>
+          <Text style={modalStyles.lead}>
+            The response was grounded in the following references. Tap one to open it.
+          </Text>
+          {citations.map((c, idx) => (
+            <Pressable
+              key={`${c.type}-${c.key}-${idx}`}
+              onPress={() => openExternal(c.url)}
+              style={({ pressed }) => [
+                modalStyles.sourceRow,
+                pressed && modalStyles.sourceRowPressed,
+              ]}
+            >
+              <View style={modalStyles.sourceText}>
+                <Text style={modalStyles.sourceLabel}>{labelForCitation(c)}</Text>
+                <Text style={modalStyles.sourceMeta}>{sourceNameForCitation(c)}</Text>
+              </View>
+              <Ionicons name="open-outline" size={16} color={colors.textMuted} />
+            </Pressable>
+          ))}
+          <Pressable
+            onPress={onClose}
+            style={({ pressed }) => [modalStyles.closeBtn, pressed && { opacity: 0.85 }]}
+          >
+            <Text style={modalStyles.closeBtnText}>Close</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
 }
 
 function VerificationFailuresModal({
@@ -189,6 +280,29 @@ const modalStyles = StyleSheet.create({
     fontSize: fontSize.sm,
     lineHeight: 20,
     marginBottom: spacing.sm,
+  },
+  sourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceElevated,
+    gap: spacing.sm,
+  },
+  sourceRowPressed: {
+    opacity: 0.85,
+  },
+  sourceText: { flex: 1 },
+  sourceLabel: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  sourceMeta: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
   },
   failure: {
     borderLeftWidth: 3,

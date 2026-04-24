@@ -251,7 +251,11 @@ final class SystemPromptBuilder
             . "- If you make a factual claim about research, mechanism, or reference ranges, cite AT LEAST ONE source from the numbered list above.\n"
             . "- Use the exact citation key format shown in parentheses — e.g. `(PMID:12345678)` or `(USDA FDC ID: 173410)` — not author-year references like `(Smith et al., 2020)`, `(Hill et al. 2014)`, or vague phrasings like `studies show` without a citation.\n"
             . "- DO NOT cite sources from your training data that are not in the list above. Every cited PMID / FDC ID / URL must appear in the evidence section.\n"
-            . "- If the evidence above does not support the claim you want to make, change the claim or say plainly \"I don't have a specific source for this\" rather than inventing one.";
+            . "- If the evidence above does not support the claim you want to make, change the claim or say plainly \"I don't have a specific source for this\" rather than inventing one.\n\n"
+            . "## Voice rules (the user sees a natural conversation, not a literature review)\n"
+            . "- NEVER name the source system in prose. Do NOT write \"PubMed research shows\", \"per PubMed\", \"USDA FoodData Central lists\", \"according to Open Food Facts\", \"meta-analyses on PubMed\", or any equivalent phrasing.\n"
+            . "- Citations are silent evidence markers, not narrated. The UI renders them under an info icon; the user does not see them inline.\n"
+            . "- Speak as if you just know the fact. Good: \"Fermented foods shift the gut microbiome (PMID:32860802).\" Bad: \"According to PubMed research (PMID:32860802), fermented foods shift the gut microbiome.\"";
     }
 
     private function conversationStyleBlock(): string
