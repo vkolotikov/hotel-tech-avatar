@@ -1,7 +1,10 @@
 <?php
 
 return [
-    'grounding_threshold' => env('VERIFICATION_GROUNDING_THRESHOLD', 0.65),
+    // Claim-vs-chunk cosine threshold for grounding. Matches the scale
+    // of retrieval.vector_similarity_threshold; see comment there for why
+    // the previous 0.65 was above every real-world match.
+    'grounding_threshold' => (float) env('VERIFICATION_GROUNDING_THRESHOLD', 0.35),
     'citation_validation_cache_ttl_hours' => 24,
     'citation_validation_error_cache_ttl_hours' => 1,
     'max_revisions' => 2,
