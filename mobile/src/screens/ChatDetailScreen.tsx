@@ -21,6 +21,7 @@ import { useAvatars } from '../hooks/useAvatars';
 import { useCreateConversation } from '../hooks/useConversations';
 import { ApiError } from '../api';
 import { PaywallScreen } from './PaywallScreen';
+import { LiveAvatarModal } from '../components/chat/LiveAvatarModal';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import { MessageInput } from '../components/chat/MessageInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
@@ -60,6 +61,7 @@ export function ChatDetailScreen() {
 
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [paywallReason, setPaywallReason] = useState<string | null>(null);
+  const [videoModeOpen, setVideoModeOpen] = useState(false);
 
   // When the backend rejects a send with 402 (free-tier daily limit),
   // open the paywall automatically with the exact message the backend
@@ -179,22 +181,35 @@ export function ChatDetailScreen() {
       <Text style={styles.headerTitle} numberOfLines={1}>
         {avatarName}
       </Text>
-      <Pressable
-        onPress={handleNewChat}
-        accessibilityLabel={`Start a new chat with ${avatarName}`}
-        hitSlop={8}
-        style={({ pressed }) => [
-          styles.backButton,
-          (pressed || createConversation.isPending) && { opacity: 0.7 },
-        ]}
-        disabled={createConversation.isPending}
-      >
-        {createConversation.isPending ? (
-          <ActivityIndicator size="small" color={colors.textPrimary} />
-        ) : (
-          <Ionicons name="create-outline" size={20} color={colors.textPrimary} />
-        )}
-      </Pressable>
+      <View style={styles.topBarActions}>
+        <Pressable
+          onPress={() => setVideoModeOpen(true)}
+          accessibilityLabel={`Start video call with ${avatarName}`}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <Ionicons name="videocam-outline" size={20} color={colors.textPrimary} />
+        </Pressable>
+        <Pressable
+          onPress={handleNewChat}
+          accessibilityLabel={`Start a new chat with ${avatarName}`}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.backButton,
+            (pressed || createConversation.isPending) && { opacity: 0.7 },
+          ]}
+          disabled={createConversation.isPending}
+        >
+          {createConversation.isPending ? (
+            <ActivityIndicator size="small" color={colors.textPrimary} />
+          ) : (
+            <Ionicons name="create-outline" size={20} color={colors.textPrimary} />
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 
@@ -309,6 +324,13 @@ export function ChatDetailScreen() {
         reason={paywallReason}
         onClose={showPaywallDismiss}
       />
+
+      <LiveAvatarModal
+        visible={videoModeOpen}
+        avatarSlug={avatarSlug}
+        avatarName={avatarName}
+        onClose={() => setVideoModeOpen(false)}
+      />
     </View>
   );
 }
@@ -345,6 +367,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textShadowColor: 'rgba(0,0,0,0.75)',
     textShadowRadius: 8,
+  },
+  topBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   list: {
     flexGrow: 1,
