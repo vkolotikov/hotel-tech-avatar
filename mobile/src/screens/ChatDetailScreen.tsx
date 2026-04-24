@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   ImageBackground,
   KeyboardAvoidingView,
@@ -16,6 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMessages } from '../hooks/useMessages';
 import { useChatStream } from '../hooks/useChatStream';
+import { useAvatars } from '../hooks/useAvatars';
+import { useCreateConversation } from '../hooks/useConversations';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import { MessageInput } from '../components/chat/MessageInput';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
@@ -50,6 +53,47 @@ export function ChatDetailScreen() {
 
   const { data, isLoading, isError, refetch } = useMessages(conversationId);
   const stream = useChatStream(conversationId);
+  const { data: avatars } = useAvatars();
+  const createConversation = useCreateConversation();
+
+  const handleNewChat = () => {
+    Alert.alert(
+      'Start a new chat?',
+      `This keeps the current conversation with ${avatarName} in your history and opens a fresh one.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'New chat',
+          onPress: async () => {
+            const agent = avatars?.find((a) => a.slug === avatarSlug);
+            if (!agent) {
+              Alert.alert('Could not start new chat', 'Avatar not available.');
+              return;
+            }
+            try {
+              const conversation = await createConversation.mutateAsync({
+                agentId: agent.id,
+                title: null,
+              });
+              // Replace current ChatDetail rather than stacking another —
+              // the old conversation is already saved, and back-nav from
+              // the new one should go to the screen the user came from
+              // (AvatarHome / Library / History), not the old chat.
+              navigation.replace('ChatDetail', {
+                conversationId: conversation.id,
+                avatarSlug: agent.slug,
+                avatarName: agent.name,
+                avatarImageUrl: agent.avatar_image_url,
+                promptSuggestions: agent.prompt_suggestions,
+              });
+            } catch (err) {
+              Alert.alert('Could not start new chat', (err as Error).message);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   useEffect(() => {
     if (data?.length) {
@@ -103,7 +147,22 @@ export function ChatDetailScreen() {
       <Text style={styles.headerTitle} numberOfLines={1}>
         {avatarName}
       </Text>
-      <View style={styles.backButton} />
+      <Pressable
+        onPress={handleNewChat}
+        accessibilityLabel={`Start a new chat with ${avatarName}`}
+        hitSlop={8}
+        style={({ pressed }) => [
+          styles.backButton,
+          (pressed || createConversation.isPending) && { opacity: 0.7 },
+        ]}
+        disabled={createConversation.isPending}
+      >
+        {createConversation.isPending ? (
+          <ActivityIndicator size="small" color={colors.textPrimary} />
+        ) : (
+          <Ionicons name="create-outline" size={20} color={colors.textPrimary} />
+        )}
+      </Pressable>
     </View>
   );
 
