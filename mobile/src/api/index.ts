@@ -30,9 +30,18 @@ export function resolveAssetUrl(path: string | null | undefined): string | null 
   return `${baseUrl()}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
+// Hard ceiling for every non-streaming request. Fetch has no built-in
+// timeout on React Native, so a backend that hangs leaves the UI stuck
+// on a spinner with no way out. 20s is generous enough to cover slow
+// cold starts on Laravel Cloud + embedding roundtrips, tight enough
+// that a dead network surfaces as a retryable error within a reasonable
+// window. Long-lived paths (SSE streaming, voice transcribe) don't use
+// this helper, so they're unaffected.
+const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
+
 export async function request<T>(
   path: string,
-  init: RequestInit & { auth?: boolean } = {},
+  init: RequestInit & { auth?: boolean; timeoutMs?: number } = {},
 ): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
@@ -45,7 +54,29 @@ export async function request<T>(
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${baseUrl()}${path}`, { ...init, headers });
+  const controller = new AbortController();
+  const timeoutMs = init.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl()}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    // AbortError from our timeout vs a real network error — surface a
+    // clearer message for the former so the user knows a retry is
+    // meaningful.
+    if ((err as { name?: string }).name === 'AbortError') {
+      throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s — check your connection and try again.`);
+    }
+    throw err;
+  }
+  clearTimeout(timeoutId);
+
   const text = await response.text();
   const body = text ? JSON.parse(text) : null;
 
