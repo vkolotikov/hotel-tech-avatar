@@ -13,6 +13,10 @@ class EmbeddingService
     private const EMBEDDING_MODEL = 'text-embedding-3-large';
     private const EMBEDDING_DIMENSION = 3072;
     private const CACHE_TTL_SECONDS = 86400 * 30; // 30 days
+    // OpenAI accepts up to 2048 inputs per call but individual requests
+    // get slow past ~100 — chunking here keeps wall-clock latency bounded
+    // during large syncs without bloating individual requests.
+    private const BATCH_CHUNK_SIZE = 100;
 
     public function __construct(
         private readonly LlmClient $llmClient,
@@ -56,6 +60,72 @@ class EmbeddingService
             // Return zero vector on failure (graceful degradation)
             return $this->zeroVector();
         }
+    }
+
+    /**
+     * Embed an array of texts in one or more batched API calls. Preserves
+     * the input order; empty strings map to zero vectors without hitting
+     * the API. Cache is consulted per-text so re-syncs that haven't
+     * changed content reuse embeddings for free.
+     *
+     * On a batch-level API failure we fall back to a parallel zero-vector
+     * array for that batch — the caller can still persist chunks, and a
+     * future re-sync will backfill embeddings once the upstream recovers.
+     *
+     * @param array<int, string> $texts
+     * @return array<int, array<int, float>> Parallel array of embeddings.
+     */
+    public function embedBatch(array $texts): array
+    {
+        if (empty($texts)) {
+            return [];
+        }
+
+        $results = array_fill(0, count($texts), null);
+        $toFetch = []; // index => text
+
+        foreach ($texts as $i => $text) {
+            $trimmed = trim((string) $text);
+            if ($trimmed === '') {
+                $results[$i] = $this->zeroVector();
+                continue;
+            }
+            $cached = Cache::get($this->getCacheKey($trimmed));
+            if (is_array($cached)) {
+                $results[$i] = $cached;
+                continue;
+            }
+            $toFetch[$i] = $trimmed;
+        }
+
+        foreach (array_chunk($toFetch, self::BATCH_CHUNK_SIZE, preserve_keys: true) as $chunk) {
+            $indices = array_keys($chunk);
+            $inputs  = array_values($chunk);
+            try {
+                $embeddings = $this->callOpenAiEmbeddingBatch($inputs);
+            } catch (\Throwable $e) {
+                Log::warning('EmbeddingService: Batch embedding failed — using zero vectors', [
+                    'error'       => $e->getMessage(),
+                    'chunk_size'  => count($inputs),
+                ]);
+                foreach ($indices as $idx) {
+                    $results[$idx] = $this->zeroVector();
+                }
+                continue;
+            }
+            foreach ($indices as $offset => $idx) {
+                $embedding      = $embeddings[$offset] ?? $this->zeroVector();
+                $results[$idx]  = $embedding;
+                Cache::put(
+                    $this->getCacheKey($inputs[$offset]),
+                    $embedding,
+                    self::CACHE_TTL_SECONDS,
+                );
+            }
+        }
+
+        // Anything still null means empty or un-fetchable — coerce to zero.
+        return array_map(fn ($v) => is_array($v) ? $v : $this->zeroVector(), $results);
     }
 
     /**
@@ -104,6 +174,67 @@ class EmbeddingService
         }
 
         return $embedding;
+    }
+
+    /**
+     * Batch variant of callOpenAiEmbedding — the API accepts an array of
+     * inputs in a single request and returns a matching array, ordered.
+     *
+     * @param array<int, string> $texts
+     * @return array<int, array<int, float>>
+     */
+    private function callOpenAiEmbeddingBatch(array $texts): array
+    {
+        $apiKey  = (string) config('services.openai.api_key', '');
+        $baseUrl = (string) config('services.openai.base_url', 'https://api.openai.com/v1');
+        $timeout = (int) config('services.openai.timeout', 45);
+
+        if (empty($apiKey)) {
+            throw new \RuntimeException('OpenAI API key not configured');
+        }
+
+        $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+            ->timeout($timeout)
+            ->acceptJson()
+            ->asJson()
+            ->post("{$baseUrl}/embeddings", [
+                'model' => self::EMBEDDING_MODEL,
+                'input' => array_values($texts),
+                'encoding_format' => 'float',
+            ]);
+
+        if (!$response->successful()) {
+            throw new \RuntimeException(
+                "OpenAI batch embedding failed (HTTP {$response->status()}): " .
+                ($response->body() ?? 'No response body')
+            );
+        }
+
+        $json = $response->json() ?? [];
+        $data = $json['data'] ?? [];
+
+        // OpenAI guarantees data is index-aligned with input, but defend
+        // against order drift by sorting by the `index` field.
+        usort($data, fn ($a, $b) => ($a['index'] ?? 0) <=> ($b['index'] ?? 0));
+
+        $out = [];
+        foreach ($data as $row) {
+            $emb = $row['embedding'] ?? [];
+            if (!is_array($emb) || count($emb) !== self::EMBEDDING_DIMENSION) {
+                throw new \RuntimeException(
+                    'Invalid batch embedding response: unexpected dimensionality'
+                );
+            }
+            $out[] = $emb;
+        }
+
+        if (count($out) !== count($texts)) {
+            throw new \RuntimeException(
+                'Batch embedding returned ' . count($out) . ' rows for ' . count($texts) . ' inputs'
+            );
+        }
+
+        return $out;
     }
 
     /**

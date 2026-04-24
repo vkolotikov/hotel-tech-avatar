@@ -11,18 +11,42 @@ use Illuminate\Support\Facades\Http;
 final class FoodSearchDriver implements DriverInterface
 {
     private const BASE_URL = 'https://world.openfoodfacts.org/api/v2/search';
+    private const HTTP_TIMEOUT_SECONDS = 20;
+    // OFF is lenient but asks callers to stay under 100 per page.
+    private const MAX_PAGE_SIZE = 100;
 
     public function fetch(array $config): array
     {
-        $maxResults = $config['max_results_per_sync'] ?? 300;
+        // OFF requires a descriptive User-Agent; anonymous callers get
+        // aggressive rate limits. Contact email is informational only.
+        $contactEmail = (string) config(
+            'services.openfoodfacts.contact_email',
+            'ops@wellnessai.app',
+        );
+        $searchQuery = trim((string) ($config['search_query'] ?? 'nutrition food'));
+        $maxResults  = (int) ($config['max_results_per_sync'] ?? 100);
+
+        if ($maxResults < 1) {
+            return [];
+        }
 
         try {
-            $response = Http::get(self::BASE_URL, [
-                'q' => 'nutrition food',
-                'page_size' => min($maxResults, 50),
-            ])->json();
-        } catch (\Exception $e) {
-            \Log::warning('Open Food Facts API call failed', ['error' => $e->getMessage()]);
+            $response = Http::withHeaders([
+                    'User-Agent' => 'wellnessai/1.0 (' . $contactEmail . ')',
+                ])
+                ->timeout(self::HTTP_TIMEOUT_SECONDS)
+                ->acceptJson()
+                ->get(self::BASE_URL, [
+                    'search_terms' => $searchQuery,
+                    'page_size'    => min($maxResults, self::MAX_PAGE_SIZE),
+                ])
+                ->throw()
+                ->json();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Open Food Facts API call failed', [
+                'error'        => $e->getMessage(),
+                'search_query' => $searchQuery,
+            ]);
             return [];
         }
 

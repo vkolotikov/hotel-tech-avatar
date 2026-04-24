@@ -11,20 +11,38 @@ use Illuminate\Support\Facades\Http;
 final class FoodDataDriver implements DriverInterface
 {
     private const BASE_URL = 'https://fdc.nal.usda.gov/api/v1/foods/search';
+    private const HTTP_TIMEOUT_SECONDS = 20;
+    // USDA caps pageSize at 200 for this endpoint.
+    private const MAX_PAGE_SIZE = 200;
 
     public function fetch(array $config): array
     {
-        $apiKey = $config['api_key'];
-        $maxResults = $config['max_results_per_sync'] ?? 500;
+        $apiKey      = (string) ($config['api_key'] ?? '');
+        // Default to a broad nutrition query so mis-configured sources
+        // still return something useful, but honour the per-source query
+        // when provided (the common case).
+        $searchQuery = trim((string) ($config['search_query'] ?? 'nutrition'));
+        $maxResults  = (int) ($config['max_results_per_sync'] ?? 200);
+
+        if ($maxResults < 1 || $apiKey === '') {
+            return [];
+        }
 
         try {
-            $response = Http::get(self::BASE_URL, [
-                'api_key' => $apiKey,
-                'query' => 'nutrition',
-                'pageSize' => $maxResults,
-            ])->json();
-        } catch (\Exception $e) {
-            \Log::warning('USDA FoodData API call failed', ['error' => $e->getMessage()]);
+            $response = Http::timeout(self::HTTP_TIMEOUT_SECONDS)
+                ->acceptJson()
+                ->get(self::BASE_URL, [
+                    'api_key'  => $apiKey,
+                    'query'    => $searchQuery,
+                    'pageSize' => min($maxResults, self::MAX_PAGE_SIZE),
+                ])
+                ->throw()
+                ->json();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('USDA FoodData API call failed', [
+                'error'        => $e->getMessage(),
+                'search_query' => $searchQuery,
+            ]);
             return [];
         }
 

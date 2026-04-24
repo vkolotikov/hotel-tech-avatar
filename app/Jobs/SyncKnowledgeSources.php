@@ -161,8 +161,12 @@ class SyncKnowledgeSources implements ShouldQueue
             // is a clean slate.
             KnowledgeChunk::where('document_id', $document->id)->delete();
 
+            // Batch-embed all chunks for this document in one (or a few)
+            // API calls rather than N individual round-trips.
+            $contents   = array_map(fn ($c) => $c->content, $list);
+            $embeddings = $embeddingService->embedBatch($contents);
+
             foreach ($list as $i => $chunk) {
-                $embedding = $embeddingService->embed($chunk->content);
                 KnowledgeChunk::create([
                     'document_id' => $document->id,
                     'agent_id'    => $agent->id,
@@ -172,7 +176,7 @@ class SyncKnowledgeSources implements ShouldQueue
                         'citation_key' => $chunk->citation_key,
                         'fetched_at'   => $chunk->fetched_at->format(\DateTimeInterface::ATOM),
                     ],
-                    'embedding'   => $embedding,
+                    'embedding'   => $embeddings[$i] ?? $embeddingService->embed($chunk->content),
                 ]);
                 $total++;
             }
