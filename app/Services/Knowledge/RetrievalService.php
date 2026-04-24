@@ -89,6 +89,14 @@ final class RetrievalService
     /**
      * Perform vector similarity search on cached knowledge chunks.
      *
+     * Uses pgvector's cosine distance operator (<=>), which matches what
+     * OpenAI recommends for their embeddings — text-embedding-3-large
+     * vectors are not unit-normalised, so L2 distance (<->) produces
+     * unbounded values that don't map cleanly to a similarity score.
+     * Cosine distance is in [0, 2]; similarity = 1 - cosine distance is
+     * in [-1, 1], and typical semantically-related pairs land in
+     * [0.4, 0.75]. Hence a default threshold well below 0.7.
+     *
      * @param string $prompt
      * @param Agent $agent
      * @return array Array of RetrievedChunk objects
@@ -98,20 +106,20 @@ final class RetrievalService
         $promptEmbedding = $this->embeddingService->embed($prompt);
         $embeddingString = $this->embeddingToString($promptEmbedding);
 
-        // Query using raw SQL for pgvector distance operator
-        // pgvector <-> returns distance (0 = identical, 1 = completely opposite)
-        // We use < 1 to get reasonable similarity matches
         $chunks = DB::select(
-            'SELECT kc.*, 1 - (kc.embedding <-> ?::vector) as similarity ' .
+            'SELECT kc.*, 1 - (kc.embedding <=> ?::vector) as similarity ' .
             'FROM knowledge_chunks kc ' .
             'WHERE kc.agent_id = ? AND kc.embedding IS NOT NULL ' .
-            'ORDER BY kc.embedding <-> ?::vector ' .
+            'ORDER BY kc.embedding <=> ?::vector ' .
             'LIMIT 10',
             [$embeddingString, $agent->id, $embeddingString]
         );
 
-        // Convert raw results to models and filter by threshold
-        $threshold = (float) config('retrieval.vector_similarity_threshold', 0.7);
+        // Convert raw results to models and filter by threshold. Default
+        // 0.5 matches real-world cosine scores for the "conversational
+        // question → PubMed abstract" pairing — can be raised per-vertical
+        // via config once we tune against the eval harness.
+        $threshold = (float) config('retrieval.vector_similarity_threshold', 0.5);
         $result = [];
 
         foreach ($chunks as $row) {

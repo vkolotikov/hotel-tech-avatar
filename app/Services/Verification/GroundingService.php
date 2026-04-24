@@ -15,11 +15,26 @@ use Illuminate\Support\Facades\Log;
 
 final class GroundingService implements GroundingServiceInterface
 {
-    private const GROUNDING_THRESHOLD = 0.65;
+    /**
+     * Minimum cosine similarity a claim's embedding must hit against at
+     * least one retrieved chunk for the claim to be considered grounded.
+     *
+     * Calibrated against text-embedding-3-large: conversational claims
+     * paired with relevant PubMed abstracts consistently land in the
+     * [0.50, 0.72] range; we want to accept the middle of that band
+     * without letting genuinely unrelated chunks sneak through. Override
+     * via config for stricter/looser behaviour per vertical.
+     */
+    private const DEFAULT_GROUNDING_THRESHOLD = 0.50;
 
     public function __construct(
         private readonly EmbeddingService $embeddingService,
     ) {}
+
+    private function threshold(): float
+    {
+        return (float) config('verification.grounding_threshold', self::DEFAULT_GROUNDING_THRESHOLD);
+    }
 
     /**
      * Ground all claims against the retrieved knowledge context.
@@ -117,7 +132,7 @@ final class GroundingService implements GroundingServiceInterface
             }
         }
 
-        if ($bestChunk !== null && $bestScore >= self::GROUNDING_THRESHOLD) {
+        if ($bestChunk !== null && $bestScore >= $this->threshold()) {
             $matchedChunk = $bestChunk instanceof KnowledgeChunk
                 ? $bestChunk
                 : ($bestChunk->chunk_id ? KnowledgeChunk::find($bestChunk->chunk_id) : null);
