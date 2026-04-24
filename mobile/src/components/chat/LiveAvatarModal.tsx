@@ -44,41 +44,71 @@ try {
 }
 
 /**
- * CSS injected into the embed page to hide LiveAvatar's built-in
- * "Chat now" demo UI. That UI drives FULL-mode sessions (they run
- * the LLM), which 400s against our LITE-mode embed. We keep only
- * the avatar video so our own controls can drive it via postMessage
- * in the audio-piping slice.
+ * CSS + JS injected into the embed page to hide LiveAvatar's demo
+ * UI. That UI drives FULL-mode sessions (they run the LLM), which
+ * 400s against our LITE-mode embed. We keep only the avatar video
+ * so our own controls can drive it via postMessage in the audio-
+ * piping slice.
  *
- * Selector strategy: match common button/label shapes rather than
- * specific class names (LiveAvatar's CSS is hashed, names rotate on
- * deploy). Safe to be slightly over-eager — the video element and
- * avatar canvas aren't buttons or <select>s.
+ * Hiding strategy — layered, because class-based CSS alone is not
+ * enough (LiveAvatar's inline `display: flex !important` on the
+ * Chat-now button beats a generic `button { display: none }`):
+ *
+ *   1. Global style: kill buttons, selects, comboboxes via
+ *      !important selectors.
+ *   2. Text-based scrub: walk the DOM, find any button whose visible
+ *      text is "Chat now" / "Start" / contains "chat", and remove
+ *      its closest card container entirely. Also wipes nearby
+ *      <select>-based language pickers.
+ *   3. MutationObserver re-runs the scrub whenever the embed's
+ *      React tree mounts new children.
+ *   4. 500ms interval as a paranoid fallback for anything the
+ *      observer misses (e.g. shadow DOM repaint).
  */
 const HIDE_DEMO_UI_CSS = `
   (function() {
-    function applyHides() {
-      var css = '\\
-        html, body { background: #000 !important; margin: 0 !important; padding: 0 !important; }\\
-        button, select { display: none !important; }\\
-        [class*="language" i], [class*="chatNow" i], [class*="chat-now" i] { display: none !important; }\\
-        /* Any floating control bar or footer label */\\
-        [class*="controls" i] > button, [class*="footer" i] button { display: none !important; }\\
-      ';
-      var style = document.createElement('style');
-      style.type = 'text/css';
-      style.innerHTML = css;
-      (document.head || document.documentElement).appendChild(style);
+    var css = '' +
+      'html, body { background: #000 !important; margin: 0 !important; padding: 0 !important; }' +
+      'button, select, [role="combobox"], [role="listbox"] { display: none !important; }' +
+      '[class*="language" i], [class*="chatNow" i], [class*="chat-now" i], [class*="controls" i], [class*="footer" i] { display: none !important; }';
+    var style = document.createElement('style');
+    style.type = 'text/css';
+    style.innerHTML = css;
+    (document.head || document.documentElement).appendChild(style);
+
+    function scrub() {
+      // Remove any button whose text matches the demo triggers, plus
+      // the closest "card" wrapper so we don't leave a ghost outline.
+      var buttons = document.querySelectorAll('button, [role="button"]');
+      for (var i = 0; i < buttons.length; i++) {
+        var btn = buttons[i];
+        var text = ((btn.innerText || btn.textContent || '') + '').trim().toLowerCase();
+        if (text === 'chat now' || text === 'start' || text === 'start chat' || text === 'try again') {
+          var container = btn.closest('[class*="card" i]') || btn.closest('[class*="control" i]') || btn.parentElement;
+          if (container) {
+            container.style.setProperty('display', 'none', 'important');
+          }
+          btn.style.setProperty('display', 'none', 'important');
+        }
+      }
+      // Kill any <select> (language picker) and its label wrapper.
+      var selects = document.querySelectorAll('select');
+      for (var j = 0; j < selects.length; j++) {
+        var wrap = selects[j].closest('[class*="card" i]') || selects[j].parentElement;
+        if (wrap) wrap.style.setProperty('display', 'none', 'important');
+      }
     }
+
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', applyHides);
+      document.addEventListener('DOMContentLoaded', scrub);
     } else {
-      applyHides();
+      scrub();
     }
-    // Re-apply on later DOM mutations — the embed renders React, so
-    // nodes can appear after initial hook-up.
-    var obs = new MutationObserver(applyHides);
+    var obs = new MutationObserver(scrub);
     obs.observe(document.documentElement, { childList: true, subtree: true });
+    // Belt-and-braces — some embed repaints fire outside our
+    // observer scope.
+    setInterval(scrub, 500);
   })();
   true;
 `;
