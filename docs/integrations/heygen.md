@@ -1,10 +1,11 @@
 # HeyGen Streaming Avatar → LiveAvatar
 
-**Status:** `deprecated` (original HeyGen endpoint) / `backend scaffolded` (LiveAvatar successor — awaiting operator signup + per-agent ID mapping before it can serve traffic).
+**Status:** `deprecated` (original HeyGen endpoint) / `backend live — mobile WebView pending` (LiveAvatar successor, LITE mode).
 **Last verified:** 2026-04-24
 **Official docs:**
+  - LiveAvatar API reference: https://docs.liveavatar.com/
+  - LiveAvatar developer portal: https://app.liveavatar.com/ (sign-in required)
   - Historical HeyGen: https://docs.heygen.com (endpoints listed are gone)
-  - Current LiveAvatar: https://app.liveavatar.com (sign-in required for developer portal)
 
 ## What we use it for
 
@@ -76,6 +77,7 @@ When all of the above lands, status flips from `backend scaffolded` to `live`.
 
 ## Change log
 
+- 2026-04-24 — LiveAvatar backend wired end-to-end in LITE mode. First avatar mapped (Nora → `26393b8e-e944-4367-98ef-e2bc75c4b792`). `LiveAvatarClient` service handles the two-step flow: `POST /v1/contexts` to lazy-create a persona resource on first use (cached in `agents.liveavatar_context_id`), then `POST /v2/embeddings` to mint a WebRTC-ready embed URL. Sandbox mode on by default so no credits burn during dev. `liveavatar:test --avatar=<slug>` CLI command prints the embed URL for browser smoke-testing before mobile is touched. LITE mode deliberately chosen over FULL — LITE keeps our Phase-1 retrieval + grounding + citation pipeline; FULL would have LiveAvatar answer with its own LLM, bypassing safety rules.
 - 2026-04-24 — LiveAvatar migration scaffolded server-side: `liveavatar_avatar_id` + `liveavatar_voice_id` columns on `agents`; `services.liveavatar.*` config + `LIVEAVATAR_API_KEY` env; new `LiveAvatarController` with `POST /api/v1/liveavatar/session` returning 503 while key empty and 422 while the agent isn't mapped. Upstream endpoint intentionally left as a 501 stub — to be filled in when an operator signs up and reads the actual payload shape off the developer portal. Legacy `HeygenController::token` left in place so the hotel SPA's existing 502 behaviour is unchanged.
 - 2026-04-17 — confirmed `/v1/streaming.create_token` returns `410 Gone`; Status moved to `deprecated`.
 - 2026-04-20 — this file created from `_template.md` as part of Phase 0 integrations scaffold

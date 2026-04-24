@@ -99,10 +99,19 @@ return [
     // mobile voice-mode UI shows "Voice avatar not configured" — chat
     // continues to work text-only and audio-only.
     'liveavatar' => [
-        'api_key'         => env('LIVEAVATAR_API_KEY', ''),
-        'base_url'        => env('LIVEAVATAR_BASE_URL', 'https://api.liveavatar.com'),
-        'default_quality' => env('LIVEAVATAR_DEFAULT_QUALITY', 'high'),
-        'timeout'         => env('LIVEAVATAR_TIMEOUT_SECONDS', 15),
+        'api_key'          => env('LIVEAVATAR_API_KEY', ''),
+        'base_url'         => env('LIVEAVATAR_BASE_URL', 'https://api.liveavatar.com'),
+        'default_language' => env('LIVEAVATAR_DEFAULT_LANGUAGE', 'en'),
+        'timeout'          => env('LIVEAVATAR_TIMEOUT_SECONDS', 15),
+        // Sandbox mode burns zero credits at LiveAvatar. Flip to false
+        // via env LIVEAVATAR_SANDBOX=false only after the end-to-end
+        // flow has been confirmed in a real WebView. Default-true means
+        // dev/staging traffic is always safe.
+        'sandbox'          => (bool) env('LIVEAVATAR_SANDBOX', true),
+        // Max session duration in seconds. LiveAvatar caps per tier;
+        // 300s is a reasonable dev ceiling so forgotten tabs don't
+        // drain the credit pool.
+        'max_session_seconds' => (int) env('LIVEAVATAR_MAX_SESSION_SECONDS', 300),
     ],
 
     'langfuse' => [
