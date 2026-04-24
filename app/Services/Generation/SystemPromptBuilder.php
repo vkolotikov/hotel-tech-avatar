@@ -245,9 +245,13 @@ final class SystemPromptBuilder
             $lines[] = "[{$n}] ({$citation}) — {$excerpt}\nSource: {$chunk->source_url}";
         }
 
-        return "# Evidence (use for factual claims; cite with (PMID:XXX) or the matching [n] marker)\n"
+        return "# Evidence — the ONLY sources you may cite\n"
             . implode("\n\n", $lines)
-            . "\n\nWhen making a factual claim, prefer these sources over free-form recall. If nothing matches, say so plainly rather than invent sources.";
+            . "\n\n## Citation rules (strict — the response is rejected if violated)\n"
+            . "- If you make a factual claim about research, mechanism, or reference ranges, cite AT LEAST ONE source from the numbered list above.\n"
+            . "- Use the exact citation key format shown in parentheses — e.g. `(PMID:12345678)` or `(USDA FDC ID: 173410)` — not author-year references like `(Smith et al., 2020)`, `(Hill et al. 2014)`, or vague phrasings like `studies show` without a citation.\n"
+            . "- DO NOT cite sources from your training data that are not in the list above. Every cited PMID / FDC ID / URL must appear in the evidence section.\n"
+            . "- If the evidence above does not support the claim you want to make, change the claim or say plainly \"I don't have a specific source for this\" rather than inventing one.";
     }
 
     private function conversationStyleBlock(): string
