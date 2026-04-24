@@ -76,6 +76,10 @@ final class LiveAvatarClient
             'default_language'     => (string) config('services.liveavatar.default_language', 'en'),
             'is_sandbox'           => (bool) config('services.liveavatar.sandbox', true),
             'max_session_duration' => (int) config('services.liveavatar.max_session_seconds', 300),
+            // Vertical orientation — mobile is portrait-primary; this
+            // also ensures the embed fills the WebView rather than
+            // leaving large horizontal-letterbox white bands on phone.
+            'orientation'          => (string) config('services.liveavatar.orientation', 'vertical'),
         ], static fn ($v) => $v !== null && $v !== '');
 
         $response = $this->http()->post($this->url('/v2/embeddings'), $payload);

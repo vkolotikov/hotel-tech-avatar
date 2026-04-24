@@ -115,6 +115,9 @@ return [
         // (verify with your plan — Essential allows longer). Default
         // stays safe for sandbox so dev traffic never fails this way.
         'max_session_seconds' => (int) env('LIVEAVATAR_MAX_SESSION_SECONDS', 60),
+        // Orientation controls the embed's video aspect ratio —
+        // 'vertical' for mobile-first, 'horizontal' for desktop / tablet.
+        'orientation' => env('LIVEAVATAR_ORIENTATION', 'vertical'),
     ],
 
     'langfuse' => [

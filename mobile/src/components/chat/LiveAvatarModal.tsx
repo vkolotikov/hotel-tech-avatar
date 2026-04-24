@@ -43,6 +43,68 @@ try {
   WebViewComponent = null;
 }
 
+/**
+ * CSS injected into the embed page to hide LiveAvatar's built-in
+ * "Chat now" demo UI. That UI drives FULL-mode sessions (they run
+ * the LLM), which 400s against our LITE-mode embed. We keep only
+ * the avatar video so our own controls can drive it via postMessage
+ * in the audio-piping slice.
+ *
+ * Selector strategy: match common button/label shapes rather than
+ * specific class names (LiveAvatar's CSS is hashed, names rotate on
+ * deploy). Safe to be slightly over-eager — the video element and
+ * avatar canvas aren't buttons or <select>s.
+ */
+const HIDE_DEMO_UI_CSS = `
+  (function() {
+    function applyHides() {
+      var css = '\\
+        html, body { background: #000 !important; margin: 0 !important; padding: 0 !important; }\\
+        button, select { display: none !important; }\\
+        [class*="language" i], [class*="chatNow" i], [class*="chat-now" i] { display: none !important; }\\
+        /* Any floating control bar or footer label */\\
+        [class*="controls" i] > button, [class*="footer" i] button { display: none !important; }\\
+      ';
+      var style = document.createElement('style');
+      style.type = 'text/css';
+      style.innerHTML = css;
+      (document.head || document.documentElement).appendChild(style);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', applyHides);
+    } else {
+      applyHides();
+    }
+    // Re-apply on later DOM mutations — the embed renders React, so
+    // nodes can appear after initial hook-up.
+    var obs = new MutationObserver(applyHides);
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+  })();
+  true;
+`;
+
+/**
+ * Injected before the page loads. Forwards every window.postMessage
+ * event back to native via ReactNativeWebView.postMessage so we can
+ * learn the embed's protocol (ready-state, transcript, session events)
+ * from real traffic before wiring the audio-piping direction.
+ */
+const LOG_POSTMESSAGE_BRIDGE = `
+  (function() {
+    if (!window.ReactNativeWebView) return;
+    var originalAddEventListener = window.addEventListener;
+    window.addEventListener('message', function(event) {
+      try {
+        var payload = typeof event.data === 'string'
+          ? event.data
+          : JSON.stringify(event.data);
+        window.ReactNativeWebView.postMessage('pm:' + payload);
+      } catch (e) {}
+    });
+  })();
+  true;
+`;
+
 export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<State>({ kind: 'idle' });
@@ -125,18 +187,24 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
               style={styles.webview}
               // Android: let the embed ask for mic permission from the
               // WebView. iOS handles this at the OS level once NSMicrophone
-              // UsageDescription is set in Info.plist (which we add in
-              // app.json for the dev build).
+              // UsageDescription is set in Info.plist.
               mediaPlaybackRequiresUserAction={false}
               allowsInlineMediaPlayback
               javaScriptEnabled
               domStorageEnabled
               originWhitelist={['*']}
+              // Hide LiveAvatar's built-in "Chat now" / language selector
+              // demo UI — that UI calls /v1/sessions/start which is a
+              // FULL-mode endpoint and bad-requests against our LITE
+              // embed. We drive speech from our side in the next slice;
+              // for now we just want the clean avatar surface.
+              injectedJavaScript={HIDE_DEMO_UI_CSS}
+              injectedJavaScriptBeforeContentLoaded={LOG_POSTMESSAGE_BRIDGE}
+              onMessage={(event: { nativeEvent: { data: string } }) => {
+                // eslint-disable-next-line no-console
+                console.log('[LiveAvatar→native]', event.nativeEvent.data);
+              }}
               onPermissionRequest={(event: { nativeEvent: { grant: () => void } }) => {
-                // Called on Android — mic / camera / etc. requested by
-                // the page. We grant because the user explicitly opened
-                // live-avatar mode. If we wanted finer-grained gating
-                // we could inspect event.nativeEvent.resources here.
                 event.nativeEvent.grant?.();
               }}
             />
