@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Verification;
 
 use App\Models\KnowledgeChunk;
+use App\Services\Knowledge\Drivers\RetrievedChunk;
 use App\Services\Knowledge\EmbeddingService;
 use App\Services\Knowledge\RetrievedContext;
 use App\Services\Verification\Contracts\GroundingServiceInterface;
@@ -98,18 +99,12 @@ final class GroundingService implements GroundingServiceInterface
         $bestScore = 0.0;
 
         foreach ($context->chunks as $chunk) {
-            if (! ($chunk instanceof KnowledgeChunk)) {
-                continue;
-            }
-
-            $chunkEmbeddingRaw = $chunk->getRawOriginal('embedding') ?? $chunk->embedding ?? null;
-
-            if ($chunkEmbeddingRaw === null) {
-                continue;
-            }
-
-            $chunkVector = $this->parse_pgvector((string) $chunkEmbeddingRaw);
-
+            // Accept both the RetrievedChunk DTO (what RetrievalService
+            // hands back for cached vector search hits) and the
+            // KnowledgeChunk model (what some tests/older callers pass
+            // directly). The DTO carries the embedding as an array; the
+            // model keeps it in pgvector string form.
+            $chunkVector = $this->extractVector($chunk);
             if (empty($chunkVector)) {
                 continue;
             }
@@ -123,9 +118,13 @@ final class GroundingService implements GroundingServiceInterface
         }
 
         if ($bestChunk !== null && $bestScore >= self::GROUNDING_THRESHOLD) {
+            $matchedChunk = $bestChunk instanceof KnowledgeChunk
+                ? $bestChunk
+                : ($bestChunk->chunk_id ? KnowledgeChunk::find($bestChunk->chunk_id) : null);
+
             $grounding = new GroundingResult(
                 is_grounded: true,
-                matched_chunk: $bestChunk,
+                matched_chunk: $matchedChunk,
                 similarity_score: $bestScore,
                 supporting_evidence: $bestChunk->content,
             );
@@ -143,6 +142,31 @@ final class GroundingService implements GroundingServiceInterface
             grounding: $grounding,
             citation: $claim->citation,
         );
+    }
+
+    /**
+     * Extract a native float-array embedding vector from whatever kind
+     * of chunk object the retrieval layer handed us. Returns empty array
+     * if no usable embedding is available.
+     *
+     * @param mixed $chunk
+     * @return array<int, float>
+     */
+    private function extractVector(mixed $chunk): array
+    {
+        if ($chunk instanceof RetrievedChunk) {
+            return is_array($chunk->embedding) ? $chunk->embedding : [];
+        }
+
+        if ($chunk instanceof KnowledgeChunk) {
+            $raw = $chunk->getRawOriginal('embedding') ?? $chunk->embedding ?? null;
+            if ($raw === null) {
+                return [];
+            }
+            return $this->parse_pgvector((string) $raw);
+        }
+
+        return [];
     }
 
     /**

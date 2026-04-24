@@ -180,6 +180,11 @@ final class RetrievalService
     /**
      * Convert KnowledgeChunk model to RetrievedChunk DTO.
      *
+     * Carries the chunk's DB id and embedding vector through to the DTO
+     * so downstream services (GroundingService for cosine similarity,
+     * citation persistence for chunk_id linkage) don't have to hit the
+     * database or OpenAI again.
+     *
      * @param KnowledgeChunk $chunk
      * @return \App\Services\Knowledge\Drivers\RetrievedChunk
      */
@@ -187,13 +192,35 @@ final class RetrievalService
     {
         $document = $chunk->document;
 
+        // pgvector values come back from Postgres as a string like
+        // "[0.1,0.2,...]"; parse once here so consumers see a native
+        // float array.
+        $embedding = null;
+        $raw = $chunk->getRawOriginal('embedding');
+        if (is_string($raw) && $raw !== '' && $raw !== '[]') {
+            $inner = trim($raw, '[]');
+            if ($inner !== '') {
+                $embedding = array_map(
+                    static fn (string $v) => (float) trim($v),
+                    explode(',', $inner),
+                );
+            }
+        }
+
+        $citationKeyFromMetadata = is_array($chunk->metadata)
+            ? ($chunk->metadata['citation_key'] ?? null)
+            : null;
+
         return new \App\Services\Knowledge\Drivers\RetrievedChunk(
             content: $chunk->content,
             source_url: $document->source_url,
             source_name: $document->title,
-            citation_key: $this->generateCitationKey($document),
+            citation_key: (string) ($citationKeyFromMetadata ?? $this->generateCitationKey($document)),
             evidence_grade: $document->evidence_grade,
             fetched_at: $document->ingested_at?->toDateTimeImmutable() ?? now()->toDateTimeImmutable(),
+            chunk_id: $chunk->id,
+            embedding: $embedding,
+            metadata: is_array($chunk->metadata) ? $chunk->metadata : null,
         );
     }
 
