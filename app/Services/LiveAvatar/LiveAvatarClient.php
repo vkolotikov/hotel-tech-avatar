@@ -60,6 +60,100 @@ final class LiveAvatarClient
     }
 
     /**
+     * Mint a LITE-mode session token. Returns a short-lived JWT the
+     * client uses (as Bearer auth) to call /v1/sessions/start directly
+     * against LiveAvatar — no further involvement from our backend
+     * until keep-alive or stop.
+     *
+     * LITE vs FULL: FULL carries an `avatar_persona` object (voice +
+     * context + language) because LiveAvatar runs an LLM. LITE leaves
+     * that off — our server drives speech via WebSocket commands
+     * instead, keeping the Phase-1 retrieval + verification pipeline
+     * in charge.
+     *
+     * @return array{session_id:string,session_token:string}
+     * @throws \RuntimeException when the upstream call fails.
+     */
+    public function createSessionToken(Agent $agent): array
+    {
+        $payload = array_filter([
+            'mode'                 => 'LITE',
+            'avatar_id'            => $agent->liveavatar_avatar_id,
+            'is_sandbox'           => (bool) config('services.liveavatar.sandbox', true),
+            'max_session_duration' => (int) config('services.liveavatar.max_session_seconds', 60),
+        ], static fn ($v) => $v !== null && $v !== '');
+
+        $response = $this->http()->post($this->url('/v1/sessions/token'), $payload);
+
+        if (!$response->successful()) {
+            throw new \RuntimeException(
+                "LiveAvatar /v1/sessions/token failed (HTTP {$response->status()}): " . $response->body(),
+            );
+        }
+
+        $data = $response->json('data');
+        if (!is_array($data)
+            || empty($data['session_id'])
+            || empty($data['session_token'])
+        ) {
+            throw new \RuntimeException(
+                "LiveAvatar /v1/sessions/token returned an unexpected payload: " . $response->body(),
+            );
+        }
+
+        return [
+            'session_id'    => (string) $data['session_id'],
+            'session_token' => (string) $data['session_token'],
+        ];
+    }
+
+    /**
+     * Keep an already-started session alive. Called periodically by
+     * the mobile client through our proxy to avoid leaking the
+     * upstream session token client-side.
+     *
+     * Returns true if LiveAvatar accepts the ping; false if the
+     * session is already gone (404) — the caller should stop pinging
+     * in that case.
+     */
+    public function keepAlive(string $sessionId, string $sessionToken): bool
+    {
+        $response = Http::withToken($sessionToken)
+            ->timeout((int) config('services.liveavatar.timeout', 15))
+            ->acceptJson()
+            ->post($this->url("/v1/sessions/{$sessionId}/keep-alive"));
+        if ($response->status() === 404) {
+            return false;
+        }
+        if (!$response->successful()) {
+            throw new \RuntimeException(
+                "LiveAvatar keep-alive failed (HTTP {$response->status()}): " . $response->body(),
+            );
+        }
+        return true;
+    }
+
+    /**
+     * Stop a live session. Idempotent — a 404 is treated as "already
+     * stopped, no-op".
+     */
+    public function stopSession(string $sessionId, string $sessionToken): void
+    {
+        $response = Http::withToken($sessionToken)
+            ->timeout((int) config('services.liveavatar.timeout', 15))
+            ->acceptJson()
+            ->delete($this->url("/v1/sessions/{$sessionId}"));
+        if ($response->status() === 404) {
+            return;
+        }
+        if (!$response->successful()) {
+            throw new \RuntimeException(
+                "LiveAvatar stop-session failed (HTTP {$response->status()}): " . $response->body(),
+            );
+        }
+    }
+
+    /**
      * Mint a session for the configured avatar + context. Returns the
      * raw `data` object from the API response (embed_id, url, script,
      * orientation) so callers can pass it through to clients.

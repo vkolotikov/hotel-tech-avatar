@@ -104,6 +104,25 @@ final class LiveAvatarController extends Controller
             ], 502);
         }
 
+        // LITE-mode session token — the JWT the mobile client uses to
+        // call /v1/sessions/start directly against LiveAvatar. Failing
+        // this is non-fatal; the client can still render the embed
+        // URL for video preview and retry connect later.
+        $connect = null;
+        try {
+            $token = $this->client->createSessionToken($agent);
+            $connect = [
+                'session_id'    => $token['session_id'],
+                'session_token' => $token['session_token'],
+                'start_url'     => rtrim((string) config('services.liveavatar.base_url'), '/') . '/v1/sessions/start',
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('LiveAvatar: session token minting failed — embed still usable', [
+                'agent_slug' => $agent->slug,
+                'error'      => $e->getMessage(),
+            ]);
+        }
+
         return response()->json([
             'session' => [
                 'embed_id'    => $session['embed_id'] ?? null,
@@ -112,6 +131,7 @@ final class LiveAvatarController extends Controller
                 'orientation' => $session['orientation'] ?? 'horizontal',
                 'sandbox'     => (bool) config('services.liveavatar.sandbox', true),
             ],
+            'connect' => $connect,
             'avatar' => [
                 'slug'       => $agent->slug,
                 'name'       => $agent->name,
@@ -119,5 +139,59 @@ final class LiveAvatarController extends Controller
                 'context_id' => $agent->liveavatar_context_id,
             ],
         ]);
+    }
+
+    /**
+     * Proxy for periodic keep-alive pings from the mobile client —
+     * keeps the upstream session token on the server, not the wire.
+     * Mobile hits this every ~30s while a live session is open.
+     *
+     * Returns 200 when accepted, 410 when the upstream session has
+     * already ended (client should stop its keep-alive loop).
+     */
+    public function keepAlive(Request $request, string $sessionId): JsonResponse
+    {
+        $validated = $request->validate([
+            'session_token' => 'required|string',
+        ]);
+
+        try {
+            $alive = $this->client->keepAlive($sessionId, $validated['session_token']);
+        } catch (\Throwable $e) {
+            Log::warning('LiveAvatar keep-alive: upstream error', [
+                'session_id' => $sessionId,
+                'error'      => $e->getMessage(),
+            ]);
+            return response()->json(['error' => 'Upstream error.'], 502);
+        }
+
+        if (!$alive) {
+            return response()->json(['error' => 'Session already ended.'], 410);
+        }
+        return response()->json(['alive' => true]);
+    }
+
+    /**
+     * Proxy for session termination. Called when the user closes the
+     * live-avatar modal so we don't leak credit for orphaned sessions.
+     * Idempotent — already-stopped sessions return 200 not 404.
+     */
+    public function stopSession(Request $request, string $sessionId): JsonResponse
+    {
+        $validated = $request->validate([
+            'session_token' => 'required|string',
+        ]);
+
+        try {
+            $this->client->stopSession($sessionId, $validated['session_token']);
+        } catch (\Throwable $e) {
+            Log::warning('LiveAvatar stop-session: upstream error', [
+                'session_id' => $sessionId,
+                'error'      => $e->getMessage(),
+            ]);
+            return response()->json(['error' => 'Upstream error.'], 502);
+        }
+
+        return response()->json(['stopped' => true]);
     }
 }

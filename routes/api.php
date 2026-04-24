@@ -60,8 +60,14 @@ Route::prefix('v1')->group(function () {
     // LiveAvatar — post-April-2026 successor to HeyGen Streaming Avatar.
     // Authenticated because it burns credits upstream and should be
     // tied to a real user for usage tracking.
-    Route::middleware('auth:sanctum')
-        ->post('liveavatar/session', [LiveAvatarController::class, 'createSession']);
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('liveavatar/session',
+            [LiveAvatarController::class, 'createSession']);
+        Route::post('liveavatar/session/{sessionId}/keep-alive',
+            [LiveAvatarController::class, 'keepAlive']);
+        Route::delete('liveavatar/session/{sessionId}',
+            [LiveAvatarController::class, 'stopSession']);
+    });
 
     // ─── Webhooks ──────────────────────────────────────────────────────────
     // Intentionally outside the auth:sanctum group — RevenueCat authenticates

@@ -85,8 +85,21 @@ class LiveAvatarTestCommand extends Command
         $this->line('');
         $this->line($url);
         $this->line('');
-        $this->line('Paste that in any browser to see the avatar stream. If it loads,');
-        $this->line('the backend is ready for the mobile WebView slice.');
+
+        $this->info('Minting LITE-mode session token...');
+        try {
+            $token = $client->createSessionToken($agent);
+        } catch (\Throwable $e) {
+            $this->error('Token minting failed: ' . $e->getMessage());
+            $this->line('(Embed still works for video preview; interactive LITE needs this call.)');
+            return 1;
+        }
+
+        $this->line('Session ID:    ' . $token['session_id']);
+        $this->line('Session token: ' . substr($token['session_token'], 0, 48) . '…');
+        $this->line('');
+        $this->line('Mobile client will POST /v1/sessions/start with this token (Bearer auth)');
+        $this->line('to get the livekit + WebSocket credentials for LITE mode.');
 
         return 0;
     }
