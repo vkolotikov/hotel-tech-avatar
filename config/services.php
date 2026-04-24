@@ -108,10 +108,13 @@ return [
         // flow has been confirmed in a real WebView. Default-true means
         // dev/staging traffic is always safe.
         'sandbox'          => (bool) env('LIVEAVATAR_SANDBOX', true),
-        // Max session duration in seconds. LiveAvatar caps per tier;
-        // 300s is a reasonable dev ceiling so forgotten tabs don't
-        // drain the credit pool.
-        'max_session_seconds' => (int) env('LIVEAVATAR_MAX_SESSION_SECONDS', 300),
+        // Max session duration in seconds. LiveAvatar's sandbox and
+        // Starter tier cap this at 60 seconds — anything higher
+        // returns 400 "max_session_duration exceeds the maximum
+        // allowed" from /v1/sessions/start. Paid tiers raise the cap
+        // (verify with your plan — Essential allows longer). Default
+        // stays safe for sandbox so dev traffic never fails this way.
+        'max_session_seconds' => (int) env('LIVEAVATAR_MAX_SESSION_SECONDS', 60),
     ],
 
     'langfuse' => [
