@@ -117,6 +117,10 @@ PROMPT,
             'knowledge_sources_json' => [
                 ['type' => 'pubmed', 'key' => 'integra_functional_medicine', 'search_query' => 'functional medicine chronic disease review', 'max_results_per_sync' => 60],
                 ['type' => 'pubmed', 'key' => 'integra_lab_reference_ranges', 'search_query' => 'clinical laboratory reference range interpretation', 'max_results_per_sync' => 40],
+                ['type' => 'pubmed', 'key' => 'integra_thyroid_labs',        'search_query' => 'thyroid TSH interpretation clinical practice',   'max_results_per_sync' => 35],
+                ['type' => 'pubmed', 'key' => 'integra_vitamin_d',           'search_query' => 'vitamin D deficiency clinical review',          'max_results_per_sync' => 35],
+                ['type' => 'pubmed', 'key' => 'integra_hscrp_inflammation',  'search_query' => 'hs-CRP inflammation cardiovascular risk',       'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'integra_hba1c_metabolic',     'search_query' => 'HbA1c prediabetes metabolic health',            'max_results_per_sync' => 30],
             ],
         ];
     }
@@ -203,6 +207,9 @@ PROMPT,
             'knowledge_sources_json' => [
                 ['type' => 'pubmed', 'key' => 'nora_gut_health',           'search_query' => 'gut microbiome nutrition review',  'max_results_per_sync' => 60],
                 ['type' => 'pubmed', 'key' => 'nora_fibre_fermented',      'search_query' => 'dietary fibre fermented foods systematic review', 'max_results_per_sync' => 40],
+                ['type' => 'pubmed', 'key' => 'nora_omega3_cardio',        'search_query' => 'omega-3 fatty acids cardiovascular outcomes',     'max_results_per_sync' => 35],
+                ['type' => 'pubmed', 'key' => 'nora_protein_synthesis',    'search_query' => 'dietary protein intake muscle synthesis',        'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'nora_ultraprocessed',       'search_query' => 'ultra-processed foods health outcomes cohort',   'max_results_per_sync' => 30],
                 ['type' => 'usda',   'key' => 'nora_usda_core',            'search_query' => 'nutrition', 'max_results_per_sync' => 200],
                 ['type' => 'open_food_facts', 'key' => 'nora_off_labels',  'max_results_per_sync' => 150],
             ],
@@ -287,8 +294,11 @@ PROMPT,
             ],
 
             'knowledge_sources_json' => [
-                ['type' => 'pubmed', 'key' => 'luna_cbti',      'search_query' => 'cognitive behavioural therapy insomnia review', 'max_results_per_sync' => 40],
-                ['type' => 'pubmed', 'key' => 'luna_circadian', 'search_query' => 'circadian rhythm sleep hygiene',                'max_results_per_sync' => 40],
+                ['type' => 'pubmed', 'key' => 'luna_cbti',       'search_query' => 'cognitive behavioural therapy insomnia review', 'max_results_per_sync' => 40],
+                ['type' => 'pubmed', 'key' => 'luna_circadian',  'search_query' => 'circadian rhythm sleep hygiene',                'max_results_per_sync' => 40],
+                ['type' => 'pubmed', 'key' => 'luna_sleep_apnea','search_query' => 'obstructive sleep apnea diagnosis review',      'max_results_per_sync' => 35],
+                ['type' => 'pubmed', 'key' => 'luna_melatonin',  'search_query' => 'melatonin supplementation sleep clinical',      'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'luna_shift_work', 'search_query' => 'shift work sleep disorder intervention',         'max_results_per_sync' => 30],
             ],
         ];
     }
@@ -372,8 +382,11 @@ PROMPT,
             ],
 
             'knowledge_sources_json' => [
-                ['type' => 'pubmed', 'key' => 'zen_mindfulness',  'search_query' => 'mindfulness meditation randomised controlled trial', 'max_results_per_sync' => 40],
-                ['type' => 'pubmed', 'key' => 'zen_breathwork',   'search_query' => 'breathwork autonomic stress response',               'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'zen_mindfulness',           'search_query' => 'mindfulness meditation randomised controlled trial', 'max_results_per_sync' => 40],
+                ['type' => 'pubmed', 'key' => 'zen_breathwork',            'search_query' => 'breathwork autonomic stress response',               'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'zen_mindfulness_depression','search_query' => 'mindfulness depression anxiety meta-analysis',       'max_results_per_sync' => 35],
+                ['type' => 'pubmed', 'key' => 'zen_meditation_cortisol',   'search_query' => 'meditation cortisol stress biomarker',              'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'zen_yoga_mental_health',    'search_query' => 'yoga mental health wellbeing randomised',           'max_results_per_sync' => 30],
             ],
         ];
     }
@@ -457,8 +470,11 @@ PROMPT,
             ],
 
             'knowledge_sources_json' => [
-                ['type' => 'pubmed', 'key' => 'axel_strength_longevity', 'search_query' => 'resistance training longevity mortality', 'max_results_per_sync' => 40],
-                ['type' => 'pubmed', 'key' => 'axel_zone2_cardio',       'search_query' => 'zone 2 training aerobic mitochondrial',   'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'axel_strength_longevity',   'search_query' => 'resistance training longevity mortality', 'max_results_per_sync' => 40],
+                ['type' => 'pubmed', 'key' => 'axel_zone2_cardio',         'search_query' => 'zone 2 training aerobic mitochondrial',   'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'axel_hiit_cardio',          'search_query' => 'high intensity interval training cardiovascular fitness', 'max_results_per_sync' => 35],
+                ['type' => 'pubmed', 'key' => 'axel_protein_older_adults', 'search_query' => 'protein intake muscle strength older adults sarcopenia', 'max_results_per_sync' => 35],
+                ['type' => 'pubmed', 'key' => 'axel_recovery_exercise',    'search_query' => 'recovery sleep exercise performance athletes',           'max_results_per_sync' => 30],
             ],
         ];
     }
@@ -541,8 +557,11 @@ PROMPT,
             ],
 
             'knowledge_sources_json' => [
-                ['type' => 'pubmed', 'key' => 'aura_actives',     'search_query' => 'topical retinoid niacinamide clinical trial', 'max_results_per_sync' => 40],
-                ['type' => 'pubmed', 'key' => 'aura_photoprotection', 'search_query' => 'sunscreen photoprotection melanoma',      'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'aura_actives',          'search_query' => 'topical retinoid niacinamide clinical trial', 'max_results_per_sync' => 40],
+                ['type' => 'pubmed', 'key' => 'aura_photoprotection',  'search_query' => 'sunscreen photoprotection melanoma',          'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'aura_acne_treatment',   'search_query' => 'acne vulgaris treatment clinical evidence',   'max_results_per_sync' => 35],
+                ['type' => 'pubmed', 'key' => 'aura_skin_barrier',     'search_query' => 'skin barrier ceramides moisturiser clinical', 'max_results_per_sync' => 30],
+                ['type' => 'pubmed', 'key' => 'aura_vitamin_c',        'search_query' => 'vitamin C ascorbic acid topical skin',        'max_results_per_sync' => 30],
             ],
         ];
     }

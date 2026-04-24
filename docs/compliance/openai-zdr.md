@@ -1,6 +1,6 @@
 # OpenAI — data retention posture
 
-**Last updated:** 2026-04-19
+**Last updated:** 2026-04-24
 **Owner:** platform / compliance
 
 ## Current status
@@ -32,7 +32,29 @@ Contractual ZDR is a stronger commitment than the dashboard toggles — it elimi
 
 Per spec hard-rule #5 (CLAUDE.md, `docs/PROJECT_SPEC.md`): **real wellness-user health data must not be routed to OpenAI in production until formal ZDR is in place.** Phase 0 ships no user data, so this is not yet blocking. The gate applies from Phase 3 onwards.
 
+## Data flows currently hitting OpenAI
+
+As of 2026-04-24, the wellness vertical has three production OpenAI code paths — documenting each so we know exactly what surfaces the ZDR gate:
+
+1. **Embeddings — chunk ingestion** (`EmbeddingService::embedBatch`, called from `SyncKnowledgeSources`). Sends PubMed abstract text, USDA FoodData descriptions, and Open Food Facts product entries to `text-embedding-3-large`. All public reference content — **no user data**. Low sensitivity.
+
+2. **Embeddings — user queries at retrieval** (`EmbeddingService::embed`, called from `RetrievalService::retrieve` and `GroundingService`). Sends the user's chat message and every extracted claim to the embeddings endpoint. **This is user health data** — the highest-sensitivity path. Not currently gated by ZDR contract, only by org-level sharing toggles (which are off) + 30-day abuse-monitoring retention.
+
+3. **Chat completions — generation + verification** (`GenerationService`, `StructuredReviewService`, `VerificationService::revise_response`). Sends the full system prompt, retrieved evidence, and conversation history (including user messages) to GPT-family chat completions. **User health data at rest for 30 days of abuse monitoring** until contractual ZDR lands.
+
+The current install has super-admin / internal QA traffic only. No external wellness users on the mobile app yet. When the first external user signs up — either via App Store or a TestFlight/closed beta — path 2 and 3 become live user-data flows, and the ZDR gate applies.
+
+## Operational posture until ZDR lands
+
+While waiting on OpenAI's contractual ZDR:
+
+- `store=false` is set on every chat-completion request from production (enforced in the LLM client).
+- Org-level sharing toggles remain disabled (verified 2026-04-24).
+- External-user signup is deliberately not yet opened. TestFlight / App Store submission is blocked on ZDR per hard-rule #5.
+- Internal test accounts ARE permitted — the posture we're protecting is external user health data, and internal testers have waived via internal policy.
+
 ## Changelog
 
+- 2026-04-24 — mobile app pipeline now fully functional (retrieval + grounding + verification). Three OpenAI data flows catalogued above. Still awaiting contractual ZDR reply; gate active for external users, not yet blocking because no external users exist. Owner to nudge OpenAI if no reply by 2026-05-03 (per prior entry). App Store submission is explicitly gated on ZDR landing first.
 - 2026-04-23 — still awaiting formal ZDR reply from OpenAI. Gate still non-blocking (Phase 0; no wellness-user data in production yet). Owner to nudge if no reply by 2026-05-03.
 - 2026-04-19 — recorded initial state; formal ZDR request filed.
