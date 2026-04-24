@@ -1,8 +1,10 @@
-# HeyGen Streaming Avatar
+# HeyGen Streaming Avatar → LiveAvatar
 
-**Status:** `deprecated` — v1/v2 Streaming Avatar API returns `HTTP 410 Gone` as of 2026-04-17. Replaced by LiveAvatar (separate platform; see migration plan below).
-**Last verified:** 2026-04-20
-**Official docs:** https://docs.heygen.com (for historical reference only — endpoints listed are gone)
+**Status:** `deprecated` (original HeyGen endpoint) / `backend scaffolded` (LiveAvatar successor — awaiting operator signup + per-agent ID mapping before it can serve traffic).
+**Last verified:** 2026-04-24
+**Official docs:**
+  - Historical HeyGen: https://docs.heygen.com (endpoints listed are gone)
+  - Current LiveAvatar: https://app.liveavatar.com (sign-in required for developer portal)
 
 ## What we use it for
 
@@ -53,7 +55,27 @@ Per-session cost is not currently metered — acceptable only while voice mode i
 - `AvatarStream.tsx` mounts only when `voiceMode` is true in `ChatPage.tsx` — this is load-bearing for credit cost.
 - HTTPS / localhost required for mic permission on the walkthrough checklist.
 
+## Operator checklist — to bring voice-mode avatar online
+
+Server code is in place (stub controller + schema + config). To light it up end-to-end:
+
+1. **Sign up at `https://app.liveavatar.com`** — separate account from the main HeyGen dashboard. Existing HeyGen avatars auto-copy on first sign-in.
+2. **Purchase credits** — Starter $19/150 credits, Essential $100/1000 credits (verify current pricing at signup).
+3. **Developers page → API Key** — generate a key, copy it.
+4. **Laravel Cloud env:** set `LIVEAVATAR_API_KEY=<key>`. Redeploy.
+5. **Map per-agent avatars** — for each wellness agent (nora, integra, luna, zen, axel, aura), pick a LiveAvatar avatar in the dashboard and paste its `avatar_id` (and optional `voice_id`) into the agent row:
+   ```sql
+   UPDATE agents SET liveavatar_avatar_id = '<hg_id>' WHERE slug = 'nora';
+   -- etc
+   ```
+   (Or expose this via the Filament admin UI once built.)
+6. **Confirm the upstream endpoint** — the exact POST path + request/response shape isn't in the public developer docs and will need to be read off the LiveAvatar developer portal once you're signed in. Likely candidates: `POST /v2/embeddings` (named in the original migration note) or a newer `/v3/sessions`. Drop the confirmed endpoint + payload into `app/Http/Controllers/Api/V1/LiveAvatarController.php::createSession()` and remove the `501 liveavatar_endpoint_pending` short-circuit.
+7. **Mobile WebView integration** — once step 6 returns a real embed URL, swap the mobile `LiveAvatarView` from placeholder to `react-native-webview` loading the embed. WebRTC + mic permission passthrough already supported on modern iOS / Android WebView; need `expo-permissions` microphone entry in `app.json`.
+
+When all of the above lands, status flips from `backend scaffolded` to `live`.
+
 ## Change log
 
+- 2026-04-24 — LiveAvatar migration scaffolded server-side: `liveavatar_avatar_id` + `liveavatar_voice_id` columns on `agents`; `services.liveavatar.*` config + `LIVEAVATAR_API_KEY` env; new `LiveAvatarController` with `POST /api/v1/liveavatar/session` returning 503 while key empty and 422 while the agent isn't mapped. Upstream endpoint intentionally left as a 501 stub — to be filled in when an operator signs up and reads the actual payload shape off the developer portal. Legacy `HeygenController::token` left in place so the hotel SPA's existing 502 behaviour is unchanged.
 - 2026-04-17 — confirmed `/v1/streaming.create_token` returns `410 Gone`; Status moved to `deprecated`.
 - 2026-04-20 — this file created from `_template.md` as part of Phase 0 integrations scaffold

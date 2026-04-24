@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\HeygenController;
+use App\Http\Controllers\Api\V1\LiveAvatarController;
 use App\Http\Controllers\Api\V1\RevenueCatWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -55,6 +56,12 @@ Route::prefix('v1')->group(function () {
 
     // ─── HeyGen Streaming Avatar ───────────────────────────────────────────
     Route::post('heygen/token', [HeygenController::class, 'token']);
+
+    // LiveAvatar — post-April-2026 successor to HeyGen Streaming Avatar.
+    // Authenticated because it burns credits upstream and should be
+    // tied to a real user for usage tracking.
+    Route::middleware('auth:sanctum')
+        ->post('liveavatar/session', [LiveAvatarController::class, 'createSession']);
 
     // ─── Webhooks ──────────────────────────────────────────────────────────
     // Intentionally outside the auth:sanctum group — RevenueCat authenticates

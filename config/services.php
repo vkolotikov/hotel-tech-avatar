@@ -90,6 +90,21 @@ return [
         'timeout'         => env('HEYGEN_TIMEOUT_SECONDS', 15),
     ],
 
+    // LiveAvatar — successor to HeyGen Streaming Avatar after the v1/v2
+    // API was retired April 2026. Separate platform (app.liveavatar.com)
+    // and separate credit pool; same vendor, existing HeyGen avatars
+    // auto-migrate on first sign-in.
+    //
+    // While api_key is empty, LiveAvatarController returns 503 and the
+    // mobile voice-mode UI shows "Voice avatar not configured" — chat
+    // continues to work text-only and audio-only.
+    'liveavatar' => [
+        'api_key'         => env('LIVEAVATAR_API_KEY', ''),
+        'base_url'        => env('LIVEAVATAR_BASE_URL', 'https://api.liveavatar.com'),
+        'default_quality' => env('LIVEAVATAR_DEFAULT_QUALITY', 'high'),
+        'timeout'         => env('LIVEAVATAR_TIMEOUT_SECONDS', 15),
+    ],
+
     'langfuse' => [
         'public_key' => env('LANGFUSE_PUBLIC_KEY'),
         'secret_key' => env('LANGFUSE_SECRET_KEY'),
