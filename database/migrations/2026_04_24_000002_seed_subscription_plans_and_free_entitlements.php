@@ -20,8 +20,18 @@ use Illuminate\Database\Migrations\Migration;
  *   free     — 10 user messages per day, 7-day conversation memory,
  *              all avatars accessible for evaluation purposes. No
  *              attachments (photo/file).
- *   premium  — unlimited messages, 90-day memory, all avatars, all
- *              features. Monthly / annual pricing copy stored in cents.
+ *   premium  — €29 / month or €278.40 / year (20% off the monthly run
+ *              rate), 5-day free trial configured in RevenueCat on the
+ *              monthly product. 200 messages/day soft cap (≈ one every
+ *              7 minutes around the clock — invisible to normal use,
+ *              protects against abuse + runaway LLM cost). 90-day
+ *              memory, all avatars, voice, attachments.
+ *
+ * Prices stored as integer cents in the existing `price_usd_cents_*`
+ * columns. The column name is misleading — RevenueCat owns the
+ * storefront-localised display price, so what we store here is just
+ * for internal admin/reporting. Dropping a proper `currency` column
+ * is a later schema migration.
  *
  * Existing users are backfilled to 'free' with status='active' and
  * billing_provider=null (no RevenueCat linkage until they upgrade).
@@ -54,15 +64,28 @@ return new class extends Migration
             ['slug' => 'premium'],
             [
                 'name' => 'Premium',
-                'price_usd_cents_monthly' => 999,   // $9.99 / mo
-                'price_usd_cents_annual'  => 7999,  // $79.99 / yr
-                'daily_message_limit'     => null,  // unlimited
+                // €29.00 / mo. Field name says "usd" but the column is
+                // generic integer cents — RevenueCat owns the localised
+                // display price. See migration docblock.
+                'price_usd_cents_monthly' => 2900,
+                // €278.40 / yr = €29 × 12 × 0.80 (20% off).
+                'price_usd_cents_annual'  => 27840,
+                // Soft cap against runaway abuse — a normal user won't
+                // hit 200 sends in a day.
+                'daily_message_limit'     => 200,
                 'memory_days'             => 90,
                 'features'                => [
                     'all_avatars'      => true,
                     'voice_mode'       => true,
                     'attachments'      => true,
                     'priority_support' => true,
+                    // 5-day free trial — configured on the RevenueCat
+                    // monthly product (App Store "Introductory Offer" /
+                    // Play Console "Free trial"). Flagged here for the
+                    // mobile paywall UI to render "5-day free trial"
+                    // language consistently.
+                    'trial_days'       => 5,
+                    'annual_discount_pct' => 20,
                 ],
                 'is_active' => true,
             ],
