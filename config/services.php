@@ -18,6 +18,29 @@ return [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
+    'revenuecat' => [
+        // Shared secret RevenueCat sends in the Authorization header on
+        // every webhook. Compared constant-time against the incoming
+        // header to verify the request actually came from RC and not
+        // from someone who guessed the endpoint URL.
+        'webhook_auth_header' => env('REVENUECAT_WEBHOOK_AUTH_HEADER'),
+        // Server-side REST key for reconciliation calls (future — not
+        // used by the v1 webhook flow, which treats webhooks as the
+        // source of truth).
+        'secret_api_key'      => env('REVENUECAT_SECRET_API_KEY'),
+        // Slug of the plan a user gets when a subscription expires or
+        // billing fails irrecoverably. Must match a subscription_plans.slug.
+        'default_plan_slug'   => env('REVENUECAT_DEFAULT_PLAN', 'free'),
+        // Map RevenueCat entitlement_ids → our subscription_plans.slug.
+        // Stored as config so product/marketing can rename RC
+        // entitlements without re-deploying code. Default assumes the
+        // entitlement id matches our plan slug, which is what you get
+        // if you configure RC consistently.
+        'entitlement_plan_map' => [
+            'premium' => 'premium',
+        ],
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

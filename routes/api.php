@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\HeygenController;
+use App\Http\Controllers\Api\V1\RevenueCatWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -54,6 +55,11 @@ Route::prefix('v1')->group(function () {
 
     // ─── HeyGen Streaming Avatar ───────────────────────────────────────────
     Route::post('heygen/token', [HeygenController::class, 'token']);
+
+    // ─── Webhooks ──────────────────────────────────────────────────────────
+    // Intentionally outside the auth:sanctum group — RevenueCat authenticates
+    // with a shared-secret Authorization header that the controller verifies.
+    Route::post('webhooks/revenuecat', [RevenueCatWebhookController::class, 'handle']);
 
     // ─── Admin Endpoints (SaaS JWT Auth) ───────────────────────────────────
     Route::prefix('admin')->middleware('saas.auth')->group(function () {

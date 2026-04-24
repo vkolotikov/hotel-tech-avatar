@@ -198,6 +198,32 @@ class ConversationController extends Controller
             'attachment_ids.*' => 'integer',
         ]);
 
+        // Free-tier daily-message gate. Only applies to authenticated
+        // mobile users on wellness conversations — the hotel SPA uses
+        // session auth with conversation.user_id=null, so $user is null
+        // there and this is a no-op. Premium users have daily_message_limit
+        // stored as null, which skips the check.
+        $user = $request->user('sanctum');
+        $conversation->loadMissing('agent.vertical');
+        $vertical = $conversation->agent?->vertical?->slug;
+        if ($user && $vertical === 'wellness') {
+            $plan = $user->activePlan();
+            $limit = $plan?->daily_message_limit;
+            if ($limit !== null) {
+                $used = $user->messagesUsedToday();
+                if ($used >= $limit) {
+                    return response()->json([
+                        'message'          => "You've used your {$limit} free messages for today. Upgrade to Premium for unlimited messages.",
+                        'error'            => 'daily_limit_reached',
+                        'plan'             => $plan->slug,
+                        'daily_limit'      => $limit,
+                        'used_today'       => $used,
+                        'upgrade_required' => true,
+                    ], 402);
+                }
+            }
+        }
+
         $content = trim((string) ($validated['content'] ?? ''));
         $hasAttachments = !empty($validated['attachment_ids'] ?? []);
         if ($content === '' && !$hasAttachments) {

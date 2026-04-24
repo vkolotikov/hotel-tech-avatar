@@ -77,10 +77,22 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        $plan  = $user->activePlan();
+        $limit = $plan?->daily_message_limit;
+        $used  = $limit !== null ? $user->messagesUsedToday() : 0;
+
         return response()->json([
-            'id'    => $user->id,
-            'name'  => $user->name,
-            'email' => $user->email,
+            'id'           => $user->id,
+            'name'         => $user->name,
+            'email'        => $user->email,
+            'subscription' => [
+                'plan'             => $plan?->slug,
+                'plan_name'        => $plan?->name,
+                'daily_limit'      => $limit,
+                'used_today'       => $used,
+                'remaining_today'  => $limit === null ? null : max(0, $limit - $used),
+                'features'         => $plan?->features ?? [],
+            ],
         ]);
     }
 
