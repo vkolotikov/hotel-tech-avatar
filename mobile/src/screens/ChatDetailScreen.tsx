@@ -182,6 +182,17 @@ export function ChatDetailScreen() {
         {avatarName}
       </Text>
       <View style={styles.topBarActions}>
+        {/*
+          Live-avatar (talking head) entry point hidden for v1 launch.
+          Phase 1-3a backend infrastructure works end-to-end (session
+          token, embed, WebSocket, PCM speak chunks all roundtrip
+          cleanly), but LiveAvatar's LITE mode doesn't publish the
+          rendered audio/video back through our LiveKit consumer in a
+          way we could get lip-sync to fire from. Holding the feature
+          for post-launch debugging — all server code + mobile modal
+          stay in place, only this UI affordance is hidden.
+          To re-enable, uncomment the Pressable below.
+
         <Pressable
           onPress={() => setVideoModeOpen(true)}
           accessibilityLabel={`Start video call with ${avatarName}`}
@@ -193,6 +204,8 @@ export function ChatDetailScreen() {
         >
           <Ionicons name="videocam-outline" size={20} color={colors.textPrimary} />
         </Pressable>
+
+        */}
         <Pressable
           onPress={handleNewChat}
           accessibilityLabel={`Start a new chat with ${avatarName}`}

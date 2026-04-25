@@ -1,7 +1,7 @@
 # HeyGen Streaming Avatar → LiveAvatar
 
-**Status:** `deprecated` (original HeyGen endpoint) / `backend live — mobile WebView pending` (LiveAvatar successor, LITE mode).
-**Last verified:** 2026-04-24
+**Status:** `deprecated` (original HeyGen endpoint) / `paused — UI hidden for v1` (LiveAvatar LITE-mode successor, full backend wired and protocol-validated, lip-sync delivery unsolved).
+**Last verified:** 2026-04-25
 **Official docs:**
   - LiveAvatar API reference: https://docs.liveavatar.com/
   - LiveAvatar developer portal: https://app.liveavatar.com/ (sign-in required)
@@ -77,6 +77,7 @@ When all of the above lands, status flips from `backend scaffolded` to `live`.
 
 ## Change log
 
+- 2026-04-25 — Mobile entry point hidden for v1 launch. Full backend + mobile scaffolding stays in place (session token mint, embed creation, WebSocket bridge with `agent.start_listening` keep-alive, PCM TTS pipeline at `/voice/speak-pcm`, native LiveKit room via `@livekit/react-native`, mobile `LiveAvatarModal` + `LiveAvatarLiveKitView`). Protocol-side everything works: WebSocket connects, `agent.speak` chunks buffer, `agent.speak_started`/`agent.speak_ended`/`agent.idle_started` fire correctly. **What does NOT work:** the avatar's rendered audio/video doesn't reach the mobile through our LiveKit subscriber, so no visible lip-sync and no audible TTS playback. Likely a track-subscription / track-publication mismatch in LITE mode that needs LiveAvatar engineering support or extended on-device debugging to resolve. Holding the feature until post-launch — re-enable by uncommenting the videocam Pressable in `ChatDetailScreen` and finishing the LiveKit track subscription investigation. Audio-only voice mode via Whisper STT + OpenAI TTS in the message input continues to work for v1.
 - 2026-04-24 — LiveAvatar backend wired end-to-end in LITE mode. First avatar mapped (Nora → `26393b8e-e944-4367-98ef-e2bc75c4b792`). `LiveAvatarClient` service handles the two-step flow: `POST /v1/contexts` to lazy-create a persona resource on first use (cached in `agents.liveavatar_context_id`), then `POST /v2/embeddings` to mint a WebRTC-ready embed URL. Sandbox mode on by default so no credits burn during dev. `liveavatar:test --avatar=<slug>` CLI command prints the embed URL for browser smoke-testing before mobile is touched. LITE mode deliberately chosen over FULL — LITE keeps our Phase-1 retrieval + grounding + citation pipeline; FULL would have LiveAvatar answer with its own LLM, bypassing safety rules.
 - 2026-04-24 — LiveAvatar migration scaffolded server-side: `liveavatar_avatar_id` + `liveavatar_voice_id` columns on `agents`; `services.liveavatar.*` config + `LIVEAVATAR_API_KEY` env; new `LiveAvatarController` with `POST /api/v1/liveavatar/session` returning 503 while key empty and 422 while the agent isn't mapped. Upstream endpoint intentionally left as a 501 stub — to be filled in when an operator signs up and reads the actual payload shape off the developer portal. Legacy `HeygenController::token` left in place so the hotel SPA's existing 502 behaviour is unchanged.
 - 2026-04-17 — confirmed `/v1/streaming.create_token` returns `410 Gone`; Status moved to `deprecated`.
