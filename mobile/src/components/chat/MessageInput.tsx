@@ -28,6 +28,13 @@ type Props = {
     opts?: { voice?: boolean; attachmentIds?: number[] },
   ) => Promise<boolean> | void;
   disabled: boolean;
+  /**
+   * True while the agent's TTS reply is currently playing through the
+   * device speaker. Used by the voice-mode auto-arm flow: once
+   * playback ends, the mic re-arms automatically so the user can
+   * answer back without tapping anything.
+   */
+  isAgentSpeaking?: boolean;
 };
 
 function deriveFilename(uri: string, fallbackExt = 'jpg'): string {
@@ -64,6 +71,7 @@ export function MessageInput({
   accent = colors.primary,
   onSend,
   disabled,
+  isAgentSpeaking,
 }: Props) {
   const [text, setText] = useState('');
   // Dictate mode (default): transcript fills the input, user reviews + sends.
@@ -84,6 +92,26 @@ export function MessageInput({
     }
   });
 
+  // Auto-arm mic after the agent's TTS finishes (voice-mode only).
+  // We watch isAgentSpeaking for a true→false transition; on the
+  // falling edge, if voice mode is still on and the recorder isn't
+  // already busy, kick start() so the user can immediately reply
+  // without tapping the mic. Tracks the previous value via a ref so
+  // we fire ONCE on the edge — not every render where it stays false.
+  const prevIsAgentSpeaking = useRef<boolean | undefined>(isAgentSpeaking);
+  useEffect(() => {
+    const wasSpeaking = prevIsAgentSpeaking.current === true;
+    const justStopped = wasSpeaking && !isAgentSpeaking;
+    prevIsAgentSpeaking.current = isAgentSpeaking;
+
+    if (!justStopped) return;
+    if (!voiceMode) return;
+    if (recorder.isRecording || recorder.isTranscribing) return;
+    if (disabled) return;
+
+    void recorder.start();
+  }, [isAgentSpeaking, voiceMode, recorder, disabled]);
+
   const canSend =
     !disabled &&
     !recorder.isTranscribing &&
@@ -94,7 +122,17 @@ export function MessageInput({
     if (!canSend) return;
     const trimmed = text.trim();
     const ids = attachments.map((a) => a.id);
-    const result = onSend(trimmed, ids.length > 0 ? { attachmentIds: ids } : undefined);
+    // Voice mode = "I want to hear the answer" — applies whether the
+    // user typed the message or recorded it. Without this the typed
+    // path would silently send and the agent's reply would never play
+    // back, which made voice mode feel broken when toggled mid-thread.
+    const opts: { voice?: boolean; attachmentIds?: number[] } = {};
+    if (voiceMode) opts.voice = true;
+    if (ids.length > 0) opts.attachmentIds = ids;
+    const result = onSend(
+      trimmed,
+      Object.keys(opts).length > 0 ? opts : undefined,
+    );
     // If onSend returned a promise, wait for the outcome before clearing
     // local state so a failed send keeps the user's text and attachments.
     if (result && typeof (result as Promise<boolean>).then === 'function') {

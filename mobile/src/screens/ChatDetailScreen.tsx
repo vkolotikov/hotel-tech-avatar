@@ -329,6 +329,7 @@ export function ChatDetailScreen() {
           accent={accent}
           onSend={handleSend}
           disabled={stream.isPending}
+          isAgentSpeaking={stream.isSpeaking}
         />
       </KeyboardAvoidingView>
 
