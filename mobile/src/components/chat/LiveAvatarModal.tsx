@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError } from '../../api';
 import {
+  fetchPcmAudio,
   keepAliveLiveAvatarSession,
   startLiveAvatarSession,
   stopLiveAvatarSession,
@@ -23,6 +24,7 @@ import { colors, spacing, radius, fontSize } from '../../theme';
 
 type Props = {
   visible: boolean;
+  conversationId: number;
   avatarSlug: string;
   avatarName: string;
   onClose: () => void;
@@ -143,7 +145,13 @@ const LOG_POSTMESSAGE_BRIDGE = `
   true;
 `;
 
-export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Props) {
+export function LiveAvatarModal({
+  visible,
+  conversationId,
+  avatarSlug,
+  avatarName,
+  onClose,
+}: Props) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<State>({ kind: 'idle' });
   const [socketStatus, setSocketStatus] = useState<SocketStatus>('idle');
@@ -267,6 +275,16 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
         // LiveAvatar tears the session down ~280ms after the handshake
         // (video-starvation watchdog assumes the client abandoned).
         sock.startListening();
+        // Phase 3a smoke test: pipe one greeting through the speak
+        // pipeline (TTS → PCM → base64 → WebSocket). If the avatar's
+        // mouth moves to the audio, the entire LITE flow is working
+        // end-to-end and Phase 3b (real chat reply piping) is a
+        // straight wiring exercise.
+        void speakOnce(
+          sock,
+          conversationId,
+          `Hi, I'm ${avatarName}. Voice mode is live — let's chat.`,
+        );
       },
       onMessage: (msg, raw) => {
         // Phase 2 logging — shape we observe here drives Phase 3 design.
@@ -422,6 +440,32 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
       </View>
     </Modal>
   );
+}
+
+/**
+ * Generate avatar speech audio on the backend (PCM 16-bit @ 24 kHz,
+ * already chunked + base64-encoded), then walk the chunks into the
+ * LITE WebSocket as agent.speak events. Each chunk plays back about
+ * one second of audio; LiveAvatar lip-syncs to the stream as it
+ * arrives.
+ */
+async function speakOnce(
+  sock: LiveAvatarSocket,
+  conversationId: number,
+  text: string,
+): Promise<void> {
+  try {
+    const result = await fetchPcmAudio(conversationId, text);
+    // eslint-disable-next-line no-console
+    console.log(`[LiveAvatar] speakOnce: ${result.chunk_count} chunks queued`);
+    for (const chunk of result.chunks) {
+      const ok = sock.send({ type: 'agent.speak', audio: chunk });
+      if (!ok) break; // socket closed mid-stream
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[LiveAvatar] speakOnce failed', err);
+  }
 }
 
 function ErrorPanel({

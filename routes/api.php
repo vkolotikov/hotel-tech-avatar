@@ -53,6 +53,7 @@ Route::prefix('v1')->group(function () {
     // ─── Voice Endpoints ───────────────────────────────────────────────────
     Route::post('conversations/{conversation}/voice/transcribe', [ConversationController::class, 'transcribe']);
     Route::post('conversations/{conversation}/voice/speak',      [ConversationController::class, 'speak']);
+    Route::post('conversations/{conversation}/voice/speak-pcm',  [ConversationController::class, 'speakPcm']);
 
     // ─── HeyGen Streaming Avatar ───────────────────────────────────────────
     Route::post('heygen/token', [HeygenController::class, 'token']);

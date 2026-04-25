@@ -95,3 +95,29 @@ export async function stopLiveAvatarSession(
     // Swallow — see docblock.
   }
 }
+
+export type SpeakPcmResponse = {
+  sample_rate: number;
+  format: string;
+  chunk_count: number;
+  chunks: string[];
+};
+
+/**
+ * Generate avatar speech audio for a snippet of text. Returns
+ * base64-encoded PCM 16-bit-LE / 24kHz / mono chunks (~1 second per
+ * chunk) ready to feed straight into a LiveAvatar agent.speak event.
+ */
+export async function fetchPcmAudio(
+  conversationId: number,
+  text: string,
+): Promise<SpeakPcmResponse> {
+  return request<SpeakPcmResponse>(
+    `/api/v1/conversations/${conversationId}/voice/speak-pcm`,
+    {
+      method: 'POST',
+      auth: true,
+      body: JSON.stringify({ text }),
+    },
+  );
+}

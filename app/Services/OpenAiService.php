@@ -64,6 +64,32 @@ class OpenAiService
     }
 
     /**
+     * Text-to-speech in raw PCM (16-bit signed little-endian, 24kHz,
+     * mono) — LiveAvatar's LITE-mode wire format. We return the raw
+     * bytes; chunking + base64 happens at the controller layer so
+     * other consumers can still get an mp3/etc via speak().
+     */
+    public function speakPcm(string $text, string $voice = 'alloy', string $model = null): string
+    {
+        $model = $model ?? config('services.openai.tts_model', 'gpt-4o-mini-tts');
+
+        $response = Http::withToken($this->apiKey)
+            ->timeout($this->timeout)
+            ->post("{$this->baseUrl}/audio/speech", [
+                'model'           => $model,
+                'input'           => $text,
+                'voice'           => $voice,
+                'response_format' => 'pcm',
+            ]);
+
+        if (!$response->successful()) {
+            throw new \RuntimeException('TTS PCM failed: ' . $response->body());
+        }
+
+        return $response->body();
+    }
+
+    /**
      * Create a file in OpenAI for vector store use.
      */
     public function uploadFile(string $filePath, string $purpose = 'assistants'): array

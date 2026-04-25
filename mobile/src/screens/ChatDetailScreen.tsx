@@ -327,6 +327,7 @@ export function ChatDetailScreen() {
 
       <LiveAvatarModal
         visible={videoModeOpen}
+        conversationId={conversationId}
         avatarSlug={avatarSlug}
         avatarName={avatarName}
         onClose={() => setVideoModeOpen(false)}

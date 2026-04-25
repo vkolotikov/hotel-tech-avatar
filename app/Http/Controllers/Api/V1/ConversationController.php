@@ -365,4 +365,39 @@ class ConversationController extends Controller
         ]);
     }
 
+    /**
+     * Text-to-speech in PCM 16-bit LE / 24kHz / mono, chunked + base64-
+     * encoded for direct delivery over LiveAvatar's LITE WebSocket
+     * (each chunk feeds into one `agent.speak` payload).
+     *
+     * Chunk size: 48000 raw bytes ≈ 1 second of audio per chunk —
+     * matches LiveAvatar's "recommended ~1 second" guidance and keeps
+     * each WebSocket frame comfortably under the default 64 kB limit
+     * after base64 inflation (~64 kB per frame).
+     */
+    public function speakPcm(Request $request, Conversation $conversation): JsonResponse
+    {
+        $this->ensureOwnership($request, $conversation);
+        $request->validate(['text' => 'required|string|max:4096']);
+
+        $agent = $conversation->agent;
+        $voice = $agent->openai_voice ?? 'alloy';
+
+        $openai = app(OpenAiService::class);
+        $rawPcm = $openai->speakPcm($request->input('text'), $voice);
+
+        $chunkSize = 48_000; // ≈ 1s of 24 kHz 16-bit mono
+        $chunks = [];
+        for ($offset = 0; $offset < strlen($rawPcm); $offset += $chunkSize) {
+            $chunks[] = base64_encode(substr($rawPcm, $offset, $chunkSize));
+        }
+
+        return response()->json([
+            'sample_rate' => 24000,
+            'format'      => 'pcm_s16le_mono',
+            'chunk_count' => count($chunks),
+            'chunks'      => $chunks,
+        ]);
+    }
+
 }
