@@ -125,6 +125,17 @@ export class LiveAvatarSocket {
       event_id: randomEventId(),
     });
   }
+
+  close(): void {
+    try {
+      this.ws?.close();
+    } catch {
+      // already-closed sockets sometimes throw on .close() — fine.
+    }
+    this.ws = null;
+    this.isOpen = false;
+    this.connectedAcked = false;
+  }
 }
 
 /**
@@ -147,16 +158,4 @@ function randomEventId(): string {
     s += Math.floor(Math.random() * 16).toString(16);
   }
   return s.slice(0, 8) + '-' + s.slice(8, 12) + '-' + s.slice(12, 16) + '-' + s.slice(16, 20) + '-' + s.slice(20, 32);
-}
-
-  close(): void {
-    try {
-      this.ws?.close();
-    } catch {
-      // already-closed sockets sometimes throw on .close() — fine.
-    }
-    this.ws = null;
-    this.isOpen = false;
-    this.connectedAcked = false;
-  }
 }
