@@ -33,65 +33,97 @@ const STEP_ORDER_EDIT: StepKey[] = ['about', 'body', 'lifestyle', 'health'];
 
 type DraftProfile = Partial<UserProfile>;
 
-const ACTIVITY_OPTIONS: Array<{ value: NonNullable<UserProfile['activity_level']>; label: string; subtitle: string }> = [
-  { value: 'sedentary', label: 'Sedentary', subtitle: 'Mostly sitting, little walking' },
-  { value: 'light',     label: 'Light',     subtitle: 'A few short walks each week' },
-  { value: 'moderate',  label: 'Moderate',  subtitle: 'Exercise 3–4 days a week' },
-  { value: 'active',    label: 'Active',    subtitle: 'Hard training 5–6 days a week' },
-  { value: 'athlete',   label: 'Athlete',   subtitle: 'Competitive / elite training' },
+type IconName = keyof typeof Ionicons.glyphMap;
+
+type ChipOpt = { value: string; label: string; icon?: IconName };
+
+const ACTIVITY_OPTIONS: Array<{
+  value: NonNullable<UserProfile['activity_level']>;
+  label: string;
+  subtitle: string;
+  icon: IconName;
+}> = [
+  { value: 'sedentary', label: 'Sedentary', subtitle: 'Mostly sitting, little walking',  icon: 'cafe-outline' },
+  { value: 'light',     label: 'Light',     subtitle: 'A few short walks each week',     icon: 'walk-outline' },
+  { value: 'moderate',  label: 'Moderate',  subtitle: 'Exercise 3–4 days a week',        icon: 'bicycle-outline' },
+  { value: 'active',    label: 'Active',    subtitle: 'Hard training 5–6 days a week',   icon: 'barbell-outline' },
+  { value: 'athlete',   label: 'Athlete',   subtitle: 'Competitive / elite training',    icon: 'trophy-outline' },
 ];
 
-const SEX_OPTIONS: Array<{ value: NonNullable<UserProfile['sex_at_birth']>; label: string }> = [
-  { value: 'F', label: 'Female' },
-  { value: 'M', label: 'Male' },
-  { value: 'I', label: 'Intersex' },
+const SEX_OPTIONS: Array<{
+  value: NonNullable<UserProfile['sex_at_birth']>;
+  label: string;
+  icon: IconName;
+}> = [
+  { value: 'F', label: 'Female',   icon: 'female-outline' },
+  { value: 'M', label: 'Male',     icon: 'male-outline' },
+  { value: 'I', label: 'Intersex', icon: 'transgender-outline' },
 ];
 
-const GOAL_OPTIONS = [
-  { value: 'better_sleep',     label: 'Sleep better' },
-  { value: 'more_energy',      label: 'More energy' },
-  { value: 'weight_loss',      label: 'Lose weight' },
-  { value: 'muscle_gain',      label: 'Build muscle' },
-  { value: 'gut_health',       label: 'Gut health' },
-  { value: 'stress_management',label: 'Manage stress' },
-  { value: 'longevity',        label: 'Longevity' },
-  { value: 'general_wellbeing',label: 'General wellbeing' },
+const GOAL_OPTIONS: ChipOpt[] = [
+  { value: 'better_sleep',      label: 'Sleep better',       icon: 'moon-outline' },
+  { value: 'more_energy',       label: 'More energy',        icon: 'flash-outline' },
+  { value: 'weight_loss',       label: 'Lose weight',        icon: 'trending-down-outline' },
+  { value: 'muscle_gain',       label: 'Build muscle',       icon: 'barbell-outline' },
+  { value: 'gut_health',        label: 'Gut health',         icon: 'leaf-outline' },
+  { value: 'stress_management', label: 'Manage stress',      icon: 'heart-outline' },
+  { value: 'longevity',         label: 'Longevity',          icon: 'hourglass-outline' },
+  { value: 'general_wellbeing', label: 'General wellbeing',  icon: 'sparkles-outline' },
 ];
 
-const DIETARY_OPTIONS = [
-  { value: 'vegetarian',     label: 'Vegetarian' },
-  { value: 'vegan',          label: 'Vegan' },
-  { value: 'pescatarian',    label: 'Pescatarian' },
-  { value: 'gluten_free',    label: 'Gluten-free' },
-  { value: 'dairy_free',     label: 'Dairy-free' },
-  { value: 'low_carb',       label: 'Low-carb' },
-  { value: 'keto',           label: 'Keto' },
-  { value: 'mediterranean',  label: 'Mediterranean' },
-  { value: 'halal',          label: 'Halal' },
-  { value: 'kosher',         label: 'Kosher' },
+const DIETARY_OPTIONS: ChipOpt[] = [
+  { value: 'vegetarian',    label: 'Vegetarian',    icon: 'leaf-outline' },
+  { value: 'vegan',         label: 'Vegan',         icon: 'flower-outline' },
+  { value: 'pescatarian',   label: 'Pescatarian',   icon: 'fish-outline' },
+  { value: 'gluten_free',   label: 'Gluten-free',   icon: 'ban-outline' },
+  { value: 'dairy_free',    label: 'Dairy-free',    icon: 'water-outline' },
+  { value: 'low_carb',      label: 'Low-carb',      icon: 'remove-circle-outline' },
+  { value: 'keto',          label: 'Keto',          icon: 'flame-outline' },
+  { value: 'mediterranean', label: 'Mediterranean', icon: 'sunny-outline' },
+  { value: 'halal',         label: 'Halal',         icon: 'star-outline' },
+  { value: 'kosher',        label: 'Kosher',        icon: 'star-outline' },
 ];
 
-const ALLERGY_OPTIONS = [
-  { value: 'peanuts',     label: 'Peanuts' },
-  { value: 'tree_nuts',   label: 'Tree nuts' },
-  { value: 'dairy',       label: 'Dairy' },
-  { value: 'eggs',        label: 'Eggs' },
-  { value: 'shellfish',   label: 'Shellfish' },
-  { value: 'fish',        label: 'Fish' },
-  { value: 'soy',         label: 'Soy' },
-  { value: 'gluten',      label: 'Gluten' },
-  { value: 'sesame',      label: 'Sesame' },
+const ALLERGY_OPTIONS: ChipOpt[] = [
+  { value: 'peanuts',   label: 'Peanuts',    icon: 'nutrition-outline' },
+  { value: 'tree_nuts', label: 'Tree nuts',  icon: 'nutrition-outline' },
+  { value: 'dairy',     label: 'Dairy',      icon: 'water-outline' },
+  { value: 'eggs',      label: 'Eggs',       icon: 'egg-outline' },
+  { value: 'shellfish', label: 'Shellfish',  icon: 'fish-outline' },
+  { value: 'fish',      label: 'Fish',       icon: 'fish-outline' },
+  { value: 'soy',       label: 'Soy',        icon: 'leaf-outline' },
+  { value: 'gluten',    label: 'Gluten',     icon: 'ban-outline' },
+  { value: 'sesame',    label: 'Sesame',     icon: 'ellipse-outline' },
 ];
 
-const CONDITION_OPTIONS = [
-  { value: 'hypertension',     label: 'Hypertension' },
-  { value: 'high_cholesterol', label: 'High cholesterol' },
-  { value: 'type_2_diabetes',  label: 'Type 2 diabetes' },
-  { value: 'pre_diabetes',     label: 'Pre-diabetes' },
-  { value: 'thyroid_issue',    label: 'Thyroid issue' },
-  { value: 'IBS',              label: 'IBS' },
-  { value: 'PCOS',             label: 'PCOS' },
-  { value: 'pregnancy',        label: 'Pregnancy' },
+const CONDITION_OPTIONS: ChipOpt[] = [
+  { value: 'hypertension',     label: 'Hypertension',     icon: 'heart-outline' },
+  { value: 'high_cholesterol', label: 'High cholesterol', icon: 'pulse-outline' },
+  { value: 'type_2_diabetes',  label: 'Type 2 diabetes',  icon: 'medkit-outline' },
+  { value: 'pre_diabetes',     label: 'Pre-diabetes',     icon: 'medkit-outline' },
+  { value: 'thyroid_issue',    label: 'Thyroid issue',    icon: 'pulse-outline' },
+  { value: 'IBS',              label: 'IBS',              icon: 'leaf-outline' },
+  { value: 'PCOS',             label: 'PCOS',             icon: 'female-outline' },
+  { value: 'pregnancy',        label: 'Pregnancy',        icon: 'heart-outline' },
+];
+
+const COMMON_MEDS: ChipOpt[] = [
+  { value: 'lisinopril',     label: 'Lisinopril' },
+  { value: 'metformin',      label: 'Metformin' },
+  { value: 'atorvastatin',   label: 'Atorvastatin' },
+  { value: 'omeprazole',     label: 'Omeprazole' },
+  { value: 'levothyroxine',  label: 'Levothyroxine' },
+  { value: 'sertraline',     label: 'Sertraline' },
+  { value: 'birth_control',  label: 'Birth control' },
+  { value: 'multivitamin',   label: 'Multivitamin' },
+  { value: 'vitamin_d',      label: 'Vitamin D' },
+  { value: 'omega_3',        label: 'Omega-3' },
+];
+
+const PRONOUN_OPTIONS: ChipOpt[] = [
+  { value: 'she/her',   label: 'she/her' },
+  { value: 'he/him',    label: 'he/him' },
+  { value: 'they/them', label: 'they/them' },
 ];
 
 export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) {
@@ -199,7 +231,8 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       style={[styles.container, { paddingTop: insets.top, display: visible ? 'flex' : 'none' }]}
     >
       <View style={styles.headerRow}>
@@ -285,32 +318,25 @@ function AboutStep({ draft, update }: { draft: DraftProfile; update: (patch: Dra
         The name your wellness team uses when greeting you and tailoring advice.
       </Text>
 
-      <FieldLabel label="Name" />
-      <TextInput
-        style={styles.textInput}
-        value={draft.display_name ?? ''}
-        onChangeText={(v) => update({ display_name: v })}
-        placeholder="First name or full name"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="words"
-      />
+      <FieldLabel label="Name" icon="person-outline" />
+      <View style={styles.textInputRow}>
+        <Ionicons name="person-outline" size={18} color={colors.textMuted} />
+        <TextInput
+          style={styles.textInputInline}
+          value={draft.display_name ?? ''}
+          onChangeText={(v) => update({ display_name: v })}
+          placeholder="First name or full name"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="words"
+          returnKeyType="done"
+        />
+      </View>
 
-      <FieldLabel label="Pronouns" sublabel="Optional" />
+      <FieldLabel label="Pronouns" sublabel="Optional" icon="chatbubble-ellipses-outline" />
       <ChipRow
-        options={[
-          { value: 'she/her', label: 'she/her' },
-          { value: 'he/him', label: 'he/him' },
-          { value: 'they/them', label: 'they/them' },
-        ]}
+        options={PRONOUN_OPTIONS}
         selected={draft.pronouns ? [draft.pronouns] : []}
         onToggle={(v) => update({ pronouns: draft.pronouns === v ? null : v })}
-      />
-      <TextInput
-        style={[styles.textInput, { marginTop: spacing.sm }]}
-        value={draft.pronouns && !['she/her', 'he/him', 'they/them'].includes(draft.pronouns) ? draft.pronouns : ''}
-        onChangeText={(v) => update({ pronouns: v || null })}
-        placeholder="…or type your own"
-        placeholderTextColor={colors.textMuted}
       />
     </View>
   );
@@ -324,31 +350,39 @@ function BodyStep({ draft, update }: { draft: DraftProfile; update: (patch: Draf
         Helps your team scale advice — calorie ranges, recovery, lab references.
       </Text>
 
-      <FieldLabel label="Sex at birth" />
+      <FieldLabel label="Sex at birth" icon="body-outline" />
       <ChipRow
-        options={SEX_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        options={SEX_OPTIONS.map((o) => ({ value: o.value, label: o.label, icon: o.icon }))}
         selected={draft.sex_at_birth ? [draft.sex_at_birth] : []}
         onToggle={(v) =>
           update({ sex_at_birth: draft.sex_at_birth === v ? null : (v as 'F' | 'M' | 'I') })
         }
       />
 
-      <FieldLabel label="Height (cm)" />
-      <NumberInput
+      <FieldLabel label="Height" icon="resize-outline" />
+      <Stepper
         value={draft.height_cm ?? null}
+        defaultValue={170}
         onChange={(n) => update({ height_cm: n })}
-        min={50}
-        max={260}
-        placeholder="e.g. 178"
+        min={120}
+        max={230}
+        smallStep={1}
+        largeStep={5}
+        unit="cm"
+        icon="resize-outline"
       />
 
-      <FieldLabel label="Weight (kg)" />
-      <NumberInput
+      <FieldLabel label="Weight" icon="speedometer-outline" />
+      <Stepper
         value={draft.weight_kg ?? null}
+        defaultValue={70}
         onChange={(n) => update({ weight_kg: n })}
-        min={20}
-        max={400}
-        placeholder="e.g. 75"
+        min={30}
+        max={250}
+        smallStep={1}
+        largeStep={5}
+        unit="kg"
+        icon="speedometer-outline"
       />
     </View>
   );
@@ -368,7 +402,7 @@ function LifestyleStep({
       <Text style={styles.heading}>How active is your week?</Text>
       <Text style={styles.lead}>Plus a quick read on sleep + diet — pick what fits.</Text>
 
-      <FieldLabel label="Activity level" />
+      <FieldLabel label="Activity level" icon="bicycle-outline" />
       <View style={styles.activityList}>
         {ACTIVITY_OPTIONS.map((opt) => {
           const selected = draft.activity_level === opt.value;
@@ -384,25 +418,44 @@ function LifestyleStep({
                 pressed && { opacity: 0.85 },
               ]}
             >
-              <Text style={[styles.activityLabel, selected && styles.activityLabelSelected]}>
-                {opt.label}
-              </Text>
-              <Text style={styles.activitySubtitle}>{opt.subtitle}</Text>
+              <View style={[
+                styles.activityIcon,
+                selected && styles.activityIconSelected,
+              ]}>
+                <Ionicons
+                  name={opt.icon}
+                  size={20}
+                  color={selected ? colors.primary : colors.textSecondary}
+                />
+              </View>
+              <View style={styles.activityText}>
+                <Text style={[styles.activityLabel, selected && styles.activityLabelSelected]}>
+                  {opt.label}
+                </Text>
+                <Text style={styles.activitySubtitle}>{opt.subtitle}</Text>
+              </View>
+              {selected && (
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              )}
             </Pressable>
           );
         })}
       </View>
 
-      <FieldLabel label="Sleep target (hours per night)" sublabel="Optional" />
-      <NumberInput
+      <FieldLabel label="Sleep target" sublabel="Hours per night" icon="moon-outline" />
+      <Stepper
         value={draft.sleep_hours_target ?? null}
+        defaultValue={8}
         onChange={(n) => update({ sleep_hours_target: n })}
-        min={3}
-        max={14}
-        placeholder="e.g. 8"
+        min={4}
+        max={12}
+        smallStep={1}
+        largeStep={1}
+        unit="h"
+        icon="moon-outline"
       />
 
-      <FieldLabel label="Goals" sublabel="Pick any" />
+      <FieldLabel label="Goals" sublabel="Pick any" icon="rocket-outline" />
       <ChipRow
         options={GOAL_OPTIONS}
         selected={draft.goals ?? []}
@@ -410,7 +463,7 @@ function LifestyleStep({
         wrap
       />
 
-      <FieldLabel label="Diet" sublabel="Optional" />
+      <FieldLabel label="Diet" sublabel="Optional" icon="restaurant-outline" />
       <ChipRow
         options={DIETARY_OPTIONS}
         selected={draft.dietary_flags ?? []}
@@ -423,36 +476,12 @@ function LifestyleStep({
 
 function HealthStep({
   draft,
-  update,
   toggle,
 }: {
   draft: DraftProfile;
   update: (patch: DraftProfile) => void;
   toggle: (field: keyof DraftProfile, value: string) => void;
 }) {
-  // Local string state for the medications text input — committed
-  // back to the draft as a parsed array on every change so saves
-  // pick up whatever the user has typed at any step boundary.
-  const [medsRaw, setMedsRaw] = useState(
-    (draft.medications ?? []).join(', '),
-  );
-
-  useEffect(() => {
-    // Pull from draft when the screen re-mounts with a freshly loaded
-    // profile — without this the input goes blank after fetchProfile.
-    setMedsRaw((draft.medications ?? []).join(', '));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.medications?.length]);
-
-  const handleMedsChange = (v: string) => {
-    setMedsRaw(v);
-    const list = v
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    update({ medications: list });
-  };
-
   return (
     <View>
       <Text style={styles.heading}>Anything we should know?</Text>
@@ -461,7 +490,7 @@ function HealthStep({
         Skip anything you'd rather not share — you can edit this later in Settings.
       </Text>
 
-      <FieldLabel label="Conditions" sublabel="Optional" />
+      <FieldLabel label="Conditions" sublabel="Optional" icon="medkit-outline" />
       <ChipRow
         options={CONDITION_OPTIONS}
         selected={draft.conditions ?? []}
@@ -469,7 +498,11 @@ function HealthStep({
         wrap
       />
 
-      <FieldLabel label="Allergies" sublabel="We'll never recommend these" />
+      <FieldLabel
+        label="Allergies"
+        sublabel="We'll never recommend these"
+        icon="alert-circle-outline"
+      />
       <ChipRow
         options={ALLERGY_OPTIONS}
         selected={draft.allergies ?? []}
@@ -477,16 +510,16 @@ function HealthStep({
         wrap
       />
 
-      <FieldLabel label="Medications" sublabel="Optional — comma-separated" />
-      <TextInput
-        style={[styles.textInput, { minHeight: 60 }]}
-        value={medsRaw}
-        onChangeText={handleMedsChange}
-        placeholder="e.g. lisinopril, metformin"
-        placeholderTextColor={colors.textMuted}
-        multiline
-        autoCorrect={false}
-        autoCapitalize="none"
+      <FieldLabel
+        label="Medications"
+        sublabel="Tap any you take regularly"
+        icon="medical-outline"
+      />
+      <ChipRow
+        options={COMMON_MEDS}
+        selected={draft.medications ?? []}
+        onToggle={(v) => toggle('medications', v)}
+        wrap
       />
     </View>
   );
@@ -538,10 +571,21 @@ function buildSummary(draft: DraftProfile): Array<{ label: string; value: string
   return out;
 }
 
-function FieldLabel({ label, sublabel }: { label: string; sublabel?: string }) {
+function FieldLabel({
+  label,
+  sublabel,
+  icon,
+}: {
+  label: string;
+  sublabel?: string;
+  icon?: IconName;
+}) {
   return (
     <View style={styles.fieldLabelRow}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.fieldLabelLeft}>
+        {icon && <Ionicons name={icon} size={14} color={colors.textMuted} />}
+        <Text style={styles.fieldLabel}>{label}</Text>
+      </View>
       {sublabel && <Text style={styles.fieldSublabel}>{sublabel}</Text>}
     </View>
   );
@@ -553,7 +597,7 @@ function ChipRow({
   onToggle,
   wrap,
 }: {
-  options: Array<{ value: string; label: string }>;
+  options: ChipOpt[];
   selected: string[];
   onToggle: (value: string) => void;
   wrap?: boolean;
@@ -572,6 +616,13 @@ function ChipRow({
               pressed && { opacity: 0.85 },
             ]}
           >
+            {opt.icon && (
+              <Ionicons
+                name={opt.icon}
+                size={14}
+                color={isSelected ? colors.textPrimary : colors.textMuted}
+              />
+            )}
             <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
               {opt.label}
             </Text>
@@ -582,46 +633,101 @@ function ChipRow({
   );
 }
 
-function NumberInput({
+/**
+ * Tap-only numeric stepper — replaces the old TextInput so the
+ * keyboard doesn't pop up and overlap the form. Five touch targets:
+ *   [-large] [-small] [VALUE + icon] [+small] [+large]
+ *
+ * Empty state: a "Tap to set" pill, taps to commit defaultValue and
+ * switches to the stepper UI. Skip button on the page header lets
+ * users still bypass the field entirely.
+ */
+function Stepper({
   value,
+  defaultValue,
   onChange,
   min,
   max,
-  placeholder,
+  smallStep,
+  largeStep,
+  unit,
+  icon,
 }: {
   value: number | null;
-  onChange: (n: number | null) => void;
+  defaultValue: number;
+  onChange: (n: number) => void;
   min: number;
   max: number;
-  placeholder: string;
+  smallStep: number;
+  largeStep: number;
+  unit: string;
+  icon?: IconName;
 }) {
-  const [raw, setRaw] = useState(value !== null ? String(value) : '');
+  const clamp = (n: number) => Math.max(min, Math.min(max, n));
 
-  useEffect(() => {
-    setRaw(value !== null ? String(value) : '');
-  }, [value]);
-
-  const commit = (s: string) => {
-    setRaw(s);
-    if (s.trim() === '') {
-      onChange(null);
-      return;
-    }
-    const n = parseInt(s, 10);
-    if (Number.isNaN(n)) return;
-    if (n < min || n > max) return;
-    onChange(n);
-  };
+  if (value == null) {
+    return (
+      <Pressable
+        onPress={() => onChange(defaultValue)}
+        style={({ pressed }) => [
+          styles.stepperEmpty,
+          pressed && { opacity: 0.85 },
+        ]}
+      >
+        {icon && <Ionicons name={icon} size={18} color={colors.primary} />}
+        <Text style={styles.stepperEmptyText}>Tap to set</Text>
+      </Pressable>
+    );
+  }
 
   return (
-    <TextInput
-      style={styles.textInput}
-      value={raw}
-      onChangeText={commit}
-      placeholder={placeholder}
-      placeholderTextColor={colors.textMuted}
-      keyboardType="number-pad"
-    />
+    <View style={styles.stepperRow}>
+      <Pressable
+        onPress={() => onChange(clamp(value - largeStep))}
+        hitSlop={6}
+        style={({ pressed }) => [
+          styles.stepperBtnSm,
+          pressed && { opacity: 0.7 },
+        ]}
+      >
+        <Text style={styles.stepperBtnTextSm}>−{largeStep}</Text>
+      </Pressable>
+      <Pressable
+        onPress={() => onChange(clamp(value - smallStep))}
+        hitSlop={6}
+        style={({ pressed }) => [
+          styles.stepperBtn,
+          pressed && { opacity: 0.7 },
+        ]}
+      >
+        <Ionicons name="remove" size={20} color={colors.textPrimary} />
+      </Pressable>
+      <View style={styles.stepperValue}>
+        {icon && <Ionicons name={icon} size={18} color={colors.primary} />}
+        <Text style={styles.stepperValueText}>{value}</Text>
+        <Text style={styles.stepperUnitText}>{unit}</Text>
+      </View>
+      <Pressable
+        onPress={() => onChange(clamp(value + smallStep))}
+        hitSlop={6}
+        style={({ pressed }) => [
+          styles.stepperBtn,
+          pressed && { opacity: 0.7 },
+        ]}
+      >
+        <Ionicons name="add" size={20} color={colors.textPrimary} />
+      </Pressable>
+      <Pressable
+        onPress={() => onChange(clamp(value + largeStep))}
+        hitSlop={6}
+        style={({ pressed }) => [
+          styles.stepperBtnSm,
+          pressed && { opacity: 0.7 },
+        ]}
+      >
+        <Text style={styles.stepperBtnTextSm}>+{largeStep}</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -672,7 +778,10 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   bodyContent: {
     padding: spacing.lg,
-    paddingBottom: spacing.xl,
+    // Generous bottom padding so a focused text input can always
+    // scroll above the on-screen keyboard on Android, where
+    // KeyboardAvoidingView's "height" mode resizes the wrapper.
+    paddingBottom: spacing.xxl + spacing.xl,
   },
   centered: {
     flex: 1,
@@ -694,10 +803,15 @@ const styles = StyleSheet.create({
   },
   fieldLabelRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: spacing.md,
     marginBottom: spacing.xs + 2,
+  },
+  fieldLabelLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
   },
   fieldLabel: {
     color: colors.textPrimary,
@@ -719,6 +833,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
+  textInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  textInputInline: {
+    flex: 1,
+    color: colors.textPrimary,
+    paddingVertical: spacing.sm + 4,
+    fontSize: fontSize.md,
+  },
   chipRow: {
     flexDirection: 'row',
     gap: spacing.xs + 2,
@@ -726,6 +856,9 @@ const styles = StyleSheet.create({
   },
   chipRowWrap: {},
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
@@ -745,10 +878,83 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     color: colors.textPrimary,
   },
+  stepperEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md - 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(124,92,255,0.4)',
+    borderStyle: 'dashed',
+  },
+  stepperEmptyText: {
+    color: colors.primary,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.xs + 2,
+  },
+  stepperBtnSm: {
+    minWidth: 48,
+    height: 56,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  stepperBtnTextSm: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  stepperBtn: {
+    width: 48,
+    height: 56,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperValue: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 56,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(124,92,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(124,92,255,0.3)',
+  },
+  stepperValueText: {
+    color: colors.textPrimary,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  stepperUnitText: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
   activityList: {
     gap: spacing.sm,
   },
   activityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: spacing.md,
@@ -759,6 +965,18 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: 'rgba(124,92,255,0.12)',
   },
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  activityIconSelected: {
+    backgroundColor: 'rgba(124,92,255,0.2)',
+  },
+  activityText: { flex: 1 },
   activityLabel: {
     color: colors.textPrimary,
     fontSize: fontSize.md,
