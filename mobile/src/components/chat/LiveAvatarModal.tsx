@@ -20,6 +20,10 @@ import {
 } from '../../api/liveavatar';
 import { startLiveAvatarLiteSession } from '../../voice/liveAvatarSession';
 import { LiveAvatarSocket } from '../../voice/liveAvatarSocket';
+import {
+  LiveAvatarLiveKitView,
+  isLiveKitAvailable,
+} from '../../voice/LiveAvatarLiveKitView';
 import { colors, spacing, radius, fontSize } from '../../theme';
 
 type Props = {
@@ -37,6 +41,8 @@ type State =
   | { kind: 'error'; title: string; body: string };
 
 type SocketStatus = 'idle' | 'connecting' | 'live' | 'closed';
+
+type LiveKitCreds = { url: string; token: string };
 
 const KEEP_ALIVE_INTERVAL_MS = 30_000;
 
@@ -155,6 +161,7 @@ export function LiveAvatarModal({
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<State>({ kind: 'idle' });
   const [socketStatus, setSocketStatus] = useState<SocketStatus>('idle');
+  const [livekitCreds, setLivekitCreds] = useState<LiveKitCreds | null>(null);
 
   // Refs hold transient session/socket state across re-renders without
   // triggering them. Cleanup on close uses these to send the DELETE
@@ -175,6 +182,7 @@ export function LiveAvatarModal({
     socketRef.current?.close();
     socketRef.current = null;
     setSocketStatus('idle');
+    setLivekitCreds(null);
 
     const sid = liveSessionIdRef.current;
     const tok = sessionTokenRef.current;
@@ -259,6 +267,17 @@ export function LiveAvatarModal({
     if (cancelled) return;
 
     liveSessionIdRef.current = lite.sessionId;
+
+    // Hand the LiveKit credentials to the LiveKit view so it can
+    // render the avatar's actual published video track — same session
+    // our agent.speak commands target. This is what makes lip-sync
+    // visible (the previous WebView showed a different /v2/embeddings
+    // session and ignored everything we sent).
+    setLivekitCreds({
+      url: lite.livekitUrl,
+      token: lite.livekitClientToken,
+    });
+
     if (!lite.wsUrl) {
       // eslint-disable-next-line no-console
       console.warn('[LiveAvatar] start response had no ws_url; LITE commands disabled');
@@ -321,6 +340,7 @@ export function LiveAvatarModal({
   };
 
   const isWebViewAvailable = WebViewComponent !== null;
+  const liveKitReady = isLiveKitAvailable && livekitCreds !== null;
   // Pulled out of JSX into locals so react-native/no-raw-text stops
   // mis-flagging the string literals inside `state.kind === '...'`
   // guards as bare JSX text.
@@ -370,23 +390,41 @@ export function LiveAvatarModal({
             <ErrorPanel title={errorView.title} body={errorView.body} onClose={onClose} />
           )}
 
-          {isReady && isWebViewAvailable && readySession?.session.url && (
+          {/*
+            Native LiveKit video — connects to the same /v1/sessions/start
+            session our agent.speak commands target, so lip-sync is
+            actually visible. Falls back to a "dev build required"
+            panel in Expo Go where the native WebRTC module isn't
+            linked.
+          */}
+          {isReady && liveKitReady && livekitCreds && (
+            <LiveAvatarLiveKitView
+              livekitUrl={livekitCreds.url}
+              livekitToken={livekitCreds.token}
+              onError={(err) => {
+                // eslint-disable-next-line no-console
+                console.warn('[LiveAvatar] LiveKit error', err);
+              }}
+            />
+          )}
+
+          {/*
+            Embed-URL WebView preview — only when LiveKit isn't ready
+            yet (still bootstrapping the LITE session) and we've got an
+            embed URL to show. Demo UI is hidden via injected CSS. This
+            is purely a preview surface; agent.speak chunks won't lip-
+            sync here because the embed is a different session. Kept so
+            users see Nora's face before LiveKit handshake completes.
+          */}
+          {isReady && !liveKitReady && isWebViewAvailable && readySession?.session.url && (
             <WebViewComponent
               source={{ uri: readySession.session.url }}
               style={styles.webview}
-              // Android: let the embed ask for mic permission from the
-              // WebView. iOS handles this at the OS level once NSMicrophone
-              // UsageDescription is set in Info.plist.
               mediaPlaybackRequiresUserAction={false}
               allowsInlineMediaPlayback
               javaScriptEnabled
               domStorageEnabled
               originWhitelist={['*']}
-              // Hide LiveAvatar's built-in "Chat now" / language selector
-              // demo UI — that UI calls /v1/sessions/start which is a
-              // FULL-mode endpoint and bad-requests against our LITE
-              // embed. We drive speech from our side in the next slice;
-              // for now we just want the clean avatar surface.
               injectedJavaScript={HIDE_DEMO_UI_CSS}
               injectedJavaScriptBeforeContentLoaded={LOG_POSTMESSAGE_BRIDGE}
               onMessage={(event: { nativeEvent: { data: string } }) => {
@@ -399,10 +437,10 @@ export function LiveAvatarModal({
             />
           )}
 
-          {isReady && !isWebViewAvailable && (
+          {isReady && !liveKitReady && !isWebViewAvailable && (
             <ErrorPanel
-              title="WebView not available"
-              body="Live Avatar needs a development build (`eas build --profile development`) — the WebView native module isn't linked in Expo Go. Sign-in and chat still work, just not the video layer."
+              title="Development build required"
+              body="Live Avatar needs the LiveKit native modules — run `eas build --profile development --platform android` and reinstall the dev app. Text chat and audio voice mode are unaffected."
               onClose={onClose}
             />
           )}
