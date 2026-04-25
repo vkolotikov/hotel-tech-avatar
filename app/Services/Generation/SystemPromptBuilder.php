@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Generation;
 
 use App\Models\Agent;
+use App\Models\UserProfile;
 use App\Services\Knowledge\RetrievedContext;
 
 /**
@@ -29,9 +30,13 @@ final class SystemPromptBuilder
      * Full prompt with the trailing conversation-style + JSON contract.
      * Use this from chat (GenerationService).
      */
-    public function build(Agent $agent, ?RetrievedContext $retrieval = null): string
-    {
-        return $this->compose($agent, $retrieval, /* includeStyle = */ true);
+    public function build(
+        Agent $agent,
+        ?RetrievedContext $retrieval = null,
+        ?UserProfile $userProfile = null,
+        ?string $userDisplayName = null,
+    ): string {
+        return $this->compose($agent, $retrieval, $userProfile, $userDisplayName, /* includeStyle = */ true);
     }
 
     /**
@@ -41,13 +46,22 @@ final class SystemPromptBuilder
      * response in {"reply": "..."} would make assertions match against
      * the JSON wrapper text.
      */
-    public function buildForEval(Agent $agent, ?RetrievedContext $retrieval = null): string
-    {
-        return $this->compose($agent, $retrieval, /* includeStyle = */ false);
+    public function buildForEval(
+        Agent $agent,
+        ?RetrievedContext $retrieval = null,
+        ?UserProfile $userProfile = null,
+        ?string $userDisplayName = null,
+    ): string {
+        return $this->compose($agent, $retrieval, $userProfile, $userDisplayName, /* includeStyle = */ false);
     }
 
-    private function compose(Agent $agent, ?RetrievedContext $retrieval, bool $includeStyle): string
-    {
+    private function compose(
+        Agent $agent,
+        ?RetrievedContext $retrieval,
+        ?UserProfile $userProfile,
+        ?string $userDisplayName,
+        bool $includeStyle,
+    ): string {
         $parts = [];
 
         // 1. Identity — always rendered so "what's your name?" works
@@ -64,7 +78,15 @@ final class SystemPromptBuilder
         $parts[] = "# Who you are\n{$identityLine}\n\n"
             . "If asked your name, say you are {$agent->name}. If asked what you do, summarise your role briefly.";
 
-        // 2. Authored instructions (the long-form system prompt).
+        // 2. User context — who the avatar is talking to. Comes early
+        //    so the persona / scope / safety rules below can read this
+        //    state when deciding how to phrase advice.
+        $userContext = $this->renderUserContext($userProfile, $userDisplayName);
+        if ($userContext !== null) {
+            $parts[] = $userContext;
+        }
+
+        // 3. Authored instructions (the long-form system prompt).
         if (!empty(trim((string) $agent->system_instructions))) {
             $parts[] = "# Instructions\n" . trim($agent->system_instructions);
         }
@@ -231,6 +253,101 @@ final class SystemPromptBuilder
             . "\n- You MUST mention the target avatar by name (Dr. Integra, Nora, Luna, Zen, Axel, or Aura) somewhere in your reply for any matching handoff.\n"
             . "- Giving direct advice on a handoff topic without naming the target avatar is a rule violation. The other avatar is the one who goes deep; you set up the handoff.\n"
             . "- If multiple handoff rules could apply (e.g. both stress-related and nutrition-related), name whichever avatar maps to the user's PRIMARY concern in their message.";
+    }
+
+    /**
+     * Renders the "About the user" block — name + body baseline +
+     * goals + safety-relevant conditions / medications / allergies.
+     * Returns null if there's no useful context to share, so the
+     * prompt stays clean for fresh users who haven't filled in
+     * their profile yet.
+     *
+     * Two responsibilities:
+     *   1. Personalisation — avatar uses display_name when addressing
+     *      the user, knows their pronouns, tailors examples to their
+     *      goals + dietary preferences.
+     *   2. Safety — conditions / medications / allergies turn into
+     *      explicit don't-cross-this-line rules. e.g. allergic-to-
+     *      peanuts users must NEVER be recommended peanut-containing
+     *      foods regardless of nutritional fit.
+     */
+    private function renderUserContext(?UserProfile $profile, ?string $userDisplayName): ?string
+    {
+        $name = null;
+        if ($profile?->display_name) {
+            $name = trim((string) $profile->display_name);
+        } elseif ($userDisplayName) {
+            $name = trim($userDisplayName);
+        }
+
+        // Nothing meaningful to share — return null, prompt stays lean.
+        if (!$name && !$profile) {
+            return null;
+        }
+
+        $lines = [];
+
+        if ($name) {
+            $first = explode(' ', $name)[0];
+            $lines[] = "- The user's name is **{$name}**. Address them as \"{$first}\" when greeting or making a personal point.";
+        }
+
+        if ($profile) {
+            if (!empty($profile->pronouns)) {
+                $lines[] = "- Pronouns: {$profile->pronouns}.";
+            }
+
+            $bodyParts = [];
+            if (!empty($profile->sex_at_birth)) {
+                $bodyParts[] = match ($profile->sex_at_birth) {
+                    'F' => 'female at birth',
+                    'M' => 'male at birth',
+                    'I' => 'intersex',
+                    default => null,
+                };
+            }
+            if (!empty($profile->height_cm)) $bodyParts[] = "{$profile->height_cm} cm tall";
+            if (!empty($profile->weight_kg)) $bodyParts[] = "{$profile->weight_kg} kg";
+            if (!empty($profile->activity_level)) $bodyParts[] = "{$profile->activity_level} activity level";
+            $bodyParts = array_filter($bodyParts);
+            if (!empty($bodyParts)) {
+                $lines[] = '- Body baseline: ' . implode(', ', $bodyParts) . '.';
+            }
+
+            if (!empty($profile->sleep_hours_target)) {
+                $lines[] = "- Sleep target: {$profile->sleep_hours_target} hours per night.";
+            }
+
+            if (is_array($profile->goals) && !empty($profile->goals)) {
+                $lines[] = '- Stated goals: ' . implode(', ', array_map('strval', $profile->goals)) . '.';
+            }
+
+            if (is_array($profile->dietary_flags) && !empty($profile->dietary_flags)) {
+                $lines[] = '- Dietary preferences: ' . implode(', ', array_map('strval', $profile->dietary_flags)) . '. Respect these in any food suggestions.';
+            }
+
+            // Safety — must be explicit, not buried.
+            $safetyLines = [];
+            if (is_array($profile->conditions) && !empty($profile->conditions)) {
+                $cond = implode(', ', array_map('strval', $profile->conditions));
+                $safetyLines[] = "- Diagnosed conditions: {$cond}. Tailor lifestyle suggestions appropriately and flag anything outside the user's stated condition pattern as a clinician question.";
+            }
+            if (is_array($profile->medications) && !empty($profile->medications)) {
+                $meds = implode(', ', array_map('strval', $profile->medications));
+                $safetyLines[] = "- Current medications: {$meds}. NEVER advise on dosing, interactions, or stopping these — defer to the prescribing clinician (or hand off to Dr. Integra for general framing).";
+            }
+            if (is_array($profile->allergies) && !empty($profile->allergies)) {
+                $aller = implode(', ', array_map('strval', $profile->allergies));
+                $safetyLines[] = "- Allergies: {$aller}. NEVER recommend foods or supplements containing these, regardless of how good the fit otherwise.";
+            }
+            if (!empty($safetyLines)) {
+                $lines[] = '';
+                $lines[] = '## Safety constraints (HARD — apply on every turn):';
+                foreach ($safetyLines as $sl) $lines[] = $sl;
+            }
+        }
+
+        return "# About the user\n" . implode("\n", $lines);
     }
 
     private function renderRetrieval(RetrievedContext $ctx): ?string

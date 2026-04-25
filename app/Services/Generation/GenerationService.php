@@ -71,11 +71,25 @@ final class GenerationService
             }
         }
 
+        // Pull the user attached to the conversation (if any) so the
+        // prompt builder can personalise: name + body baseline + goals
+        // + safety-relevant medical context. Hotel-vertical sessions
+        // are session-auth and have no user — profile stays null and
+        // the prompt simply omits the personalisation block.
+        $user        = $conversation->user;
+        $userProfile = $user?->profile;
+        $userName    = $user?->name;
+
         // Build the system prompt from every admin-configured field so none
         // of the super-admin's persona / scope / rule work gets silently
         // dropped at call time. Shared builder is also used by
         // App\Eval\LiveResolver so chat and eval see the same context.
-        $systemPrompt = $this->promptBuilder->build($agent, $retrievedContext);
+        $systemPrompt = $this->promptBuilder->build(
+            $agent,
+            $retrievedContext,
+            $userProfile,
+            $userName,
+        );
 
         // Build message history
         $history = $conversation->messages()

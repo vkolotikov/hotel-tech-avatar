@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\HeygenController;
 use App\Http\Controllers\Api\V1\LiveAvatarController;
 use App\Http\Controllers\Api\V1\RevenueCatWebhookController;
+use App\Http\Controllers\Api\V1\UserProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -24,6 +25,9 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('me',           [AuthController::class, 'me']);
         Route::post('auth/logout', [AuthController::class, 'logout']);
+
+        Route::get('me/profile',   [UserProfileController::class, 'show']);
+        Route::patch('me/profile', [UserProfileController::class, 'update']);
 
         // User-scoped conversations (mobile)
         Route::get('conversations',                [ConversationController::class, 'indexForUser']);

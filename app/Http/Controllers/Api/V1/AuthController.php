@@ -81,6 +81,8 @@ class AuthController extends Controller
         $limit = $plan?->daily_message_limit;
         $used  = $limit !== null ? $user->messagesUsedToday() : 0;
 
+        $profile = $user->profile;
+
         return response()->json([
             'id'           => $user->id,
             'name'         => $user->name,
@@ -93,7 +95,39 @@ class AuthController extends Controller
                 'remaining_today'  => $limit === null ? null : max(0, $limit - $used),
                 'features'         => $plan?->features ?? [],
             ],
+            'profile' => $profile ? [
+                'display_name'       => $profile->display_name,
+                'pronouns'           => $profile->pronouns,
+                'sex_at_birth'       => $profile->sex_at_birth,
+                'height_cm'          => $profile->height_cm,
+                'weight_kg'          => $profile->weight_kg,
+                'activity_level'     => $profile->activity_level,
+                'sleep_hours_target' => $profile->sleep_hours_target,
+                'goals'              => $profile->goals ?? [],
+                'conditions'         => $profile->conditions ?? [],
+                'medications'        => $profile->medications ?? [],
+                'dietary_flags'      => $profile->dietary_flags ?? [],
+                'allergies'          => $profile->allergies ?? [],
+                // The mobile uses this flag to decide whether to push
+                // the user into the profile-setup flow on first login.
+                'is_complete'        => $this->isProfileComplete($profile),
+            ] : null,
         ]);
+    }
+
+    /**
+     * Heuristic for "this user has filled in enough to skip onboarding".
+     * Mobile triggers profile-setup when this is false. Tuned to be
+     * reasonable but not annoying — name + age signal + body baseline
+     * is enough to stop nagging.
+     */
+    private function isProfileComplete(?\App\Models\UserProfile $profile): bool
+    {
+        if (!$profile) return false;
+        return !empty($profile->display_name)
+            && !empty($profile->sex_at_birth)
+            && !empty($profile->height_cm)
+            && !empty($profile->weight_kg);
     }
 
     public function logout(Request $request): JsonResponse
