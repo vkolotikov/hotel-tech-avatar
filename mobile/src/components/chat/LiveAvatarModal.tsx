@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -12,9 +12,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError } from '../../api';
 import {
+  keepAliveLiveAvatarSession,
   startLiveAvatarSession,
+  stopLiveAvatarSession,
   type LiveAvatarSession,
 } from '../../api/liveavatar';
+import { startLiveAvatarLiteSession } from '../../voice/liveAvatarSession';
+import { LiveAvatarSocket } from '../../voice/liveAvatarSocket';
 import { colors, spacing, radius, fontSize } from '../../theme';
 
 type Props = {
@@ -29,6 +33,10 @@ type State =
   | { kind: 'loading' }
   | { kind: 'ready'; session: LiveAvatarSession }
   | { kind: 'error'; title: string; body: string };
+
+type SocketStatus = 'idle' | 'connecting' | 'live' | 'closed';
+
+const KEEP_ALIVE_INTERVAL_MS = 30_000;
 
 // react-native-webview is a native module; wrap the require so the
 // component still compiles in Expo Go (no native linked) with a
@@ -138,18 +146,52 @@ const LOG_POSTMESSAGE_BRIDGE = `
 export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const [state, setState] = useState<State>({ kind: 'idle' });
+  const [socketStatus, setSocketStatus] = useState<SocketStatus>('idle');
+
+  // Refs hold transient session/socket state across re-renders without
+  // triggering them. Cleanup on close uses these to send the DELETE
+  // session call and tear down the WebSocket cleanly.
+  const socketRef = useRef<LiveAvatarSocket | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionTokenRef = useRef<string | null>(null);
+  const liveSessionIdRef = useRef<string | null>(null);
+  const keepAliveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Tear-down helper used both by useEffect cleanup and by manual close.
+  // Best-effort: ignores errors because the modal is going away anyway.
+  const teardown = () => {
+    if (keepAliveTimerRef.current) {
+      clearInterval(keepAliveTimerRef.current);
+      keepAliveTimerRef.current = null;
+    }
+    socketRef.current?.close();
+    socketRef.current = null;
+    setSocketStatus('idle');
+
+    const sid = liveSessionIdRef.current;
+    const tok = sessionTokenRef.current;
+    if (sid && tok) {
+      // Fire-and-forget — we don't block close on the response.
+      void stopLiveAvatarSession(sid, tok);
+    }
+    liveSessionIdRef.current = null;
+    sessionIdRef.current = null;
+    sessionTokenRef.current = null;
+  };
 
   useEffect(() => {
     if (!visible) {
+      teardown();
       setState({ kind: 'idle' });
       return;
     }
 
     let cancelled = false;
     setState({ kind: 'loading' });
+    setSocketStatus('idle');
 
     startLiveAvatarSession(avatarSlug)
-      .then((session) => {
+      .then(async (session) => {
         if (cancelled) return;
         if (!session.session.url) {
           setState({
@@ -160,6 +202,15 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
           return;
         }
         setState({ kind: 'ready', session });
+
+        // Phase 2: kick off the LITE WebSocket bridge in parallel with
+        // the WebView loading. If this fails, video still works — users
+        // see the avatar but won't be able to interact in voice mode.
+        if (session.connect) {
+          sessionIdRef.current = session.connect.session_id;
+          sessionTokenRef.current = session.connect.session_token;
+          await connectLiteSocket(session.connect, cancelled);
+        }
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -169,8 +220,83 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
 
     return () => {
       cancelled = true;
+      teardown();
     };
+    // teardown is stable closure-only; intentional empty dep tail
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, avatarSlug]);
+
+  /**
+   * Two-step LITE bring-up:
+   *   1. POST /v1/sessions/start directly to LiveAvatar (Bearer auth)
+   *      to get the wsUrl + livekit credentials.
+   *   2. Open the WebSocket; flip socketStatus to 'live' once the
+   *      `{state: "connected"}` ack arrives.
+   *   3. Schedule a 30s keep-alive ping against our backend proxy.
+   */
+  const connectLiteSocket = async (
+    connect: NonNullable<LiveAvatarSession['connect']>,
+    cancelled: boolean,
+  ) => {
+    setSocketStatus('connecting');
+    let lite;
+    try {
+      lite = await startLiveAvatarLiteSession(connect.start_url, connect.session_token);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[LiveAvatar] /v1/sessions/start failed', err);
+      setSocketStatus('closed');
+      return;
+    }
+    if (cancelled) return;
+
+    liveSessionIdRef.current = lite.sessionId;
+    if (!lite.wsUrl) {
+      // eslint-disable-next-line no-console
+      console.warn('[LiveAvatar] start response had no ws_url; LITE commands disabled');
+      setSocketStatus('closed');
+      return;
+    }
+
+    const sock = new LiveAvatarSocket(lite.wsUrl, {
+      onConnected: () => {
+        // eslint-disable-next-line no-console
+        console.log('[LiveAvatar] WebSocket connected');
+        setSocketStatus('live');
+      },
+      onMessage: (msg, raw) => {
+        // Phase 2 logging — shape we observe here drives Phase 3 design.
+        // eslint-disable-next-line no-console
+        console.log('[LiveAvatar→ws]', raw.length > 200 ? raw.slice(0, 200) + '…' : raw);
+        void msg; // intentionally unused for now
+      },
+      onClose: (code, reason) => {
+        // eslint-disable-next-line no-console
+        console.log('[LiveAvatar] WebSocket closed', code, reason);
+        setSocketStatus('closed');
+      },
+      onError: (err) => {
+        // eslint-disable-next-line no-console
+        console.warn('[LiveAvatar] WebSocket error', err);
+      },
+    });
+    sock.open();
+    socketRef.current = sock;
+
+    // Keep-alive — LiveAvatar sessions are credit-leased; we ping our
+    // backend proxy every 30s while the modal is open. If the upstream
+    // session has ended (410), proxy returns false and we stop pinging.
+    keepAliveTimerRef.current = setInterval(async () => {
+      const sid = liveSessionIdRef.current;
+      const tok = sessionTokenRef.current;
+      if (!sid || !tok) return;
+      const alive = await keepAliveLiveAvatarSession(sid, tok);
+      if (!alive && keepAliveTimerRef.current) {
+        clearInterval(keepAliveTimerRef.current);
+        keepAliveTimerRef.current = null;
+      }
+    }, KEEP_ALIVE_INTERVAL_MS);
+  };
 
   const isWebViewAvailable = WebViewComponent !== null;
   // Pulled out of JSX into locals so react-native/no-raw-text stops
@@ -181,6 +307,9 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
   const isReady = state.kind === 'ready';
   const readySession = state.kind === 'ready' ? state.session : null;
   const errorView = state.kind === 'error' ? state : null;
+  const showSocketPill = socketStatus !== 'idle';
+  const isSocketLive = socketStatus === 'live';
+  const isSocketConnecting = socketStatus === 'connecting';
 
   return (
     <Modal
@@ -256,6 +385,27 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
             />
           )}
         </View>
+
+        {isReady && showSocketPill && (
+          <View style={styles.statusPill}>
+            {isSocketLive ? (
+              <>
+                <View style={styles.liveDot} />
+                <Text style={styles.statusText}>Live</Text>
+              </>
+            ) : isSocketConnecting ? (
+              <>
+                <ActivityIndicator size="small" color={colors.textPrimary} />
+                <Text style={styles.statusText}>Connecting…</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="cloud-offline-outline" size={12} color={colors.textMuted} />
+                <Text style={[styles.statusText, { color: colors.textMuted }]}>Voice offline</Text>
+              </>
+            )}
+          </View>
+        )}
 
         {isReady && readySession?.session.sandbox && (
           <View style={styles.sandboxPill}>
@@ -435,6 +585,32 @@ const styles = StyleSheet.create({
   },
   sandboxText: {
     color: colors.warning,
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  statusPill: {
+    position: 'absolute',
+    top: 12,
+    right: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(11,15,23,0.85)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.success,
+  },
+  statusText: {
+    color: colors.textPrimary,
     fontSize: fontSize.xs,
     fontWeight: '600',
     letterSpacing: 0.2,
