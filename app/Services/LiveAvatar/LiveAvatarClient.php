@@ -88,36 +88,39 @@ final class LiveAvatarClient
     }
 
     /**
-     * GET /v1/contexts and find the first one whose name matches
-     * exactly. Returns null when there's no match (or when the list
-     * call fails — caller decides what to do).
+     * GET /v1/contexts (paginated) and find the first context whose
+     * name matches exactly. Returns null when there's no match (or
+     * when the list call fails — caller decides what to do).
+     *
+     * Walks pages while the response includes a `next` link.
+     * page_size capped at 100 by LiveAvatar — we ask for the max so
+     * an average account fits in one round-trip.
      */
     private function findContextIdByName(string $name): ?string
     {
-        try {
-            $response = $this->http()->get($this->url('/v1/contexts'));
-        } catch (\Throwable) {
-            return null;
-        }
-        if (!$response->successful()) {
-            return null;
-        }
-        $data = $response->json();
-        if (!is_array($data)) return null;
+        $page = 1;
+        // Hard ceiling to keep us from looping forever on a misbehaving
+        // upstream — 10 pages × 100 per page = 1000 contexts which is
+        // far more than any sane account holds.
+        $maxPages = 10;
 
-        // Defensive shape walking — LiveAvatar wraps in a few subtly
-        // different envelopes across endpoint revisions.
-        $candidates = [
-            $data['data']           ?? null,
-            $data['data']['items']  ?? null,
-            $data['data']['data']   ?? null,
-            $data['items']          ?? null,
-            $data,
-        ];
+        while ($page <= $maxPages) {
+            try {
+                $response = $this->http()->get($this->url('/v1/contexts'), [
+                    'page'      => $page,
+                    'page_size' => 100,
+                ]);
+            } catch (\Throwable) {
+                return null;
+            }
+            if (!$response->successful()) {
+                return null;
+            }
+            $payload = $response->json();
+            if (!is_array($payload)) return null;
 
-        foreach ($candidates as $list) {
-            if (!is_array($list) || !array_is_list($list)) continue;
-            foreach ($list as $row) {
+            $rows = $this->extractContextList($payload);
+            foreach ($rows as $row) {
                 if (!is_array($row)) continue;
                 $rowName = $row['name'] ?? null;
                 $rowId   = $row['id']   ?? null;
@@ -125,8 +128,44 @@ final class LiveAvatarClient
                     return $rowId;
                 }
             }
+
+            // Pagination — keep walking only if there's an explicit next.
+            $next = $payload['data']['next'] ?? null;
+            if (!$next) break;
+            $page++;
         }
         return null;
+    }
+
+    /**
+     * Pull the list of context rows out of a /v1/contexts response.
+     * Real shape per the docs is data.results; older revisions used
+     * data.items or a flat data array. Defensive in case of either.
+     *
+     * @param array<string,mixed> $payload
+     * @return array<int, array<string,mixed>>
+     */
+    private function extractContextList(array $payload): array
+    {
+        $candidates = [
+            $payload['data']['results']  ?? null,  // current shape (paginated)
+            $payload['data']['items']    ?? null,  // older revisions
+            $payload['data']['data']     ?? null,
+            $payload['data']             ?? null,  // flat list at data
+            $payload['results']          ?? null,
+            $payload['items']            ?? null,
+            $payload,                              // very flat fallback
+        ];
+        foreach ($candidates as $list) {
+            if (is_array($list) && array_is_list($list)) {
+                $first = $list[0] ?? null;
+                // Sanity check: items should look like contexts
+                if (is_array($first) && (isset($first['id']) || isset($first['name']))) {
+                    return $list;
+                }
+            }
+        }
+        return [];
     }
 
     /**
