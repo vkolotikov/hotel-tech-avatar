@@ -121,11 +121,28 @@ export type Subscription = {
   features: Record<string, boolean | number | string>;
 };
 
+export type ProfileSummary = {
+  display_name: string | null;
+  pronouns: string | null;
+  sex_at_birth: 'F' | 'M' | 'I' | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'athlete' | null;
+  sleep_hours_target: number | null;
+  goals: string[];
+  conditions: string[];
+  medications: string[];
+  dietary_flags: string[];
+  allergies: string[];
+  is_complete: boolean;
+};
+
 export type AuthUser = {
   id: number;
   name: string;
   email: string;
   subscription?: Subscription;
+  profile?: ProfileSummary | null;
 };
 
 export async function login(

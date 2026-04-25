@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { AuthUser, logout } from '../api';
 import { PaywallScreen } from './PaywallScreen';
+import { ProfileSetupScreen } from './ProfileSetupScreen';
 import { colors, spacing, radius, fontSize } from '../theme';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json') as { version?: string };
@@ -24,6 +25,7 @@ type Props = {
 export function SettingsScreen({ user, onRefreshUser }: Props) {
   const version = pkg.version ?? 'dev';
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
   const plan = user?.subscription?.plan ?? 'free';
   const planName = user?.subscription?.plan_name ?? 'Free';
   const isPremium = plan === 'premium';
@@ -78,6 +80,19 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
             {user?.email && <Text style={styles.rowSub}>{user.email}</Text>}
           </View>
         </View>
+        <Pressable
+          onPress={() => setProfileEditOpen(true)}
+          style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        >
+          <Ionicons name="fitness-outline" size={18} color={colors.textMuted} />
+          <Text style={styles.rowLink}>Edit profile</Text>
+          <Ionicons
+            name="chevron-forward"
+            size={14}
+            color={colors.textMuted}
+            style={styles.rowChevron}
+          />
+        </Pressable>
       </View>
 
       <View style={styles.section}>
@@ -194,6 +209,19 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
         visible={paywallOpen}
         onClose={() => setPaywallOpen(false)}
         onEntitlementChanged={onRefreshUser}
+      />
+
+      <ProfileSetupScreen
+        visible={profileEditOpen}
+        mode="edit"
+        onFinish={() => {
+          setProfileEditOpen(false);
+          void onRefreshUser();
+        }}
+        onClose={() => {
+          setProfileEditOpen(false);
+          void onRefreshUser();
+        }}
       />
     </ScrollView>
   );

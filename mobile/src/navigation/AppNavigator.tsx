@@ -19,6 +19,7 @@ import { ChatDetailScreen } from '../screens/ChatDetailScreen';
 import { LibraryScreen } from '../screens/LibraryScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
+import { ProfileSetupScreen } from '../screens/ProfileSetupScreen';
 import { colors } from '../theme';
 
 const ONBOARDING_KEY = 'onboarding_complete_v1';
@@ -324,9 +325,25 @@ export function AppNavigator() {
     return <SignInScreen onSignedIn={handleSignedIn} />;
   }
 
+  // Push the multi-step profile flow on first sign-in (or any session
+  // where the user hasn't completed the essential fields). Once
+  // backend confirms is_complete=true via /me we skip straight to
+  // tabs. The Settings tab re-opens this same screen in edit mode.
+  const profileComplete = user.profile?.is_complete === true;
+
   return (
     <NavigationContainer>
-      <RootTabs user={user} onRefreshUser={refreshUser} />
+      {!profileComplete ? (
+        <ProfileSetupScreen
+          visible
+          mode="setup"
+          onFinish={() => {
+            void refreshUser();
+          }}
+        />
+      ) : (
+        <RootTabs user={user} onRefreshUser={refreshUser} />
+      )}
     </NavigationContainer>
   );
 }
