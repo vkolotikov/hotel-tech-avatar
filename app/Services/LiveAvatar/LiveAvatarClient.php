@@ -28,35 +28,105 @@ final class LiveAvatarClient
     }
 
     /**
-     * Create (or re-create — LiveAvatar doesn't have a lookup-by-name
-     * endpoint) a Context for this agent. Returns the context id.
+     * Get-or-create a Context for this agent. LiveAvatar enforces
+     * unique-by-name on contexts per account, so we look up first via
+     * GET /v1/contexts before attempting a create. If the create
+     * itself races and 400s with "already exists", we fall back to a
+     * list-and-find as a recovery path. Either way, returns the id.
      *
-     * @throws \RuntimeException when the upstream call fails.
+     * @throws \RuntimeException when neither lookup nor create succeed.
      */
     public function createContext(Agent $agent): string
     {
-        $payload = [
-            'name'         => "{$agent->name} — WellnessAI",
-            'prompt'       => $this->buildContextPrompt($agent),
-            'opening_text' => $this->buildOpeningText($agent),
-        ];
+        $name = $this->buildContextName($agent);
 
-        $response = $this->http()->post($this->url('/v1/contexts'), $payload);
-
-        if (!$response->successful()) {
-            throw new \RuntimeException(
-                "LiveAvatar /v1/contexts failed (HTTP {$response->status()}): " . $response->body(),
-            );
+        // 1. Look it up first — happy path on every call after the first.
+        $existing = $this->findContextIdByName($name);
+        if ($existing !== null) {
+            return $existing;
         }
 
-        $id = $response->json('data.id');
-        if (!is_string($id) || $id === '') {
+        // 2. Create.
+        $response = $this->http()->post($this->url('/v1/contexts'), [
+            'name'         => $name,
+            'prompt'       => $this->buildContextPrompt($agent),
+            'opening_text' => $this->buildOpeningText($agent),
+        ]);
+
+        if ($response->successful()) {
+            $id = $response->json('data.id');
+            if (is_string($id) && $id !== '') {
+                return $id;
+            }
             throw new \RuntimeException(
                 "LiveAvatar /v1/contexts returned an unexpected payload: " . $response->body(),
             );
         }
 
-        return $id;
+        // 3. Race-recovery: a parallel request created the same name
+        //    between our list and create. Re-list and adopt.
+        if ($response->status() === 400 && stripos($response->body(), 'already exists') !== false) {
+            $existing = $this->findContextIdByName($name);
+            if ($existing !== null) {
+                return $existing;
+            }
+        }
+
+        throw new \RuntimeException(
+            "LiveAvatar /v1/contexts failed (HTTP {$response->status()}): " . $response->body(),
+        );
+    }
+
+    /**
+     * Stable name per agent — the same agent always points at the same
+     * context regardless of avatar swaps, so we don't leak orphaned
+     * contexts every time someone tries a new face.
+     */
+    private function buildContextName(Agent $agent): string
+    {
+        return "{$agent->name} — WellnessAI";
+    }
+
+    /**
+     * GET /v1/contexts and find the first one whose name matches
+     * exactly. Returns null when there's no match (or when the list
+     * call fails — caller decides what to do).
+     */
+    private function findContextIdByName(string $name): ?string
+    {
+        try {
+            $response = $this->http()->get($this->url('/v1/contexts'));
+        } catch (\Throwable) {
+            return null;
+        }
+        if (!$response->successful()) {
+            return null;
+        }
+        $data = $response->json();
+        if (!is_array($data)) return null;
+
+        // Defensive shape walking — LiveAvatar wraps in a few subtly
+        // different envelopes across endpoint revisions.
+        $candidates = [
+            $data['data']           ?? null,
+            $data['data']['items']  ?? null,
+            $data['data']['data']   ?? null,
+            $data['items']          ?? null,
+            $data,
+        ];
+
+        foreach ($candidates as $list) {
+            if (!is_array($list) || !array_is_list($list)) continue;
+            foreach ($list as $row) {
+                if (!is_array($row)) continue;
+                $rowName = $row['name'] ?? null;
+                $rowId   = $row['id']   ?? null;
+                if (is_string($rowName) && is_string($rowId) && $rowName === $name) {
+                    return $rowId;
+                }
+            }
+        }
+        return null;
     }
 
     /**
