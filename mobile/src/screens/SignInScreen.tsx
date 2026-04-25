@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -66,8 +67,13 @@ export function SignInScreen({ onSignedIn }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.card}>
         <View style={styles.brandRow}>
           <View style={styles.brandIcon}>
@@ -158,6 +164,7 @@ export function SignInScreen({ onSignedIn }: Props) {
           </Text>
         </Pressable>
       </View>
+      </ScrollView>
       <StatusBar style="light" />
     </KeyboardAvoidingView>
   );
@@ -167,8 +174,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollContent: {
+    // grow to fill the screen so the card vertically centers when
+    // the keyboard isn't open, then the ScrollView naturally scrolls
+    // the focused TextInput above the keyboard when it is.
+    flexGrow: 1,
     justifyContent: 'center',
     padding: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   card: {
     backgroundColor: colors.surface,

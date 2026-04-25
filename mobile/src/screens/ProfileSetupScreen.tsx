@@ -26,10 +26,40 @@ type Props = {
   onClose?: () => void;
 };
 
-type StepKey = 'about' | 'body' | 'lifestyle' | 'health' | 'review';
+type StepKey =
+  | 'welcome'
+  | 'about'
+  | 'body'
+  | 'activity'
+  | 'sleep'
+  | 'goals'
+  | 'diet'
+  | 'medical'
+  | 'review';
 
-const STEP_ORDER_SETUP: StepKey[] = ['about', 'body', 'lifestyle', 'health', 'review'];
-const STEP_ORDER_EDIT: StepKey[] = ['about', 'body', 'lifestyle', 'health'];
+const STEP_ORDER_SETUP: StepKey[] = [
+  'welcome',
+  'about',
+  'body',
+  'activity',
+  'sleep',
+  'goals',
+  'diet',
+  'medical',
+  'review',
+];
+
+// Edit mode skips the welcome screen (returning user, no need for sales)
+// and the review screen (each save commits immediately).
+const STEP_ORDER_EDIT: StepKey[] = [
+  'about',
+  'body',
+  'activity',
+  'sleep',
+  'goals',
+  'diet',
+  'medical',
+];
 
 type DraftProfile = Partial<UserProfile>;
 
@@ -167,11 +197,15 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
   // `mode === '...'` JS comparisons as bare JSX text.
   const isSetupMode = mode === 'setup';
   const isEditMode = mode === 'edit';
-  const showSkip = isSetupMode && !isLast;
+  const showSkip = isSetupMode && !isLast && step !== 'welcome';
+  const onWelcome = step === 'welcome';
   const onAbout = step === 'about';
   const onBody = step === 'body';
-  const onLifestyle = step === 'lifestyle';
-  const onHealth = step === 'health';
+  const onActivity = step === 'activity';
+  const onSleep = step === 'sleep';
+  const onGoals = step === 'goals';
+  const onDiet = step === 'diet';
+  const onMedical = step === 'medical';
   const onReview = step === 'review';
 
   const persistAndContinue = async (
@@ -271,18 +305,14 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {onWelcome && <WelcomeStep />}
           {onAbout && <AboutStep draft={draft} update={updateDraft} />}
           {onBody && <BodyStep draft={draft} update={updateDraft} />}
-          {onLifestyle && (
-            <LifestyleStep draft={draft} update={updateDraft} toggle={toggleArrayValue} />
-          )}
-          {onHealth && (
-            <HealthStep
-              draft={draft}
-              update={updateDraft}
-              toggle={toggleArrayValue}
-            />
-          )}
+          {onActivity && <ActivityStep draft={draft} update={updateDraft} />}
+          {onSleep && <SleepStep draft={draft} update={updateDraft} />}
+          {onGoals && <GoalsStep draft={draft} toggle={toggleArrayValue} />}
+          {onDiet && <DietStep draft={draft} toggle={toggleArrayValue} />}
+          {onMedical && <MedicalStep draft={draft} toggle={toggleArrayValue} />}
           {onReview && <ReviewStep draft={draft} />}
         </ScrollView>
       )}
@@ -300,7 +330,13 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
             <ActivityIndicator color={colors.textPrimary} />
           ) : (
             <Text style={styles.primaryBtnText}>
-              {isEditMode ? 'Save' : isLast ? 'All set' : 'Continue'}
+              {isEditMode
+                ? 'Save'
+                : isLast
+                  ? 'All set'
+                  : onWelcome
+                    ? "Let's go"
+                    : 'Continue'}
             </Text>
           )}
         </Pressable>
@@ -388,21 +424,43 @@ function BodyStep({ draft, update }: { draft: DraftProfile; update: (patch: Draf
   );
 }
 
-function LifestyleStep({
+function WelcomeStep() {
+  return (
+    <View>
+      <StepHero icon="sparkles" tint={colors.primary} />
+      <Text style={styles.heading}>Let's personalise your team</Text>
+      <Text style={styles.lead}>
+        Your name, body, goals and any conditions help every avatar give better,
+        safer advice. Quick setup — under two minutes. Skip anything you'd rather
+        not share.
+      </Text>
+      <View style={styles.privacyCard}>
+        <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} />
+        <Text style={styles.privacyText}>
+          Stored privately on your account. Used only to tailor your wellness team's
+          replies — never sold, never shared.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function ActivityStep({
   draft,
   update,
-  toggle,
 }: {
   draft: DraftProfile;
   update: (patch: DraftProfile) => void;
-  toggle: (field: keyof DraftProfile, value: string) => void;
 }) {
   return (
     <View>
+      <StepHero icon="bicycle-outline" tint={colors.primary} />
       <Text style={styles.heading}>How active is your week?</Text>
-      <Text style={styles.lead}>Plus a quick read on sleep + diet — pick what fits.</Text>
+      <Text style={styles.lead}>
+        Pick the row that best matches a typical week. Influences calorie and
+        recovery suggestions.
+      </Text>
 
-      <FieldLabel label="Activity level" icon="bicycle-outline" />
       <View style={styles.activityList}>
         {ACTIVITY_OPTIONS.map((opt) => {
           const selected = draft.activity_level === opt.value;
@@ -441,8 +499,27 @@ function LifestyleStep({
           );
         })}
       </View>
+    </View>
+  );
+}
 
-      <FieldLabel label="Sleep target" sublabel="Hours per night" icon="moon-outline" />
+function SleepStep({
+  draft,
+  update,
+}: {
+  draft: DraftProfile;
+  update: (patch: DraftProfile) => void;
+}) {
+  return (
+    <View>
+      <StepHero icon="moon-outline" tint="#818cf8" />
+      <Text style={styles.heading}>Sleep target</Text>
+      <Text style={styles.lead}>
+        Most adults thrive on seven to nine hours. We'll calibrate Luna's
+        suggestions and Axel's recovery advice to your target.
+      </Text>
+
+      <FieldLabel label="Hours per night" icon="moon-outline" />
       <Stepper
         value={draft.sleep_hours_target ?? null}
         defaultValue={8}
@@ -454,47 +531,58 @@ function LifestyleStep({
         unit="h"
         icon="moon-outline"
       />
+    </View>
+  );
+}
 
-      <FieldLabel label="Goals" sublabel="Pick any" icon="rocket-outline" />
+function GoalsStep({
+  draft,
+  toggle,
+}: {
+  draft: DraftProfile;
+  toggle: (field: keyof DraftProfile, value: string) => void;
+}) {
+  return (
+    <View>
+      <StepHero icon="rocket-outline" tint="#4ade80" />
+      <Text style={styles.heading}>What are you here for?</Text>
+      <Text style={styles.lead}>Pick any that apply — your team will weave these into every reply.</Text>
+
       <ChipRow
         options={GOAL_OPTIONS}
         selected={draft.goals ?? []}
         onToggle={(v) => toggle('goals', v)}
         wrap
       />
-
-      <FieldLabel label="Diet" sublabel="Optional" icon="restaurant-outline" />
-      <ChipRow
-        options={DIETARY_OPTIONS}
-        selected={draft.dietary_flags ?? []}
-        onToggle={(v) => toggle('dietary_flags', v)}
-        wrap
-      />
     </View>
   );
 }
 
-function HealthStep({
+function DietStep({
   draft,
   toggle,
 }: {
   draft: DraftProfile;
-  update: (patch: DraftProfile) => void;
   toggle: (field: keyof DraftProfile, value: string) => void;
 }) {
   return (
     <View>
-      <Text style={styles.heading}>Anything we should know?</Text>
+      <StepHero icon="restaurant-outline" tint="#f59e0b" />
+      <Text style={styles.heading}>How do you eat?</Text>
       <Text style={styles.lead}>
-        Helps your team avoid suggesting things you can't or shouldn't take.
-        Skip anything you'd rather not share — you can edit this later in Settings.
+        Helps Nora suggest food that actually fits — and never recommend
+        anything you can't have.
       </Text>
 
-      <FieldLabel label="Conditions" sublabel="Optional" icon="medkit-outline" />
+      <FieldLabel
+        label="Dietary preferences"
+        sublabel="Optional"
+        icon="restaurant-outline"
+      />
       <ChipRow
-        options={CONDITION_OPTIONS}
-        selected={draft.conditions ?? []}
-        onToggle={(v) => toggle('conditions', v)}
+        options={DIETARY_OPTIONS}
+        selected={draft.dietary_flags ?? []}
+        onToggle={(v) => toggle('dietary_flags', v)}
         wrap
       />
 
@@ -509,6 +597,33 @@ function HealthStep({
         onToggle={(v) => toggle('allergies', v)}
         wrap
       />
+    </View>
+  );
+}
+
+function MedicalStep({
+  draft,
+  toggle,
+}: {
+  draft: DraftProfile;
+  toggle: (field: keyof DraftProfile, value: string) => void;
+}) {
+  return (
+    <View>
+      <StepHero icon="medkit-outline" tint="#3b82f6" />
+      <Text style={styles.heading}>Anything we should know?</Text>
+      <Text style={styles.lead}>
+        Conditions and medications help your team avoid risky suggestions.
+        Skip what you'd rather not share — you can edit any of this later.
+      </Text>
+
+      <FieldLabel label="Conditions" sublabel="Optional" icon="medkit-outline" />
+      <ChipRow
+        options={CONDITION_OPTIONS}
+        selected={draft.conditions ?? []}
+        onToggle={(v) => toggle('conditions', v)}
+        wrap
+      />
 
       <FieldLabel
         label="Medications"
@@ -521,6 +636,15 @@ function HealthStep({
         onToggle={(v) => toggle('medications', v)}
         wrap
       />
+    </View>
+  );
+}
+
+/** Shared hero icon that anchors each step visually. */
+function StepHero({ icon, tint }: { icon: IconName; tint: string }) {
+  return (
+    <View style={[styles.stepHero, { backgroundColor: tint + '22', borderColor: tint + '55' }]}>
+      <Ionicons name={icon} size={32} color={tint} />
     </View>
   );
 }
@@ -788,12 +912,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  stepHero: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
   heading: {
     color: colors.textPrimary,
     fontSize: 26,
     fontWeight: '800',
     letterSpacing: -0.5,
     marginBottom: spacing.sm,
+  },
+  privacyCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    marginTop: spacing.lg,
+  },
+  privacyText: {
+    flex: 1,
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
   },
   lead: {
     color: colors.textSecondary,
