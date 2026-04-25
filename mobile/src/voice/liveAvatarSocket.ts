@@ -105,6 +105,50 @@ export class LiveAvatarSocket {
     }
   }
 
+  /**
+   * Tell the server we're an active LITE client and want it to start
+   * routing user-audio transcripts back to us. Phase 2 sends this
+   * immediately on connect to keep the session from auto-closing
+   * after ~280ms with a video-starvation warning. event_id lets the
+   * server correlate any later replies with this listen window.
+   */
+  startListening(): boolean {
+    return this.send({
+      type: 'agent.start_listening',
+      event_id: randomEventId(),
+    });
+  }
+
+  stopListening(): boolean {
+    return this.send({
+      type: 'agent.stop_listening',
+      event_id: randomEventId(),
+    });
+  }
+}
+
+/**
+ * RFC4122-flavoured random id. Hermes / RN's `crypto.randomUUID` is
+ * available on newer runtimes but not guaranteed; falls back to a
+ * Math.random-based 32-hex string which is good enough for client-
+ * generated event correlation (not security).
+ */
+function randomEventId(): string {
+  const g = globalThis as unknown as { crypto?: { randomUUID?: () => string } };
+  if (g.crypto?.randomUUID) {
+    try {
+      return g.crypto.randomUUID();
+    } catch {
+      // fall through
+    }
+  }
+  let s = '';
+  for (let i = 0; i < 32; i++) {
+    s += Math.floor(Math.random() * 16).toString(16);
+  }
+  return s.slice(0, 8) + '-' + s.slice(8, 12) + '-' + s.slice(12, 16) + '-' + s.slice(16, 20) + '-' + s.slice(20, 32);
+}
+
   close(): void {
     try {
       this.ws?.close();

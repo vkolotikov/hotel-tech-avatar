@@ -263,6 +263,10 @@ export function LiveAvatarModal({ visible, avatarSlug, avatarName, onClose }: Pr
         // eslint-disable-next-line no-console
         console.log('[LiveAvatar] WebSocket connected');
         setSocketStatus('live');
+        // Tell the server we're an active LITE client. Without this,
+        // LiveAvatar tears the session down ~280ms after the handshake
+        // (video-starvation watchdog assumes the client abandoned).
+        sock.startListening();
       },
       onMessage: (msg, raw) => {
         // Phase 2 logging — shape we observe here drives Phase 3 design.
