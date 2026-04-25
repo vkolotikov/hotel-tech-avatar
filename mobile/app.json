@@ -39,7 +39,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "5d63b73d-f2c2-44fa-bc0f-f5b231bcd550"
+        "projectId": "7e22f92b-c4d5-47c8-94bc-1918a7a2f45d"
       }
     },
     "plugins": [
@@ -52,6 +52,6 @@
         }
       ]
     ],
-    "owner": "hoteltech"
+    "owner": "hoteltechai"
   }
 }
