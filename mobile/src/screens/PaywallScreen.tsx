@@ -207,7 +207,7 @@ export function PaywallScreen({ visible, onClose, onEntitlementChanged, reason }
           <View style={styles.heroIconWrap}>
             <Ionicons name="sparkles" size={32} color={colors.primary} />
           </View>
-          <Text style={styles.heading}>WellnessAI Premium</Text>
+          <Text style={styles.heading}>Hexalife Premium</Text>
           <Text style={styles.subheading}>
             Six expert avatars, citation-backed, without the daily limit.
           </Text>

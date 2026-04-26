@@ -40,3 +40,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Play Store service account — never commit
+google-service-account.json
+*-service-account.json

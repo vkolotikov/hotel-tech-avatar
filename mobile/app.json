@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "WellnessAI",
-    "slug": "wellness-ai",
-    "scheme": "wellnessai",
+    "name": "Hexalife",
+    "slug": "health-app",
+    "scheme": "hexalife",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,9 +15,9 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ai.hoteltech.wellnessai",
+      "bundleIdentifier": "com.hexalife.app",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Allow WellnessAI to record voice messages for your avatar conversations."
+        "NSMicrophoneUsageDescription": "Allow Hexalife to record voice messages for your avatar conversations."
       }
     },
     "android": {
@@ -27,7 +27,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "ai.hoteltech.wellnessai",
+      "package": "com.hexalife.app",
       "permissions": [
         "RECORD_AUDIO",
         "android.permission.RECORD_AUDIO",
@@ -48,7 +48,7 @@
       [
         "expo-av",
         {
-          "microphonePermission": "Allow WellnessAI to record voice messages for your avatar conversations."
+          "microphonePermission": "Allow Hexalife to record voice messages for your avatar conversations."
         }
       ]
     ],

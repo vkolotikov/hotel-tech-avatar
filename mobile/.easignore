@@ -1,0 +1,68 @@
+# EAS Build ignore list — excludes files from the project archive uploaded
+# to EAS. Note: when .easignore exists, EAS uses ONLY this file (it does
+# NOT also apply .gitignore), so this list must cover everything we don't
+# want shipped to the build servers.
+
+# ---- The big wins (most of the 328 MB upload comes from these) ----
+
+# EAS reinstalls dependencies from the lockfile on its own builders.
+node_modules/
+
+# Generated native projects — EAS regenerates from app.json / config plugins.
+ios/
+android/
+
+# Expo cache + build outputs
+.expo/
+.expo-shared/
+dist/
+web-build/
+expo-env.d.ts
+
+# ---- Tests, snapshots, coverage — not needed to build a release ----
+__tests__/
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+__snapshots__/
+**/__snapshots__/
+coverage/
+.jest/
+
+# ---- IDE / editor / OS noise ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# ---- Logs + scratch ----
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+.metro-health-check*
+*.tsbuildinfo
+
+# ---- Local secrets — never ship to EAS, set via `eas env:create` instead ----
+.env
+.env.local
+.env.*.local
+google-service-account.json
+*-service-account.json
+
+# ---- Native build artefacts that sometimes appear in the tree ----
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# ---- Source control ----
+.git/
+.gitignore

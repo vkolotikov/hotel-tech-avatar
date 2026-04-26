@@ -45,7 +45,7 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
   const handleSignOut = () => {
     Alert.alert(
       'Sign out',
-      'You will be signed out of WellnessAI on this device.',
+      'You will be signed out of Hexalife on this device.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -153,7 +153,7 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
       <View style={styles.section}>
         <Text style={styles.sectionHeading}>Support</Text>
         <Pressable
-          onPress={() => openLink('https://wellnessai.app/privacy')}
+          onPress={() => openLink('https://hexalife.app/privacy')}
           style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         >
           <Ionicons name="shield-checkmark-outline" size={18} color={colors.textMuted} />
@@ -166,7 +166,7 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
           />
         </Pressable>
         <Pressable
-          onPress={() => openLink('https://wellnessai.app/terms')}
+          onPress={() => openLink('https://hexalife.app/terms')}
           style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         >
           <Ionicons name="document-text-outline" size={18} color={colors.textMuted} />
@@ -184,7 +184,7 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
         <Text style={styles.sectionHeading}>About</Text>
         <View style={styles.disclaimer}>
           <Text style={styles.disclaimerText}>
-            WellnessAI offers wellness education only. It is not a substitute for
+            Hexalife offers wellness education only. It is not a substitute for
             professional medical advice, diagnosis, or treatment. Always seek the
             advice of a qualified clinician with any questions about a medical
             condition.

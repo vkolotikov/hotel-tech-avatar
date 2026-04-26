@@ -79,7 +79,7 @@ export function SignInScreen({ onSignedIn }: Props) {
           <View style={styles.brandIcon}>
             <Ionicons name="leaf" size={20} color={colors.textPrimary} />
           </View>
-          <Text style={styles.brand}>WellnessAI</Text>
+          <Text style={styles.brand}>Hexalife</Text>
         </View>
         <Text style={styles.subheading}>
           {mode === 'signin' ? 'Sign in to continue' : 'Create your account'}

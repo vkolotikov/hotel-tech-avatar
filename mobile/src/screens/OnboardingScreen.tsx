@@ -33,7 +33,7 @@ const SLIDES: Slide[] = [
     key: 'welcome',
     icon: 'leaf',
     iconTint: '#4ade80',
-    title: 'Welcome to WellnessAI',
+    title: 'Welcome to Hexalife',
     body:
       'Six expert avatars — sleep, nutrition, fitness, mindfulness, skin and lab literacy — each grounded in current research. Ask anything in plain English and get a response that’s evidence-led, calm, and practical.',
   },
@@ -43,7 +43,7 @@ const SLIDES: Slide[] = [
     iconTint: '#f59e0b',
     title: 'Not medical advice',
     body:
-      'WellnessAI is wellness education. It does not diagnose, prescribe, or replace a clinician. If you’re experiencing anything urgent, contact your doctor or local emergency services — the avatars will always redirect you to the right help.',
+      'Hexalife is wellness education. It does not diagnose, prescribe, or replace a clinician. If you’re experiencing anything urgent, contact your doctor or local emergency services — the avatars will always redirect you to the right help.',
   },
   {
     key: 'safety-first',

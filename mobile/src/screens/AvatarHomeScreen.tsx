@@ -139,7 +139,7 @@ export function AvatarHomeScreen() {
       {/* Top bar — brand mark floating over the portrait.
           History + sign-out moved to bottom tabs + Settings. */}
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]} pointerEvents="box-none">
-        <Text style={styles.brand}>WellnessAI</Text>
+        <Text style={styles.brand}>Hexalife</Text>
       </View>
 
       {/* Pagination dots */}
