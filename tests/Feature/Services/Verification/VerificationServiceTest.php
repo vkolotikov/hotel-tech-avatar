@@ -182,14 +182,10 @@ class VerificationServiceTest extends TestCase
             ->with($responseText)
             ->andReturn([]);
 
+        // Clean first pass — Stage 5 (structured review) is intentionally
+        // skipped to save the ~1–3 s critic LLM round-trip.
         $this->structuredReviewService
-            ->shouldReceive('review')
-            ->once()
-            ->andReturn(new StructuredReviewResult(
-                passed: true,
-                issues: [],
-                revision_suggestion: null,
-            ));
+            ->shouldNotReceive('review');
 
         $result = $this->service->verify($responseText, $context, $this->agent);
 
@@ -372,14 +368,10 @@ class VerificationServiceTest extends TestCase
             ->with($responseText)
             ->andReturn([]);
 
+        // Clean first pass — Stage 5 skipped (see Stage 5 comment in
+        // VerificationService::verify()).
         $this->structuredReviewService
-            ->shouldReceive('review')
-            ->once()
-            ->andReturn(new StructuredReviewResult(
-                passed: true,
-                issues: [],
-                revision_suggestion: null,
-            ));
+            ->shouldNotReceive('review');
 
         $result = $this->service->verify($responseText, $context, $this->agent);
 

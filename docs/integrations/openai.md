@@ -64,3 +64,10 @@ Model defaults (overridable per-call and per-env):
   `store=false` is sent unconditionally on every chat request (belt-and-braces
   with the dashboard-level opt-out). `OpenAiService::chat()` removed; STT / TTS
   / file / vector-store helpers stay in `OpenAiService`.
+- 2026-04-26 — `gpt-5.5` added to the admin model picker as the new flagship.
+  Existing avatars stay on whatever model they were configured with; no
+  automatic migration. Reference: https://developers.openai.com/api/docs/guides/latest-model
+- 2026-04-26 — admin endpoint `POST /api/v1/admin/voices/preview` added —
+  generates short TTS samples per voice for previewing in the admin form.
+  Audio is cached on disk by `sha1(voice|text|model)` to avoid re-billing on
+  repeat clicks. Returns a base64 `data:audio/mpeg` URL.

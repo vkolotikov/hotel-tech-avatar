@@ -54,9 +54,11 @@ class AdminController extends Controller
             'nova', 'onyx', 'sage', 'shimmer', 'verse', 'marin', 'cedar',
         ];
 
-        // Text generation. gpt-5.4 is the current flagship; the mini and
-        // nano variants are lower-cost for budget-sensitive avatars.
+        // Text generation. gpt-5.5 is the current flagship; gpt-5.4 family
+        // remains as fallbacks; the mini/nano variants are lower-cost for
+        // budget-sensitive avatars.
         $models = [
+            'gpt-5.5',
             'gpt-5.4',
             'gpt-5.4-mini',
             'gpt-5.4-nano',
@@ -98,7 +100,7 @@ class AdminController extends Controller
     public function index(): JsonResponse
     {
         $agents = Agent::withCount(['conversations', 'knowledgeFiles'])
-            ->orderBy('name')
+            ->orderForDisplay()
             ->get();
 
         return response()->json($agents);
@@ -162,6 +164,7 @@ class AdminController extends Controller
             'openai_voice'           => 'nullable|string|max:64',
             'use_advanced_ai'        => 'boolean',
             'is_published'           => 'boolean',
+            'display_order'          => 'nullable|integer|min:0',
         ];
     }
 
@@ -170,6 +173,72 @@ class AdminController extends Controller
     {
         $agent->delete();
         return response()->json(['message' => 'Agent deleted']);
+    }
+
+    /**
+     * Persist a new ordering for the avatar list. Body: `{ order: [id, id, ...] }`.
+     * Each agent gets `display_order` = its zero-based index * 10. The 10-step
+     * gap matches the migration's backfill so future single-row inserts can
+     * land between two existing rows without renumbering.
+     */
+    public function reorder(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'order'   => 'required|array|min:1',
+            'order.*' => 'integer|distinct|exists:agents,id',
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            foreach ($validated['order'] as $index => $agentId) {
+                DB::table('agents')
+                    ->where('id', $agentId)
+                    ->update(['display_order' => $index * 10]);
+            }
+        });
+
+        return response()->json(['ok' => true, 'count' => count($validated['order'])]);
+    }
+
+    /**
+     * Generate (or return cached) TTS preview audio for one of the OpenAI
+     * voices. Used by the admin form to let an editor sample a voice before
+     * assigning it to an avatar without burning OpenAI credits on every
+     * click — repeated previews of the same {voice, text, model} hit a
+     * disk cache under storage/app/voice-previews/.
+     */
+    public function voicePreview(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'voice' => 'required|string|max:32',
+            'text'  => 'nullable|string|max:240',
+            'model' => 'nullable|string|max:64',
+        ]);
+
+        $voice = $validated['voice'];
+        $text  = $validated['text']  ?? "Hi, I'm here to help. Ask me anything you'd like to learn about.";
+        $model = $validated['model'] ?? (string) config('services.openai.tts_model', 'gpt-4o-mini-tts');
+
+        $hash = sha1($voice . '|' . $text . '|' . $model);
+        $relPath = "voice-previews/{$hash}.mp3";
+
+        if (!Storage::disk('local')->exists($relPath)) {
+            $tts = app(\App\Services\OpenAiService::class);
+            $audio = $tts->speak($text, $voice, $model);
+            Storage::disk('local')->put($relPath, $audio);
+        }
+
+        $bytes = Storage::disk('local')->get($relPath);
+
+        // Inline data URL keeps the admin a single static page — no need to
+        // expose a streaming media route, and the response is small enough
+        // (≈30-60 KB for a 6-second clip) for JSON transport.
+        return response()->json([
+            'voice'    => $voice,
+            'model'    => $model,
+            'mime'     => 'audio/mpeg',
+            'data_url' => 'data:audio/mpeg;base64,' . base64_encode($bytes),
+            'cached'   => Storage::disk('local')->exists($relPath),
+        ]);
     }
 
     /**

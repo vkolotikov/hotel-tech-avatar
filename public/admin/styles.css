@@ -56,6 +56,11 @@ body {
 }
 
 .agents-list__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 8px;
+  align-items: center;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.72);
@@ -78,6 +83,37 @@ body {
   opacity: 0.72;
 }
 
+.agents-list__item--dragging {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.agents-list__item--drop-before {
+  box-shadow: 0 -2px 0 0 rgba(96, 165, 250, 0.95);
+}
+
+.agents-list__item--drop-after {
+  box-shadow: 0 2px 0 0 rgba(96, 165, 250, 0.95);
+}
+
+.agents-list__handle {
+  cursor: grab;
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 14px;
+  line-height: 1;
+  user-select: none;
+  text-align: center;
+  letter-spacing: -1px;
+}
+
+.agents-list__handle:active {
+  cursor: grabbing;
+}
+
+.agents-list__body {
+  min-width: 0;
+}
+
 .agents-list__name {
   display: block;
   font-weight: 700;
@@ -88,6 +124,54 @@ body {
   margin-top: 2px;
   font-size: 12px;
   color: rgba(226, 232, 240, 0.75);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.voice-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.voice-preview-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.voice-preview-btn:hover {
+  border-color: rgba(96, 165, 250, 0.8);
+  background: rgba(30, 64, 175, 0.35);
+}
+
+.voice-preview-btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.voice-preview-btn--playing {
+  border-color: rgba(96, 165, 250, 0.95);
+  background: rgba(30, 64, 175, 0.55);
+}
+
+.voice-preview-btn__icon {
+  font-size: 11px;
+  line-height: 1;
 }
 
 .admin-main {

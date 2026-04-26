@@ -63,7 +63,13 @@
           </label>
           <label>
             OpenAI Voice
-            <select id="openai_voice" name="openai_voice"></select>
+            <div class="voice-row">
+              <select id="openai_voice" name="openai_voice"></select>
+              <button id="voice-preview" type="button" class="voice-preview-btn" title="Preview this voice">
+                <span class="voice-preview-btn__icon" aria-hidden="true">&#9658;</span>
+                <span class="voice-preview-btn__label">Preview</span>
+              </button>
+            </div>
           </label>
           <label class="toggle-field">
             <input id="use_advanced_ai" name="use_advanced_ai" type="checkbox">

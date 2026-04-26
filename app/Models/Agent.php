@@ -21,6 +21,7 @@ class Agent extends Model
         'use_advanced_ai', 'openai_vector_store_id',
         'knowledge_sync_status', 'knowledge_synced_at', 'knowledge_last_error',
         'is_published',
+        'display_order',
         'persona_json', 'scope_json', 'red_flag_rules_json', 'handoff_rules_json',
         'prompt_suggestions_json',
         'active_prompt_version_id',
@@ -75,5 +76,22 @@ class Agent extends Model
     public function scopeForVertical($query, string $slug)
     {
         return $query->whereHas('vertical', fn ($q) => $q->where('slug', $slug));
+    }
+
+    /**
+     * Order by the admin-controlled display_order, falling back to name for
+     * any rows that haven't been positioned yet (or when display_order is
+     * tied — e.g. two new avatars created on the same day).
+     *
+     * Postgres-only NULLS LAST keeps unpositioned rows at the end. The
+     * fallback name sort means existing query call sites can drop their
+     * `->orderBy('name')` once they switch to ->orderForDisplay().
+     */
+    public function scopeOrderForDisplay($query)
+    {
+        return $query
+            ->orderByRaw('display_order IS NULL ASC')
+            ->orderBy('display_order')
+            ->orderBy('name');
     }
 }

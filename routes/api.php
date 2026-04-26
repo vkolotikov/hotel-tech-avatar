@@ -88,6 +88,8 @@ Route::prefix('v1')->group(function () {
         Route::post('agents',                          [AdminController::class, 'store']);
         Route::put('agents/{agent}',                   [AdminController::class, 'update']);
         Route::delete('agents/{agent}',                [AdminController::class, 'destroy']);
+        Route::put('agents-order',                     [AdminController::class, 'reorder']);
+        Route::post('voices/preview',                  [AdminController::class, 'voicePreview']);
         Route::post('knowledge-files',                 [AdminController::class, 'uploadKnowledgeFiles']);
         Route::get('agents/{agent}/knowledge/status',  [AdminController::class, 'knowledgeStatus']);
         Route::post('agents/{agent}/knowledge/reindex',[AdminController::class, 'reindex']);

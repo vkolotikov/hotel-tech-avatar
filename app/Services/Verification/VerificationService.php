@@ -99,23 +99,32 @@ final class VerificationService implements VerificationServiceInterface
                 }
             }
 
-            // Stage 5: Structured review
-            $review = $this->structuredReviewService->review(
-                response_text: $current_text,
-                context: $context,
-                failures_so_far: array_map(
-                    fn (VerificationFailure $f) => ['type' => $f->type->value, 'claim' => $f->claim_text, 'reason' => $f->reason],
-                    $failures,
-                ),
-            );
+            // Stage 5: Structured review — skip on the clean first pass to
+            // save a full LLM round-trip (~1–3 s) when stages 0–4 already
+            // certified grounding, citations, and safety. The critic still
+            // runs whenever failures exist (its revision_suggestion drives
+            // the rewrite) and on subsequent revision iterations (where we
+            // explicitly want a second opinion on the rewritten text).
+            $review = null;
+            $skip_review = empty($failures) && $revision_count === 0;
+            if (! $skip_review) {
+                $review = $this->structuredReviewService->review(
+                    response_text: $current_text,
+                    context: $context,
+                    failures_so_far: array_map(
+                        fn (VerificationFailure $f) => ['type' => $f->type->value, 'claim' => $f->claim_text, 'reason' => $f->reason],
+                        $failures,
+                    ),
+                );
 
-            if (! $review->passed) {
-                foreach ($review->issues as $issue) {
-                    $failures[] = new VerificationFailure(
-                        type: VerificationFailureType::INCOMPLETE,
-                        claim_text: $issue['criterion'] ?? 'unknown',
-                        reason: $issue['description'] ?? 'Review failed',
-                    );
+                if (! $review->passed) {
+                    foreach ($review->issues as $issue) {
+                        $failures[] = new VerificationFailure(
+                            type: VerificationFailureType::INCOMPLETE,
+                            claim_text: $issue['criterion'] ?? 'unknown',
+                            reason: $issue['description'] ?? 'Review failed',
+                        );
+                    }
                 }
             }
 
@@ -124,8 +133,11 @@ final class VerificationService implements VerificationServiceInterface
                 break;
             }
 
-            // Attempt revision if suggestion exists and revisions budget remains
-            if ($review->revision_suggestion !== null && $revision_count < self::MAX_REVISIONS - 1) {
+            // Attempt revision if the critic supplied a suggestion and we
+            // still have budget. When we skipped the critic (clean path)
+            // there's no suggestion either, but we wouldn't reach this
+            // branch — empty($failures) breaks above.
+            if ($review?->revision_suggestion !== null && $revision_count < self::MAX_REVISIONS - 1) {
                 $current_text = $this->revise_response(
                     original: $current_text,
                     failures: $failures,

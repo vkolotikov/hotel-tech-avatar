@@ -76,6 +76,7 @@ const elements = {
   bulkExport: document.getElementById('bulk-export'),
   bulkImport: document.getElementById('bulk-import'),
   bulkImportInput: document.getElementById('bulk-import-input'),
+  voicePreview: document.getElementById('voice-preview'),
 };
 
 // --- Rule editor schema ---
@@ -709,32 +710,154 @@ function renderAgentsList() {
   }
 
   agents.forEach((agent) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'agents-list__item';
+    const item = document.createElement('div');
+    item.className = 'agents-list__item';
+    item.dataset.agentId = String(agent.id);
+    item.draggable = true;
+
     if (!isPublished(agent)) {
-      button.classList.add('agents-list__item--unpublished');
+      item.classList.add('agents-list__item--unpublished');
     }
 
     if (agent.id === state.currentAgentId) {
-      button.classList.add('agents-list__item--active');
+      item.classList.add('agents-list__item--active');
     }
 
-    button.innerHTML = `
-      <span class="agents-list__name">${agent.name}</span>
-      <span class="agents-list__meta">${agent.role} - ${agent.slug} - ${!isPublished(agent) ? 'Hidden' : 'Published'}</span>
+    const escName = escapeHtml(agent.name || '');
+    const escRole = escapeHtml(agent.role || '');
+    const escSlug = escapeHtml(agent.slug || '');
+
+    item.innerHTML = `
+      <span class="agents-list__handle" title="Drag to reorder" aria-hidden="true">&#x22EE;&#x22EE;</span>
+      <span class="agents-list__body">
+        <span class="agents-list__name">${escName}</span>
+        <span class="agents-list__meta">${escRole} - ${escSlug} - ${!isPublished(agent) ? 'Hidden' : 'Published'}</span>
+      </span>
     `;
 
-    button.addEventListener('click', () => {
+    // Selecting an avatar: clicking anywhere on the row except the handle
+    // opens the edit form for that agent. The handle is reserved for drag.
+    item.addEventListener('click', (e) => {
+      if (e.target instanceof HTMLElement && e.target.classList.contains('agents-list__handle')) {
+        return;
+      }
       state.currentAgentId = agent.id;
       fillForm(agent);
       renderAgentsList();
       void loadKnowledgeStatus(agent.id);
     });
 
-    elements.list.appendChild(button);
+    bindDragHandlers(item, agent.id);
+
+    elements.list.appendChild(item);
   });
 }
+
+// --- Drag-and-drop reorder ---
+// Tracks the agent ID currently being dragged. Module-scoped because the
+// drop target needs to know what's coming in via dataTransfer (which is
+// blocked from being read on `dragover` for security reasons).
+let dragSourceAgentId = null;
+
+function bindDragHandlers(item, agentId) {
+  item.addEventListener('dragstart', (e) => {
+    dragSourceAgentId = agentId;
+    item.classList.add('agents-list__item--dragging');
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      // Some browsers refuse to start a drag without dataTransfer.setData.
+      e.dataTransfer.setData('text/plain', String(agentId));
+    }
+  });
+
+  item.addEventListener('dragend', () => {
+    dragSourceAgentId = null;
+    item.classList.remove('agents-list__item--dragging');
+    document.querySelectorAll('.agents-list__item--drop-before, .agents-list__item--drop-after')
+      .forEach((el) => {
+        el.classList.remove('agents-list__item--drop-before');
+        el.classList.remove('agents-list__item--drop-after');
+      });
+  });
+
+  item.addEventListener('dragover', (e) => {
+    if (dragSourceAgentId === null || dragSourceAgentId === agentId) {
+      return;
+    }
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+
+    const rect = item.getBoundingClientRect();
+    const isAbove = (e.clientY - rect.top) < rect.height / 2;
+    item.classList.toggle('agents-list__item--drop-before', isAbove);
+    item.classList.toggle('agents-list__item--drop-after', !isAbove);
+  });
+
+  item.addEventListener('dragleave', () => {
+    item.classList.remove('agents-list__item--drop-before');
+    item.classList.remove('agents-list__item--drop-after');
+  });
+
+  item.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (dragSourceAgentId === null || dragSourceAgentId === agentId) {
+      return;
+    }
+    const sourceId = dragSourceAgentId;
+    const rect = item.getBoundingClientRect();
+    const dropAbove = (e.clientY - rect.top) < rect.height / 2;
+    item.classList.remove('agents-list__item--drop-before');
+    item.classList.remove('agents-list__item--drop-after');
+    void applyReorder(sourceId, agentId, dropAbove);
+  });
+}
+
+/**
+ * Reorder state.agents so that `sourceId` lands directly before/after
+ * `targetId`, then persist the new ordering. We only move within the
+ * currently-visible (filtered) subset — non-visible rows keep their
+ * existing absolute order on the server. Optimistic: the UI re-renders
+ * from local state immediately, server save happens in the background.
+ */
+async function applyReorder(sourceId, targetId, dropAbove) {
+  const filterVal = elements.verticalFilter?.value || '';
+  const isVisible = (a) => !filterVal || String(a.vertical_id ?? '') === filterVal;
+
+  const visible = state.agents.filter(isVisible);
+  const sourceIndex = visible.findIndex((a) => a.id === sourceId);
+  let targetIndex = visible.findIndex((a) => a.id === targetId);
+  if (sourceIndex === -1 || targetIndex === -1) return;
+
+  const [moved] = visible.splice(sourceIndex, 1);
+  if (sourceIndex < targetIndex) targetIndex -= 1;
+  visible.splice(targetIndex + (dropAbove ? 0 : 1), 0, moved);
+
+  // Splice the reordered visible items back into state.agents in the
+  // visible slots, preserving non-visible rows' existing positions.
+  const newVisibleQueue = [...visible];
+  state.agents = state.agents.map((a) => (isVisible(a) ? newVisibleQueue.shift() : a));
+
+  renderAgentsList();
+  await persistAgentOrder();
+}
+
+async function persistAgentOrder() {
+  const order = state.agents.map((a) => a.id);
+  setStatus('Saving order...');
+  try {
+    await api('/api/v1/admin/agents-order', {
+      method: 'PUT',
+      body: JSON.stringify({ order }),
+    });
+    setStatus('Order saved');
+  } catch (err) {
+    setStatus(`Failed to save order: ${err.message || err}`, true);
+    // Refresh from server to undo the optimistic local move.
+    await refreshAgents();
+    renderAgentsList();
+  }
+}
+
 
 function buildPayload() {
   const sources = (elements.knowledgeSources?.value || '')
@@ -1434,6 +1557,79 @@ elements.useAdvancedAi.addEventListener('change', () => {
 elements.reindexKnowledge.addEventListener('click', () => {
   void reindexKnowledge();
 });
+
+if (elements.voicePreview) {
+  elements.voicePreview.addEventListener('click', () => {
+    void playVoicePreview();
+  });
+}
+
+// --- Voice preview ---
+// Single shared <audio> element. Re-using it lets a second click stop a
+// playback in progress (toggle-style) and avoids overlapping streams.
+let voicePreviewAudio = null;
+
+async function playVoicePreview() {
+  const voice = (elements.openAiVoice?.value || '').trim();
+  if (!voice) {
+    setStatus('Pick a voice first', true);
+    return;
+  }
+
+  // Toggle: clicking again while playing stops playback.
+  if (voicePreviewAudio && !voicePreviewAudio.paused) {
+    voicePreviewAudio.pause();
+    voicePreviewAudio.currentTime = 0;
+    elements.voicePreview.classList.remove('voice-preview-btn--playing');
+    return;
+  }
+
+  elements.voicePreview.disabled = true;
+  setStatus(`Generating preview for "${voice}"...`);
+  try {
+    const sample = sampleSentenceForAgent();
+    const payload = await api('/api/v1/admin/voices/preview', {
+      method: 'POST',
+      body: JSON.stringify({ voice, text: sample }),
+    });
+
+    if (!payload?.data_url) {
+      throw new Error('No audio returned');
+    }
+
+    if (!voicePreviewAudio) {
+      voicePreviewAudio = new Audio();
+      voicePreviewAudio.addEventListener('ended', () => {
+        elements.voicePreview.classList.remove('voice-preview-btn--playing');
+      });
+      voicePreviewAudio.addEventListener('pause', () => {
+        elements.voicePreview.classList.remove('voice-preview-btn--playing');
+      });
+    }
+    voicePreviewAudio.src = payload.data_url;
+    elements.voicePreview.classList.add('voice-preview-btn--playing');
+    await voicePreviewAudio.play();
+    setStatus(payload.cached ? `Playing (cached) - ${voice}` : `Playing - ${voice}`);
+  } catch (err) {
+    setStatus(`Voice preview failed: ${err.message || err}`, true);
+    elements.voicePreview.classList.remove('voice-preview-btn--playing');
+  } finally {
+    elements.voicePreview.disabled = false;
+  }
+}
+
+/**
+ * Build a short sample line that personalises the preview if the editor
+ * has filled in a name, so they can hear how the voice says the avatar's
+ * actual name. Falls back to a generic line otherwise.
+ */
+function sampleSentenceForAgent() {
+  const name = (elements.name?.value || '').trim();
+  if (name) {
+    return `Hi, I'm ${name}. I'm here to help — ask me anything you'd like to learn.`;
+  }
+  return "Hi there, I'm here to help. Ask me anything you'd like to learn about.";
+}
 
 elements.usageInfoButton.addEventListener('click', () => {
   openUsageModal();

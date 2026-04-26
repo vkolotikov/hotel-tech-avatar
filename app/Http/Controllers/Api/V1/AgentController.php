@@ -15,9 +15,9 @@ class AgentController extends Controller
             ->select(
                 'id', 'slug', 'name', 'role', 'description',
                 'avatar_image_url', 'chat_background_url', 'intro_video_url',
-                'prompt_suggestions_json',
+                'prompt_suggestions_json', 'display_order',
             )
-            ->orderBy('name')
+            ->orderForDisplay()
             ->get()
             ->map(fn (Agent $a) => array_merge($a->toArray(), [
                 'prompt_suggestions' => $a->prompt_suggestions_json ?? [],
