@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,13 +14,15 @@ import {
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { useMessages } from '../hooks/useMessages';
+import { useMessages, messagesKey } from '../hooks/useMessages';
 import { useChatStream } from '../hooks/useChatStream';
 import { useAvatars } from '../hooks/useAvatars';
 import { useCreateConversation } from '../hooks/useConversations';
 import { ApiError } from '../api';
 import { PaywallScreen } from './PaywallScreen';
+import { VoiceModeScreen } from './VoiceModeScreen';
 import { LiveAvatarModal } from '../components/chat/LiveAvatarModal';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import { MessageInput } from '../components/chat/MessageInput';
@@ -31,6 +33,7 @@ import { SuggestionChips } from '../components/chat/SuggestionChips';
 import { resolveAssetUrl } from '../api';
 import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../theme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
+import type { Message } from '../types/models';
 
 type Route = RouteProp<RootStackParamList, 'ChatDetail'>;
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ChatDetail'>;
@@ -62,6 +65,8 @@ export function ChatDetailScreen() {
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [paywallReason, setPaywallReason] = useState<string | null>(null);
   const [videoModeOpen, setVideoModeOpen] = useState(false);
+  const [voiceModeOpen, setVoiceModeOpen] = useState(false);
+  const qc = useQueryClient();
 
   // When the backend rejects a send with 402 (free-tier daily limit),
   // open the paywall automatically with the exact message the backend
@@ -144,6 +149,41 @@ export function ChatDetailScreen() {
       attachmentIds: opts?.attachmentIds,
     });
   };
+
+  /**
+   * Voice mode contract: send the user transcript without auto-speak
+   * (the voice screen owns playback so it can drive its own state
+   * machine), wait for the agent reply to land in the messages cache,
+   * then return the reply text. Returns null on send failure so the
+   * voice screen can pause cleanly instead of trying to speak nothing.
+   *
+   * stream.send resolves after queueing the SSE listener — the actual
+   * reply arrives token-by-token via the stream, so we have to poll
+   * the cache for the new agent message rather than rely on send's
+   * resolution. 30 s deadline catches stuck streams.
+   */
+  const handleVoiceUtterance = useCallback(
+    async (transcript: string): Promise<string | null> => {
+      const before = qc.getQueryData<Message[]>(messagesKey(conversationId)) ?? [];
+      const beforeCount = before.length;
+
+      const ok = await stream.send(transcript, { speak: false });
+      if (!ok) return null;
+
+      const deadline = Date.now() + 30_000;
+      while (Date.now() < deadline) {
+        const current = qc.getQueryData<Message[]>(messagesKey(conversationId)) ?? [];
+        const last = current[current.length - 1];
+        if (current.length > beforeCount && last?.role === 'agent') {
+          const content = (last.content ?? '').trim();
+          return content.length > 0 ? content : null;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      return null;
+    },
+    [stream, qc, conversationId],
+  );
 
   const Background = heroUri
     ? (
@@ -262,8 +302,13 @@ export function ChatDetailScreen() {
 
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + HEADER_HEIGHT : 0}
+        // iOS uses `padding` so the input row is pushed up by the keyboard.
+        // Android needs `height` because the system already resizes the
+        // window, but doesn't account for our absolute-positioned header.
+        // Both share an offset that covers the header height — without it,
+        // the soft keyboard rides up over the send button on Android.
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={insets.top + HEADER_HEIGHT}
       >
         <FlatList
           ref={listRef}
@@ -329,7 +374,7 @@ export function ChatDetailScreen() {
           accent={accent}
           onSend={handleSend}
           disabled={stream.isPending}
-          isAgentSpeaking={stream.isSpeaking}
+          onOpenVoiceMode={() => setVoiceModeOpen(true)}
         />
       </KeyboardAvoidingView>
 
@@ -345,6 +390,16 @@ export function ChatDetailScreen() {
         avatarSlug={avatarSlug}
         avatarName={avatarName}
         onClose={() => setVideoModeOpen(false)}
+      />
+
+      <VoiceModeScreen
+        visible={voiceModeOpen}
+        conversationId={conversationId}
+        avatarName={avatarName}
+        avatarImageUrl={avatarImageUrl}
+        accent={accent}
+        onUserSpoke={handleVoiceUtterance}
+        onClose={() => setVoiceModeOpen(false)}
       />
     </View>
   );

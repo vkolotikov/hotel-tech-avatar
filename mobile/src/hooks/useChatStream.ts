@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Audio } from 'expo-av';
 import EventSource from 'react-native-sse';
 import * as SecureStore from 'expo-secure-store';
 import { sendMessage } from '../api/messages';
-import { fetchSpeechDataUrl } from '../api/voice';
+import { fetchAndPlay, useMessagePlayback } from './useMessagePlayback';
 import { messagesKey } from './useMessages';
 import type { Message, StreamEvent } from '../types/models';
 
@@ -20,10 +19,11 @@ type State = {
   isPending: boolean;
   streamingText: string;
   error: Error | null;
-  isSpeaking: boolean;
 };
 
 type SendOpts = { speak?: boolean; attachmentIds?: number[] };
+
+const AGENT_REPLY_KEY = 'agent-reply';
 
 export function useChatStream(conversationId: number) {
   const qc = useQueryClient();
@@ -31,61 +31,30 @@ export function useChatStream(conversationId: number) {
     isPending: false,
     streamingText: '',
     error: null,
-    isSpeaking: false,
   });
   const esRef = useRef<EventSource | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
 
-  useEffect(() => {
-    return () => {
-      soundRef.current?.unloadAsync().catch(() => {});
-      soundRef.current = null;
-    };
-  }, []);
+  // The shared singleton owns playback — every bubble's ▶ button + the
+  // voice-mode auto-speak go through it, so we only ever have one TTS
+  // clip in the air at a time. We treat any active playback as
+  // "isSpeaking" for the chat screen's UI (speaking pill, mic auto-arm).
+  const playback = useMessagePlayback();
+  const isSpeaking = playback.isPlayingAny;
 
   const stopSpeaking = useCallback(async () => {
-    const s = soundRef.current;
-    soundRef.current = null;
-    if (s) {
-      try {
-        await s.stopAsync();
-      } catch {}
-      try {
-        await s.unloadAsync();
-      } catch {}
-    }
-    setState((prev) => ({ ...prev, isSpeaking: false }));
-  }, []);
+    await playback.stop();
+  }, [playback]);
 
   const playReply = useCallback(
     async (text: string) => {
       if (!text.trim()) return;
-      await stopSpeaking();
       try {
-        setState((prev) => ({ ...prev, isSpeaking: true }));
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          allowsRecordingIOS: false,
-        });
-        const dataUrl = await fetchSpeechDataUrl(conversationId, text);
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: dataUrl },
-          { shouldPlay: true },
-        );
-        soundRef.current = sound;
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            sound.unloadAsync().catch(() => {});
-            if (soundRef.current === sound) soundRef.current = null;
-            setState((prev) => ({ ...prev, isSpeaking: false }));
-          }
-        });
+        await fetchAndPlay(AGENT_REPLY_KEY, conversationId, text);
       } catch (err) {
         console.warn('TTS playback failed', err);
-        setState((prev) => ({ ...prev, isSpeaking: false }));
       }
     },
-    [conversationId, stopSpeaking],
+    [conversationId],
   );
 
   const appendMessages = useCallback(
@@ -214,5 +183,5 @@ export function useChatStream(conversationId: number) {
     setState((s) => ({ ...s, isPending: false, streamingText: '', error: null }));
   }, []);
 
-  return { ...state, send, cancel, stopSpeaking };
+  return { ...state, isSpeaking, send, cancel, stopSpeaking };
 }

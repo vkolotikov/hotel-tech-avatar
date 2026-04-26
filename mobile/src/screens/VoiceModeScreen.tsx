@@ -1,0 +1,452 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  Image,
+  Linking,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import { transcribeAudio } from '../api/transcribe';
+import { fetchAndPlay, useMessagePlayback } from '../hooks/useMessagePlayback';
+import { resolveAssetUrl } from '../api';
+import { colors, spacing, radius, fontSize } from '../theme';
+
+type Props = {
+  visible: boolean;
+  conversationId: number;
+  avatarName: string;
+  avatarImageUrl?: string | null;
+  accent: string;
+  /**
+   * Called when the user has finished saying something. The screen
+   * provides the transcribed text + a flag asking the host (chat
+   * screen) to send it AND speak the reply. Returns the text of the
+   * agent's reply once available, so we can re-arm the mic afterwards.
+   */
+  onUserSpoke: (transcript: string) => Promise<string | null>;
+  onClose: () => void;
+};
+
+const SILENCE_THRESHOLD_DB = -40;
+const SILENCE_HOLD_MS = 1200;
+const MIN_RECORDING_MS = 600;
+const MAX_RECORDING_MS = 30_000;
+const METERING_INTERVAL_MS = 120;
+
+type Phase = 'idle' | 'listening' | 'thinking' | 'speaking' | 'paused' | 'error';
+
+const PHASE_LABELS: Record<Phase, string> = {
+  idle: 'Tap to start',
+  listening: 'Listening…',
+  thinking: 'Thinking…',
+  speaking: 'Speaking…',
+  paused: 'Tap to resume',
+  error: 'Tap to retry',
+};
+
+export function VoiceModeScreen({
+  visible,
+  conversationId,
+  avatarName,
+  avatarImageUrl,
+  accent,
+  onUserSpoke,
+  onClose,
+}: Props) {
+  const insets = useSafeAreaInsets();
+  const [phase, setPhase] = useState<Phase>('idle');
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const lastLoudAtRef = useRef<number>(0);
+  const recordingStartedAtRef = useRef<number>(0);
+  // Track whether the user has explicitly paused the loop. While paused,
+  // the screen stays visible but won't auto-arm the mic; tapping the big
+  // central button re-arms it.
+  const pausedRef = useRef<boolean>(false);
+  const playback = useMessagePlayback();
+
+  // Pulse animation on the avatar — runs whenever we're listening or the
+  // agent is speaking, so the user has a visual signal of "the system is
+  // doing something." Driven by phase, not isPlaying directly, so the
+  // pulse tracks our orchestrator state cleanly.
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (phase === 'listening' || phase === 'speaking') {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 1.08, duration: 700, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        ]),
+      );
+      loop.start();
+      return () => loop.stop();
+    }
+    pulse.setValue(1);
+    return () => {};
+  }, [phase, pulse]);
+
+  // Cleanly tear down the recording if the modal closes (user tapped X,
+  // navigated away, or the screen unmounted). Without this the mic stays
+  // hot and battery drains.
+  const teardownRecording = useCallback(async () => {
+    const r = recordingRef.current;
+    recordingRef.current = null;
+    if (!r) return;
+    try { await r.stopAndUnloadAsync(); } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (!visible) {
+      void teardownRecording();
+      void playback.stop();
+      pausedRef.current = false;
+      setPhase('idle');
+    }
+  }, [visible, teardownRecording, playback]);
+
+  // Watch agent playback finishing so we can re-arm the mic. While the
+  // agent is speaking the singleton's activeKey is non-null. The moment
+  // it goes back to null AND we're in the speaking phase, switch to
+  // listening (assuming user hasn't paused).
+  const wasSpeakingRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (!visible) return;
+    const isAnyPlaying = playback.activeKey !== null;
+    const justFinished = wasSpeakingRef.current && !isAnyPlaying;
+    wasSpeakingRef.current = isAnyPlaying;
+
+    if (justFinished && phase === 'speaking' && !pausedRef.current) {
+      void startListening();
+    }
+  }, [playback.activeKey, phase, visible]);
+
+  const startListening = useCallback(async () => {
+    if (recordingRef.current) return;
+    pausedRef.current = false;
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Microphone access required',
+          'Enable microphone access in Settings to use voice mode.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        );
+        setPhase('paused');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        {
+          ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+          isMeteringEnabled: true,
+        },
+        undefined,
+        METERING_INTERVAL_MS,
+      );
+      recordingRef.current = recording;
+      recordingStartedAtRef.current = Date.now();
+      lastLoudAtRef.current = Date.now();
+      setPhase('listening');
+
+      recording.setOnRecordingStatusUpdate((status) => {
+        if (!status.isRecording || !status.canRecord) return;
+        const now = Date.now();
+        const elapsed = now - recordingStartedAtRef.current;
+        const meter = (status as { metering?: number }).metering;
+
+        if (typeof meter === 'number' && meter > SILENCE_THRESHOLD_DB) {
+          lastLoudAtRef.current = now;
+        }
+        const silentFor = now - lastLoudAtRef.current;
+
+        // Endpoint detection: enough audio recorded AND a long-enough
+        // silence at the end. Cap at MAX_RECORDING_MS so a stuck mic
+        // doesn't drain forever.
+        if (
+          (elapsed > MIN_RECORDING_MS && silentFor > SILENCE_HOLD_MS) ||
+          elapsed > MAX_RECORDING_MS
+        ) {
+          void finishListening();
+        }
+      });
+    } catch (err) {
+      console.warn('Voice mode: failed to start recording', err);
+      setPhase('error');
+    }
+  }, []);
+
+  const finishListening = useCallback(async () => {
+    const r = recordingRef.current;
+    recordingRef.current = null;
+    if (!r) return;
+    setPhase('thinking');
+    try {
+      await r.stopAndUnloadAsync();
+      const uri = r.getURI();
+      if (!uri) throw new Error('No recording URI');
+      const { transcript } = await transcribeAudio(uri, conversationId);
+      const text = (transcript ?? '').trim();
+      if (!text) {
+        // Empty transcript — likely the user didn't speak. Re-arm.
+        if (!pausedRef.current) {
+          void startListening();
+        } else {
+          setPhase('paused');
+        }
+        return;
+      }
+
+      const replyText = await onUserSpoke(text);
+      if (replyText && replyText.trim().length > 0) {
+        setPhase('speaking');
+        try {
+          await fetchAndPlay('voice-mode-reply', conversationId, replyText);
+        } catch (err) {
+          console.warn('Voice mode: TTS playback failed', err);
+          setPhase('paused');
+        }
+      } else {
+        // No reply text (e.g. send was rejected) — bounce back to idle.
+        setPhase('paused');
+      }
+    } catch (err) {
+      console.warn('Voice mode: transcription failed', err);
+      setPhase('error');
+    }
+  }, [conversationId, onUserSpoke, startListening]);
+
+  const handleCenterTap = useCallback(() => {
+    if (phase === 'listening') {
+      // User tapped while listening — finish early.
+      void finishListening();
+      return;
+    }
+    if (phase === 'speaking') {
+      // User tapped while agent talks — interrupt + go straight to listening.
+      void playback.stop();
+      void startListening();
+      return;
+    }
+    if (phase === 'thinking') {
+      // Don't interrupt a network round-trip — let it finish.
+      return;
+    }
+    // idle / paused / error — start a fresh listening cycle.
+    void startListening();
+  }, [phase, finishListening, startListening, playback]);
+
+  const handleClose = useCallback(async () => {
+    pausedRef.current = true;
+    await teardownRecording();
+    await playback.stop();
+    onClose();
+  }, [teardownRecording, playback, onClose]);
+
+  const heroUri = resolveAssetUrl(avatarImageUrl);
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      onRequestClose={handleClose}
+      statusBarTranslucent
+    >
+      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <View style={styles.topBar}>
+          <Text style={styles.title} numberOfLines={1}>
+            {avatarName} - voice mode
+          </Text>
+          <Pressable
+            onPress={handleClose}
+            hitSlop={12}
+            accessibilityLabel="Close voice mode"
+            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons name="close" size={22} color={colors.textPrimary} />
+          </Pressable>
+        </View>
+
+        <View style={styles.heroArea}>
+          <Animated.View
+            style={[
+              styles.avatarWrap,
+              {
+                transform: [{ scale: pulse }],
+                shadowColor: accent,
+                borderColor: accent,
+              },
+            ]}
+          >
+            {heroUri ? (
+              <Image source={{ uri: heroUri }} style={styles.avatar} resizeMode="cover" />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: accent + '40' }]} />
+            )}
+          </Animated.View>
+          <View style={[styles.statusPill, { borderColor: accent }]}>
+            {(phase === 'listening' || phase === 'speaking') && (
+              <View style={[styles.statusDot, { backgroundColor: accent }]} />
+            )}
+            <Text style={styles.statusText}>{PHASE_LABELS[phase]}</Text>
+          </View>
+          <Text style={styles.helper}>
+            {phase === 'listening'
+              ? 'Speak naturally — I will pause when you do.'
+              : phase === 'speaking'
+              ? `${avatarName} is speaking. Tap to interrupt.`
+              : phase === 'thinking'
+              ? 'Hang on a moment…'
+              : 'Tap the mic and start talking. I will reply by voice.'}
+          </Text>
+        </View>
+
+        <View style={styles.controls}>
+          <Pressable
+            onPress={handleCenterTap}
+            disabled={phase === 'thinking'}
+            accessibilityLabel="Toggle voice"
+            style={({ pressed }) => [
+              styles.bigMic,
+              {
+                backgroundColor:
+                  phase === 'listening'
+                    ? accent
+                    : phase === 'speaking'
+                    ? 'rgba(20,26,38,0.9)'
+                    : accent,
+                borderColor: accent,
+              },
+              pressed && { opacity: 0.85 },
+              phase === 'thinking' && { opacity: 0.5 },
+            ]}
+          >
+            <Ionicons
+              name={
+                phase === 'listening'
+                  ? 'stop'
+                  : phase === 'speaking'
+                  ? 'hand-left'
+                  : phase === 'thinking'
+                  ? 'ellipsis-horizontal'
+                  : 'mic'
+              }
+              size={36}
+              color={colors.textPrimary}
+            />
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#0b0f17',
+    paddingHorizontal: spacing.md,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  title: {
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    flex: 1,
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(20,26,38,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroArea: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+  },
+  avatarWrap: {
+    width: 220,
+    height: 220,
+    borderRadius: 999,
+    borderWidth: 2,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 30,
+    elevation: 10,
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: 999,
+    borderWidth: 1,
+    backgroundColor: 'rgba(20,26,38,0.85)',
+    gap: spacing.xs + 2,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  helper: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  controls: {
+    alignItems: 'center',
+    paddingBottom: spacing.lg,
+  },
+  bigMic: {
+    width: 88,
+    height: 88,
+    borderRadius: 999,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+});

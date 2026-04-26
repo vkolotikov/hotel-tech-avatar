@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, Pressable, Text, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Message, Attachment } from '../../types/models';
 import { colors, spacing, radius, fontSize, avatarColors, AvatarSlug } from '../../theme';
 import { CitationBadge } from './CitationBadge';
 import { parseContent } from '../../utils/citations';
+import { fetchAndPlay, useMessagePlayback } from '../../hooks/useMessagePlayback';
 
 function iconForMime(mime: string | null | undefined): keyof typeof Ionicons.glyphMap {
   if (!mime) return 'document-outline';
@@ -34,6 +35,61 @@ type Props = {
   message: Message;
   avatarSlug: string;
 };
+
+type SpeakButtonProps = {
+  message: Message;
+  accent: string;
+};
+
+/**
+ * Per-message TTS playback button. Sits in the agent bubble's footer
+ * row and toggles between ▶ Speak and ■ Stop. Uses the shared playback
+ * singleton so opening playback on one bubble auto-stops any other.
+ */
+function SpeakButton({ message, accent }: SpeakButtonProps) {
+  const playback = useMessagePlayback();
+  const [loading, setLoading] = useState(false);
+  const isThis = playback.isPlaying(message.id);
+
+  const handlePress = async () => {
+    if (isThis) {
+      await playback.stop();
+      return;
+    }
+    if (!message.content?.trim()) return;
+    setLoading(true);
+    try {
+      await fetchAndPlay(message.id, message.conversation_id, message.content);
+    } catch (err) {
+      Alert.alert('Could not play voice', (err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      hitSlop={6}
+      accessibilityLabel={isThis ? 'Stop speaking' : 'Speak this message'}
+      style={({ pressed }) => [
+        styles.speakBtn,
+        isThis && { borderColor: accent, backgroundColor: accent + '22' },
+        pressed && { opacity: 0.7 },
+      ]}
+      disabled={loading}
+    >
+      <Ionicons
+        name={isThis ? 'stop' : loading ? 'ellipsis-horizontal' : 'play'}
+        size={11}
+        color={isThis ? accent : colors.textMuted}
+      />
+      <Text style={[styles.speakBtnText, isThis && { color: accent }]}>
+        {isThis ? 'Stop' : loading ? '...' : 'Speak'}
+      </Text>
+    </Pressable>
+  );
+}
 
 function formatTime(iso: string | undefined): string {
   if (!iso) return '';
@@ -102,6 +158,9 @@ export function MessageBubble({ message, avatarSlug }: Props) {
             verificationFailures={message.verification_failures_json}
           />
         )}
+        {!isUser && displayText.trim().length > 0 && (
+          <SpeakButton message={message} accent={accent} />
+        )}
         {time !== '' && <Text style={styles.timeText}>{time}</Text>}
       </View>
     </View>
@@ -145,6 +204,23 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: '500',
+    letterSpacing: 0.3,
+  },
+  speakBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(20,26,38,0.6)',
+  },
+  speakBtnText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
     letterSpacing: 0.3,
   },
 });

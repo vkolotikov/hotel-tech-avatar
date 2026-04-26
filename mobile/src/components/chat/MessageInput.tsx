@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -29,12 +29,11 @@ type Props = {
   ) => Promise<boolean> | void;
   disabled: boolean;
   /**
-   * True while the agent's TTS reply is currently playing through the
-   * device speaker. Used by the voice-mode auto-arm flow: once
-   * playback ends, the mic re-arms automatically so the user can
-   * answer back without tapping anything.
+   * Open the full-screen continuous voice mode (talks back-and-forth
+   * with the avatar without leaving the keyboard). Bubble-up to the
+   * screen so it can render the modal alongside the message list.
    */
-  isAgentSpeaking?: boolean;
+  onOpenVoiceMode: () => void;
 };
 
 function deriveFilename(uri: string, fallbackExt = 'jpg'): string {
@@ -71,46 +70,23 @@ export function MessageInput({
   accent = colors.primary,
   onSend,
   disabled,
-  isAgentSpeaking,
+  onOpenVoiceMode,
 }: Props) {
   const [text, setText] = useState('');
-  // Dictate mode (default): transcript fills the input, user reviews + sends.
-  // Voice mode: transcript auto-sends and the agent reply plays through TTS.
-  const [voiceMode, setVoiceMode] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const insets = useSafeAreaInsets();
+
+  // Mic in this row is dictation-only — record once, transcribe, append
+  // to the text field so the user can review before sending. Continuous
+  // back-and-forth voice happens in VoiceModeScreen, behind the new
+  // headset button.
   const recorder = useVoiceRecorder(conversationId, (transcript) => {
     const trimmed = transcript.trim();
     if (!trimmed) return;
-    if (voiceMode) {
-      onSend(trimmed, { voice: true });
-    } else {
-      // Dictate — append to whatever the user had typed.
-      setText((prev) => (prev ? prev + ' ' + trimmed : trimmed));
-    }
+    setText((prev) => (prev ? prev + ' ' + trimmed : trimmed));
   });
-
-  // Auto-arm mic after the agent's TTS finishes (voice-mode only).
-  // We watch isAgentSpeaking for a true→false transition; on the
-  // falling edge, if voice mode is still on and the recorder isn't
-  // already busy, kick start() so the user can immediately reply
-  // without tapping the mic. Tracks the previous value via a ref so
-  // we fire ONCE on the edge — not every render where it stays false.
-  const prevIsAgentSpeaking = useRef<boolean | undefined>(isAgentSpeaking);
-  useEffect(() => {
-    const wasSpeaking = prevIsAgentSpeaking.current === true;
-    const justStopped = wasSpeaking && !isAgentSpeaking;
-    prevIsAgentSpeaking.current = isAgentSpeaking;
-
-    if (!justStopped) return;
-    if (!voiceMode) return;
-    if (recorder.isRecording || recorder.isTranscribing) return;
-    if (disabled) return;
-
-    void recorder.start();
-  }, [isAgentSpeaking, voiceMode, recorder, disabled]);
 
   const canSend =
     !disabled &&
@@ -122,19 +98,9 @@ export function MessageInput({
     if (!canSend) return;
     const trimmed = text.trim();
     const ids = attachments.map((a) => a.id);
-    // Voice mode = "I want to hear the answer" — applies whether the
-    // user typed the message or recorded it. Without this the typed
-    // path would silently send and the agent's reply would never play
-    // back, which made voice mode feel broken when toggled mid-thread.
     const opts: { voice?: boolean; attachmentIds?: number[] } = {};
-    if (voiceMode) opts.voice = true;
     if (ids.length > 0) opts.attachmentIds = ids;
-    const result = onSend(
-      trimmed,
-      Object.keys(opts).length > 0 ? opts : undefined,
-    );
-    // If onSend returned a promise, wait for the outcome before clearing
-    // local state so a failed send keeps the user's text and attachments.
+    const result = onSend(trimmed, Object.keys(opts).length > 0 ? opts : undefined);
     if (result && typeof (result as Promise<boolean>).then === 'function') {
       const ok = await (result as Promise<boolean>);
       if (ok === false) return;
@@ -219,11 +185,8 @@ export function MessageInput({
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const voiceActive = recorder.isRecording || recorder.isTranscribing;
   const hint = recorder.isRecording
-    ? voiceMode
-      ? 'Voice mode · tap mic to send'
-      : 'Listening… tap mic to finish'
+    ? 'Listening… tap mic to finish'
     : recorder.isTranscribing
     ? 'Transcribing…'
     : uploading
@@ -269,36 +232,13 @@ export function MessageInput({
         </ScrollView>
       )}
 
-      <View style={styles.modeRow} pointerEvents={voiceActive ? 'none' : 'auto'}>
-        <Pressable
-          onPress={() => setVoiceMode((v) => !v)}
-          style={[
-            styles.modeChip,
-            voiceMode && { borderColor: accent, backgroundColor: accent + '22' },
-          ]}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: voiceMode }}
-          accessibilityLabel="Toggle voice mode"
-        >
-          <View
-            style={[
-              styles.modeDot,
-              { backgroundColor: voiceMode ? accent : 'rgba(255,255,255,0.3)' },
-            ]}
-          />
-          <Text style={[styles.modeChipText, voiceMode && { color: colors.textPrimary }]}>
-            {voiceMode ? 'Voice mode on' : 'Dictate to text'}
-          </Text>
-        </Pressable>
-      </View>
-
       <View style={[styles.container, { paddingBottom: spacing.sm + insets.bottom }]}>
         <Pressable
           onPress={() => setPickerVisible(true)}
           disabled={disabled || uploading || recorder.isTranscribing}
           style={({ pressed }) => [
-            styles.attachButton,
-            (disabled || uploading || recorder.isTranscribing) && styles.attachDisabled,
+            styles.iconButton,
+            (disabled || uploading || recorder.isTranscribing) && styles.iconDisabled,
             pressed && { opacity: 0.7 },
           ]}
           accessibilityLabel="Attach file or photo"
@@ -309,12 +249,15 @@ export function MessageInput({
             <Ionicons name="add" size={22} color={colors.textPrimary} />
           )}
         </Pressable>
+
+        {/* Dictation mic — record once, transcribe to input field. */}
         <VoiceRecordButton
           isRecording={recorder.isRecording}
           isTranscribing={recorder.isTranscribing}
           accent={accent}
           onToggle={recorder.toggle}
         />
+
         <TextInput
           style={[
             styles.input,
@@ -322,30 +265,44 @@ export function MessageInput({
           ]}
           value={text}
           onChangeText={setText}
-          placeholder={
-            recorder.isTranscribing
-              ? ''
-              : voiceMode
-              ? 'Voice mode — tap mic to speak'
-              : 'Message… or tap mic to dictate'
-          }
+          placeholder={recorder.isTranscribing ? '' : 'Message…'}
           placeholderTextColor={colors.textMuted}
           multiline
           editable={!disabled && !recorder.isTranscribing}
         />
-        <Pressable
-          testID="send-button"
-          style={[
-            styles.sendButton,
-            { backgroundColor: accent },
-            !canSend && styles.sendDisabled,
-          ]}
-          onPress={handleSend}
-          disabled={!canSend}
-          accessibilityLabel="Send message"
-        >
-          <Ionicons name="send" size={18} color={colors.textPrimary} />
-        </Pressable>
+
+        {/* Voice-mode entry — opens the continuous-conversation full-screen
+            UI. We swap to a Send icon when there's something to send, so
+            the rightmost slot follows ChatGPT's "send vs talk" pattern. */}
+        {canSend ? (
+          <Pressable
+            testID="send-button"
+            style={[
+              styles.sendButton,
+              { backgroundColor: accent },
+            ]}
+            onPress={handleSend}
+            disabled={!canSend}
+            accessibilityLabel="Send message"
+          >
+            <Ionicons name="send" size={18} color={colors.textPrimary} />
+          </Pressable>
+        ) : (
+          <Pressable
+            testID="voice-mode-button"
+            style={({ pressed }) => [
+              styles.voiceModeButton,
+              { backgroundColor: accent },
+              (disabled || recorder.isRecording || recorder.isTranscribing) && styles.sendDisabled,
+              pressed && { opacity: 0.85 },
+            ]}
+            onPress={onOpenVoiceMode}
+            disabled={disabled || recorder.isRecording || recorder.isTranscribing}
+            accessibilityLabel="Start voice conversation"
+          >
+            <Ionicons name="mic-circle" size={26} color={colors.textPrimary} />
+          </Pressable>
+        )}
       </View>
 
       <AttachmentPickerSheet
@@ -410,40 +367,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm - 1,
     flexShrink: 1,
   },
-  modeRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    paddingTop: spacing.xs,
-  },
-  modeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(20,26,38,0.6)',
-  },
-  modeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
-  },
-  modeChipText: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
   container: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     padding: spacing.sm,
     gap: spacing.xs,
   },
-  attachButton: {
+  iconButton: {
     width: 44,
     height: 44,
     borderRadius: radius.pill,
@@ -453,7 +383,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
   },
-  attachDisabled: { opacity: 0.4 },
+  iconDisabled: { opacity: 0.4 },
   input: {
     flex: 1,
     marginHorizontal: spacing.xs,
@@ -467,6 +397,13 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voiceModeButton: {
     width: 44,
     height: 44,
     borderRadius: radius.pill,
