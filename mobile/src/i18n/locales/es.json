@@ -318,5 +318,15 @@
     "purchaseFailed": "Compra fallida",
     "restoreFailed": "Restauración fallida"
   },
-  "tabs": { "home": "Inicio", "library": "Biblioteca", "history": "Historial", "settings": "Ajustes" }
+  "tabs": { "home": "Inicio", "library": "Biblioteca", "history": "Historial", "settings": "Ajustes" },
+  "avatarHome": {
+    "continueChat": "Continuar chat",
+    "newChat": "Nuevo chat",
+    "startChat": "Empezar chat",
+    "starting": "Iniciando…",
+    "watchDemo": "Ver demo",
+    "newChatTitle": "¿Iniciar un nuevo chat?",
+    "newChatBody": "Mantenemos la conversación actual con {{name}} en tu historial y abrimos una nueva.",
+    "couldNotStart": "No se pudo iniciar el chat"
+  }
 }

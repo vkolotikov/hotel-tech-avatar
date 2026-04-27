@@ -292,5 +292,15 @@
     "purchaseFailed": "Zakup nie powiódł się",
     "restoreFailed": "Przywracanie nie powiodło się"
   },
-  "tabs": { "home": "Główna", "library": "Biblioteka", "history": "Historia", "settings": "Ustawienia" }
+  "tabs": { "home": "Główna", "library": "Biblioteka", "history": "Historia", "settings": "Ustawienia" },
+  "avatarHome": {
+    "continueChat": "Kontynuuj rozmowę",
+    "newChat": "Nowa rozmowa",
+    "startChat": "Rozpocznij",
+    "starting": "Uruchamiam…",
+    "watchDemo": "Obejrzyj demo",
+    "newChatTitle": "Rozpocząć nową rozmowę?",
+    "newChatBody": "Zachowamy bieżącą rozmowę z {{name}} w historii i otworzymy nową.",
+    "couldNotStart": "Nie udało się rozpocząć rozmowy"
+  }
 }

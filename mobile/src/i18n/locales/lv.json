@@ -292,5 +292,15 @@
     "purchaseFailed": "Pirkums neizdevās",
     "restoreFailed": "Atjaunošana neizdevās"
   },
-  "tabs": { "home": "Sākums", "library": "Bibliotēka", "history": "Vēsture", "settings": "Iestatījumi" }
+  "tabs": { "home": "Sākums", "library": "Bibliotēka", "history": "Vēsture", "settings": "Iestatījumi" },
+  "avatarHome": {
+    "continueChat": "Turpināt sarunu",
+    "newChat": "Jauna saruna",
+    "startChat": "Sākt",
+    "starting": "Sākt…",
+    "watchDemo": "Skatīt demo",
+    "newChatTitle": "Sākt jaunu sarunu?",
+    "newChatBody": "Pašreizējo sarunu ar {{name}} saglabāsim vēsturē, atvērsim jaunu.",
+    "couldNotStart": "Neizdevās sākt sarunu"
+  }
 }

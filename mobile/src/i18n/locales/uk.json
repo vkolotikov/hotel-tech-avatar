@@ -292,5 +292,15 @@
     "purchaseFailed": "Покупка не вдалася",
     "restoreFailed": "Не вдалося відновити"
   },
-  "tabs": { "home": "Головна", "library": "Бібліотека", "history": "Історія", "settings": "Налаштування" }
+  "tabs": { "home": "Головна", "library": "Бібліотека", "history": "Історія", "settings": "Налаштування" },
+  "avatarHome": {
+    "continueChat": "Продовжити розмову",
+    "newChat": "Нова розмова",
+    "startChat": "Почати",
+    "starting": "Запуск…",
+    "watchDemo": "Дивитись демо",
+    "newChatTitle": "Розпочати нову розмову?",
+    "newChatBody": "Поточну розмову з {{name}} збережемо в історії, відкриємо нову.",
+    "couldNotStart": "Не вдалося розпочати розмову"
+  }
 }

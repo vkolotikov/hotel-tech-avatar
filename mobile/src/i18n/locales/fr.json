@@ -292,5 +292,15 @@
     "purchaseFailed": "Achat échoué",
     "restoreFailed": "Restauration échouée"
   },
-  "tabs": { "home": "Accueil", "library": "Bibliothèque", "history": "Historique", "settings": "Réglages" }
+  "tabs": { "home": "Accueil", "library": "Bibliothèque", "history": "Historique", "settings": "Réglages" },
+  "avatarHome": {
+    "continueChat": "Continuer la conversation",
+    "newChat": "Nouvelle conversation",
+    "startChat": "Démarrer",
+    "starting": "Démarrage…",
+    "watchDemo": "Voir la démo",
+    "newChatTitle": "Démarrer une nouvelle conversation ?",
+    "newChatBody": "On garde la conversation actuelle avec {{name}} dans votre historique et on en ouvre une nouvelle.",
+    "couldNotStart": "Impossible de démarrer la conversation"
+  }
 }

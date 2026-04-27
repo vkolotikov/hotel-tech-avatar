@@ -486,5 +486,15 @@
     "library": "Library",
     "history": "History",
     "settings": "Settings"
+  },
+  "avatarHome": {
+    "continueChat": "Continue chat",
+    "newChat": "New chat",
+    "startChat": "Start chat",
+    "starting": "Starting…",
+    "watchDemo": "Watch demo",
+    "newChatTitle": "Start a new chat?",
+    "newChatBody": "This keeps the current conversation with {{name}} in your history and opens a fresh one.",
+    "couldNotStart": "Couldn't start chat"
   }
 }

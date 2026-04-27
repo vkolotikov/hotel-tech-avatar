@@ -292,5 +292,15 @@
     "purchaseFailed": "Acquisto fallito",
     "restoreFailed": "Ripristino fallito"
   },
-  "tabs": { "home": "Home", "library": "Libreria", "history": "Cronologia", "settings": "Impostazioni" }
+  "tabs": { "home": "Home", "library": "Libreria", "history": "Cronologia", "settings": "Impostazioni" },
+  "avatarHome": {
+    "continueChat": "Continua chat",
+    "newChat": "Nuova chat",
+    "startChat": "Inizia",
+    "starting": "Avvio…",
+    "watchDemo": "Guarda demo",
+    "newChatTitle": "Iniziare una nuova chat?",
+    "newChatBody": "Manteniamo la conversazione attuale con {{name}} nella cronologia e ne apriamo una nuova.",
+    "couldNotStart": "Impossibile avviare la chat"
+  }
 }

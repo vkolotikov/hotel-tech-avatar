@@ -292,5 +292,15 @@
     "purchaseFailed": "Не удалось купить",
     "restoreFailed": "Не удалось восстановить"
   },
-  "tabs": { "home": "Главная", "library": "Библиотека", "history": "История", "settings": "Настройки" }
+  "tabs": { "home": "Главная", "library": "Библиотека", "history": "История", "settings": "Настройки" },
+  "avatarHome": {
+    "continueChat": "Продолжить чат",
+    "newChat": "Новый чат",
+    "startChat": "Начать чат",
+    "starting": "Запуск…",
+    "watchDemo": "Смотреть демо",
+    "newChatTitle": "Начать новый чат?",
+    "newChatBody": "Текущий разговор с {{name}} останется в истории, откроется новый.",
+    "couldNotStart": "Не удалось начать чат"
+  }
 }

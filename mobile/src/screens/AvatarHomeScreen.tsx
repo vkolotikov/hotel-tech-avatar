@@ -15,6 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useAvatars } from '../hooks/useAvatars';
 import { useConversations, useCreateConversation } from '../hooks/useConversations';
 import { IntroVideoModal } from '../components/avatars/IntroVideoModal';
@@ -30,6 +31,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export function AvatarHomeScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { data: avatars, isLoading, isError } = useAvatars();
   const { data: conversationsData } = useConversations();
   const createMutation = useCreateConversation();
@@ -60,6 +62,14 @@ export function AvatarHomeScreen() {
       });
       return;
     }
+    await createAndOpen(avatar);
+  };
+
+  // Create a fresh conversation regardless of any existing one. Used by
+  // the dedicated "New chat" button so the user can deliberately start
+  // over (e.g. when their last topic with this avatar is finished and
+  // they want a clean thread, or when revisiting after profile changes).
+  const createAndOpen = async (avatar: Avatar) => {
     try {
       const conversation = await createMutation.mutateAsync({
         agentId: avatar.id,
@@ -73,8 +83,25 @@ export function AvatarHomeScreen() {
         promptSuggestions: avatar.prompt_suggestions,
       });
     } catch (err) {
-      Alert.alert('Could not start chat', (err as Error).message ?? 'Unknown error');
+      Alert.alert(t('avatarHome.couldNotStart'), (err as Error).message ?? '');
     }
+  };
+
+  const handleNewChat = (avatar: Avatar) => {
+    // If there's no prior conversation, "New chat" is just "Start chat" —
+    // skip the confirm dialog and go straight in.
+    if (!conversationsByAgent.has(avatar.id)) {
+      void createAndOpen(avatar);
+      return;
+    }
+    Alert.alert(
+      t('avatarHome.newChatTitle'),
+      t('avatarHome.newChatBody', { name: avatar.name }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('avatarHome.newChat'), onPress: () => void createAndOpen(avatar) },
+      ],
+    );
   };
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -114,6 +141,7 @@ export function AvatarHomeScreen() {
             avatar={item}
             hasExistingChat={conversationsByAgent.has(item.id)}
             onStart={() => handleStart(item)}
+            onNewChat={() => handleNewChat(item)}
             onPlayIntro={() => setIntroAvatar(item)}
             pending={createMutation.isPending}
           />
@@ -162,12 +190,14 @@ type PageProps = {
   avatar: Avatar;
   hasExistingChat: boolean;
   onStart: () => void;
+  onNewChat: () => void;
   onPlayIntro: () => void;
   pending: boolean;
 };
 
-function AvatarPage({ avatar, hasExistingChat, onStart, onPlayIntro, pending }: PageProps) {
+function AvatarPage({ avatar, hasExistingChat, onStart, onNewChat, onPlayIntro, pending }: PageProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const slug = avatar.slug as AvatarSlug;
   const accent = slug in avatarColors ? avatarColors[slug] : colors.primary;
   const imageUrl = resolveAssetUrl(avatar.avatar_image_url);
@@ -206,6 +236,9 @@ function AvatarPage({ avatar, hasExistingChat, onStart, onPlayIntro, pending }: 
           )}
 
           <View style={pageStyles.ctaRow}>
+            {/* Primary CTA: continue if there's a previous conversation,
+                otherwise start the first one. The label changes but the
+                handler is the same — handleStart picks the right path. */}
             <Pressable
               onPress={onStart}
               disabled={pending}
@@ -216,9 +249,35 @@ function AvatarPage({ avatar, hasExistingChat, onStart, onPlayIntro, pending }: 
               ]}
             >
               <Text style={pageStyles.ctaText}>
-                {pending ? 'Starting…' : hasExistingChat ? 'Continue chat' : 'Start chat'}
+                {pending
+                  ? t('avatarHome.starting')
+                  : hasExistingChat
+                  ? t('avatarHome.continueChat')
+                  : t('avatarHome.startChat')}
               </Text>
             </Pressable>
+
+            {/* Secondary CTA: only shown when there IS an existing chat,
+                because otherwise "Continue" + "New chat" both mean the
+                same thing — confusing. With no prior chat, the primary
+                button is already labelled "Start chat". */}
+            {hasExistingChat && (
+              <Pressable
+                onPress={onNewChat}
+                disabled={pending}
+                style={({ pressed }) => [
+                  pageStyles.secondaryCta,
+                  { borderColor: accent },
+                  (pressed || pending) && pageStyles.ctaPressed,
+                ]}
+                accessibilityLabel={t('avatarHome.newChat')}
+              >
+                <Text style={[pageStyles.secondaryCtaText, { color: accent }]}>
+                  {t('avatarHome.newChat')}
+                </Text>
+              </Pressable>
+            )}
+
             {avatar.intro_video_url && (
               <Pressable
                 onPress={onPlayIntro}
@@ -227,9 +286,11 @@ function AvatarPage({ avatar, hasExistingChat, onStart, onPlayIntro, pending }: 
                   { borderColor: accent },
                   pressed && pageStyles.ctaPressed,
                 ]}
-                accessibilityLabel={`Play intro video for ${avatar.name}`}
+                accessibilityLabel={t('avatarHome.watchDemo')}
               >
-                <Text style={[pageStyles.playPillText, { color: accent }]}>▶ Play intro</Text>
+                <Text style={[pageStyles.playPillText, { color: accent }]}>
+                  ▶ {t('avatarHome.watchDemo')}
+                </Text>
               </Pressable>
             )}
           </View>
@@ -346,6 +407,22 @@ const pageStyles = StyleSheet.create({
   ctaPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   ctaText: {
     color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  // Bordered (outlined) variant for the "New chat" secondary action —
+  // visually subordinate to the filled primary CTA but more prominent
+  // than the demo pill. Sits in the same row, inherits the avatar's
+  // accent for the border + text colour.
+  secondaryCta: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    backgroundColor: 'rgba(11,15,23,0.55)',
+  },
+  secondaryCtaText: {
     fontSize: fontSize.md,
     fontWeight: '700',
     letterSpacing: 0.3,

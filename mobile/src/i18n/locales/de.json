@@ -292,5 +292,15 @@
     "purchaseFailed": "Kauf fehlgeschlagen",
     "restoreFailed": "Wiederherstellung fehlgeschlagen"
   },
-  "tabs": { "home": "Start", "library": "Bibliothek", "history": "Verlauf", "settings": "Einstellungen" }
+  "tabs": { "home": "Start", "library": "Bibliothek", "history": "Verlauf", "settings": "Einstellungen" },
+  "avatarHome": {
+    "continueChat": "Chat fortsetzen",
+    "newChat": "Neuer Chat",
+    "startChat": "Chat starten",
+    "starting": "Wird gestartet…",
+    "watchDemo": "Demo ansehen",
+    "newChatTitle": "Neuen Chat starten?",
+    "newChatBody": "Wir behalten das aktuelle Gespräch mit {{name}} im Verlauf und öffnen ein neues.",
+    "couldNotStart": "Chat konnte nicht gestartet werden"
+  }
 }
