@@ -67,9 +67,12 @@ return [
         'model'                => env('OPENAI_MODEL_DEFAULT', 'gpt-4o'),
         'timeout'              => env('OPENAI_TIMEOUT_SECONDS', 45),
         'temperature'          => env('OPENAI_TEMPERATURE', 0.3),
-        // Tight default; natural chat wants short replies by default, and the
-        // mobile "Tell me more" path can relax it per-turn.
-        'max_output_tokens'    => env('OPENAI_MAX_OUTPUT_TOKENS', 180),
+        // Default keeps natural-conversation replies short, but leaves
+        // headroom for structured asks ("give me a meal plan", "list 10
+        // foods rich in iron", "compare these in a table") which were
+        // truncating at the previous 180-token cap. The model only uses
+        // what it needs; idle chat still emits 60-150 tokens.
+        'max_output_tokens'    => env('OPENAI_MAX_OUTPUT_TOKENS', 1500),
         'max_context_messages' => env('OPENAI_MAX_CONTEXT_MESSAGES', 20),
         'max_knowledge_chars'  => env('OPENAI_MAX_KNOWLEDGE_CHARS', 12000),
         'tts_model'            => env('OPENAI_TTS_MODEL', 'gpt-4o-mini-tts'),

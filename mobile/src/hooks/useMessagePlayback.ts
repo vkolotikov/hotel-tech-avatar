@@ -34,22 +34,55 @@ async function stopInternal(): Promise<void> {
 
 async function playInternal(key: ActiveKey, dataUrl: string): Promise<void> {
   await stopInternal();
-  if (!dataUrl) return;
+  if (!dataUrl) {
+    throw new Error('Empty audio URL');
+  }
+
+  // Force the audio session into pure-playback mode. Critical when the
+  // user just used the dictation mic or voice mode — that left the
+  // session in record-and-playback, and on some Android devices
+  // playback stays muted until we explicitly clear allowsRecordingIOS
+  // (the option name is misleading; expo-av reads it on Android too).
   await Audio.setAudioModeAsync({
     playsInSilentModeIOS: true,
     allowsRecordingIOS: false,
-  }).catch(() => { /* device may not allow — best-effort */ });
+    staysActiveInBackground: false,
+    shouldDuckAndroid: true,
+    playThroughEarpieceAndroid: false,
+  }).catch((err) => {
+    console.warn('useMessagePlayback: setAudioModeAsync failed', err);
+  });
 
-  const { sound } = await Audio.Sound.createAsync(
-    { uri: dataUrl },
-    { shouldPlay: true },
-  );
+  let sound: Audio.Sound;
+  try {
+    const result = await Audio.Sound.createAsync(
+      { uri: dataUrl },
+      { shouldPlay: true, volume: 1.0 },
+    );
+    sound = result.sound;
+  } catch (err) {
+    console.warn('useMessagePlayback: createAsync failed', err);
+    throw err instanceof Error ? err : new Error(String(err));
+  }
   currentSound = sound;
   currentKey = key;
   notify();
 
   sound.setOnPlaybackStatusUpdate((status) => {
-    if (!status.isLoaded) return;
+    if (!status.isLoaded) {
+      // Status carries an `error` field when load fails. Surface it so
+      // a silent failure becomes a noisy one in dev.
+      const errStatus = status as { error?: string };
+      if (errStatus.error) {
+        console.warn('useMessagePlayback: playback status error', errStatus.error);
+        if (currentSound === sound) {
+          currentSound = null;
+          currentKey = null;
+          notify();
+        }
+      }
+      return;
+    }
     if (status.didJustFinish) {
       // Race-free check: only clear if THIS sound is still the active one.
       if (currentSound === sound) {

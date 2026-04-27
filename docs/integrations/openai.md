@@ -51,7 +51,7 @@ Model defaults (overridable per-call and per-env):
 
 ## Project-specific notes
 
-- `max_tokens` is currently capped at 220 (`OPENAI_MAX_OUTPUT_TOKENS`) — short-reply tuning for the hotel concierge flow. Wellness vertical will need this raised and made per-agent.
+- `max_tokens` is set to 1500 (`OPENAI_MAX_OUTPUT_TOKENS`). Raised from 220 on 2026-04-27 because structured asks ("give me a meal plan", "compare these in a table") were truncating mid-answer. Conversational replies still cost 60-150 tokens — the cap only matters when the user requests substance. Per-agent override remains a future option but isn't yet wired.
 - Context window capped at 20 recent messages (`OPENAI_MAX_CONTEXT_MESSAGES`) plus retrieved knowledge trimmed to 12k chars (`OPENAI_MAX_KNOWLEDGE_CHARS`). These heuristics predate retrieval-based grounding and should be revisited alongside the wellness RAG pipeline.
 - `uploadFile` + vector-store endpoints are for OpenAI's hosted assistants feature. The wellness vertical will use local pgvector (`knowledge_chunks.embedding`) and skip these — keep the OpenAI vector-store code path, but don't build new features on it.
 - `base_url` is env-overridable (`OPENAI_API_BASE_URL`) for staging / proxy routing; defaults to `https://api.openai.com/v1`.

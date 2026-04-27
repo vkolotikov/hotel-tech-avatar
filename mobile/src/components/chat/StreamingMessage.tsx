@@ -20,9 +20,12 @@ export function StreamingMessage({ text, avatarSlug }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { alignItems: 'flex-start', marginBottom: spacing.md },
+  // Stretch so the streaming bubble matches the final agent bubble's
+  // width when the stream completes — otherwise long replies "snap"
+  // wider on completion, which is jarring.
+  row: { alignSelf: 'stretch', marginBottom: spacing.md },
   bubble: {
-    maxWidth: '85%',
+    alignSelf: 'stretch',
     backgroundColor: colors.surface,
     padding: spacing.md,
     borderRadius: radius.lg,
