@@ -90,4 +90,39 @@ class User extends Authenticatable
             ->whereDate('created_at', now()->toDateString())
             ->count();
     }
+
+    /**
+     * Sum of generation tokens (prompt + completion) consumed by this
+     * user over the current rolling 30-day window. Counts only
+     * `purpose = 'generation'` rows on llm_calls — verification,
+     * claim extraction, structured review, revision, TTS, STT all
+     * stay our overhead and are NOT deducted from the user's budget.
+     *
+     * Rolling 30 days (rather than calendar month or billing-cycle-
+     * anchored) gives consistent UX across free + paid tiers and
+     * avoids edge-case "you have 0 tokens but reset is tomorrow"
+     * dead-zones at month boundaries.
+     */
+    public function tokensUsedThisPeriod(): int
+    {
+        $since = $this->tokenPeriodStart();
+
+        return (int) \DB::table('llm_calls')
+            ->join('messages', 'llm_calls.message_id', '=', 'messages.id')
+            ->join('conversations', 'messages.conversation_id', '=', 'conversations.id')
+            ->where('conversations.user_id', $this->id)
+            ->where('llm_calls.purpose', 'generation')
+            ->where('llm_calls.created_at', '>=', $since)
+            ->sum(\DB::raw('COALESCE(llm_calls.prompt_tokens, 0) + COALESCE(llm_calls.completion_tokens, 0)'));
+    }
+
+    /**
+     * Start of the current 30-day token-budget window. Exposed so
+     * callers (notably AuthController::me()) can render a reset-date
+     * hint to the user.
+     */
+    public function tokenPeriodStart(): \Carbon\Carbon
+    {
+        return now()->subDays(30);
+    }
 }

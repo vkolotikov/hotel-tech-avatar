@@ -279,7 +279,10 @@
     "termsOfService": "Lietošanas noteikumi", "version": "Versija",
     "disclaimer": "Hexalife piedāvā tikai wellness izglītību. Tā neaizvieto profesionālu medicīnisko padomu, diagnozi vai ārstēšanu. Medicīniskos jautājumos vienmēr konsultējies ar kvalificētu klīnicistu.",
     "couldNotOpenLink": "Neizdevās atvērt saiti",
-    "couldNotOpenSubscription": "Neizdevās atvērt abonementu"
+    "couldNotOpenSubscription": "Neizdevās atvērt abonementu",
+    "tokensTitle": "Žetoni šajā periodā",
+    "tokensResetIn": "Atiestatās pēc {{days}} dienām",
+    "tokensRolling": "Slīdošs 30 dienu budžets"
   },
   "paywall": {
     "title": "Hexalife Premium",

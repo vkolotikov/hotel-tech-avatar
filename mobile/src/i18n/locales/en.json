@@ -467,7 +467,10 @@
     "version": "Version",
     "disclaimer": "Hexalife offers wellness education only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of a qualified clinician with any questions about a medical condition.",
     "couldNotOpenLink": "Couldn't open link",
-    "couldNotOpenSubscription": "Couldn't open subscription settings"
+    "couldNotOpenSubscription": "Couldn't open subscription settings",
+    "tokensTitle": "Tokens this period",
+    "tokensResetIn": "Resets in {{days}} days",
+    "tokensRolling": "Rolling 30-day budget"
   },
   "paywall": {
     "title": "Hexalife Premium",

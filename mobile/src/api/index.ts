@@ -118,6 +118,12 @@ export type Subscription = {
   daily_limit: number | null;
   used_today: number;
   remaining_today: number | null;
+  // Monthly token budget — main quota the Settings screen surfaces.
+  // null = unlimited (e.g. ultimate / admin tier).
+  monthly_token_limit: number | null;
+  tokens_used_period: number;
+  tokens_remaining: number | null;
+  period_resets_at: string | null;
   features: Record<string, boolean | number | string>;
 };
 

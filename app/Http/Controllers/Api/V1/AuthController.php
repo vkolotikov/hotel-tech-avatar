@@ -81,6 +81,11 @@ class AuthController extends Controller
         $limit = $plan?->daily_message_limit;
         $used  = $limit !== null ? $user->messagesUsedToday() : 0;
 
+        // Token budget — main quota the mobile app surfaces.
+        $tokenBudget    = $plan?->monthly_token_limit;
+        $tokensUsed     = $tokenBudget !== null ? $user->tokensUsedThisPeriod() : 0;
+        $tokensRemaining = $tokenBudget === null ? null : max(0, $tokenBudget - $tokensUsed);
+
         $profile = $user->profile;
 
         return response()->json([
@@ -88,12 +93,20 @@ class AuthController extends Controller
             'name'         => $user->name,
             'email'        => $user->email,
             'subscription' => [
-                'plan'             => $plan?->slug,
-                'plan_name'        => $plan?->name,
-                'daily_limit'      => $limit,
-                'used_today'       => $used,
-                'remaining_today'  => $limit === null ? null : max(0, $limit - $used),
-                'features'         => $plan?->features ?? [],
+                'plan'                  => $plan?->slug,
+                'plan_name'             => $plan?->name,
+                'daily_limit'           => $limit,
+                'used_today'            => $used,
+                'remaining_today'       => $limit === null ? null : max(0, $limit - $used),
+                // Token budget surface. NULL = unlimited, otherwise the
+                // mobile renders a "x of y tokens used" bar in Settings.
+                // period_resets_at is ISO-8601; client formats as
+                // relative time ("resets in 5 days") in the user's locale.
+                'monthly_token_limit'   => $tokenBudget,
+                'tokens_used_period'    => $tokensUsed,
+                'tokens_remaining'      => $tokensRemaining,
+                'period_resets_at'      => now()->addDays(30)->toIso8601String(),
+                'features'              => $plan?->features ?? [],
             ],
             'profile' => $profile ? [
                 'display_name'       => $profile->display_name,

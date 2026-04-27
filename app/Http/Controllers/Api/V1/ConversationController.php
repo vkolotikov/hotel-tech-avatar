@@ -198,26 +198,44 @@ class ConversationController extends Controller
             'attachment_ids.*' => 'integer',
         ]);
 
-        // Free-tier daily-message gate. Only applies to authenticated
-        // mobile users on wellness conversations — the hotel SPA uses
-        // session auth with conversation.user_id=null, so $user is null
-        // there and this is a no-op. Premium users have daily_message_limit
-        // stored as null, which skips the check.
+        // Quota gates. Two layers, both opt-in via the plan record:
+        //   1. Monthly token budget — the user-facing quota. Counts
+        //      generation tokens over the rolling 30-day window.
+        //   2. Daily message ceiling — anti-abuse. Hard cap regardless
+        //      of token budget; a runaway client can't burn 1M tokens
+        //      in a single day even if the plan technically allows it.
+        // Either NULL on the plan = skip that layer.
         $user = $request->user('sanctum');
         $conversation->loadMissing('agent.vertical');
         $vertical = $conversation->agent?->vertical?->slug;
         if ($user && $vertical === 'wellness') {
             $plan = $user->activePlan();
-            $limit = $plan?->daily_message_limit;
-            if ($limit !== null) {
-                $used = $user->messagesUsedToday();
-                if ($used >= $limit) {
+
+            $tokenBudget = $plan?->monthly_token_limit;
+            if ($tokenBudget !== null) {
+                $tokensUsed = $user->tokensUsedThisPeriod();
+                if ($tokensUsed >= $tokenBudget) {
                     return response()->json([
-                        'message'          => "You've used your {$limit} free messages for today. Upgrade to Premium for unlimited messages.",
+                        'message'             => "You've used your monthly token allowance. Upgrade for more.",
+                        'error'               => 'token_limit_reached',
+                        'plan'                => $plan->slug,
+                        'monthly_token_limit' => $tokenBudget,
+                        'tokens_used_period'  => $tokensUsed,
+                        'upgrade_required'    => true,
+                    ], 402);
+                }
+            }
+
+            $dailyLimit = $plan?->daily_message_limit;
+            if ($dailyLimit !== null) {
+                $messagesUsed = $user->messagesUsedToday();
+                if ($messagesUsed >= $dailyLimit) {
+                    return response()->json([
+                        'message'          => "You've hit today's message limit. Try again tomorrow or upgrade.",
                         'error'            => 'daily_limit_reached',
                         'plan'             => $plan->slug,
-                        'daily_limit'      => $limit,
-                        'used_today'       => $used,
+                        'daily_limit'      => $dailyLimit,
+                        'used_today'       => $messagesUsed,
                         'upgrade_required' => true,
                     ], 402);
                 }

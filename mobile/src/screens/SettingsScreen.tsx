@@ -21,6 +21,28 @@ import { colors, spacing, radius, fontSize } from '../theme';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json') as { version?: string };
 
+/**
+ * Compact token formatter: 1500 → "1.5K", 50000 → "50K", 1.5M → "1.5M".
+ * Keeps the Settings card readable at a glance without scientific
+ * notation or thousand-separators that vary by locale.
+ */
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1) + 'K';
+  return String(n);
+}
+
+/**
+ * Days remaining until the given ISO timestamp, floored at 0. Used for
+ * the "resets in N days" hint on the tokens card.
+ */
+function daysUntil(iso: string): number {
+  const target = new Date(iso).getTime();
+  const now = Date.now();
+  const days = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  return Math.max(0, days);
+}
+
 type Props = {
   user: AuthUser | null;
   onRefreshUser: () => Promise<void>;
@@ -60,6 +82,12 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
   const isPremium = plan === 'premium';
   const remaining = user?.subscription?.remaining_today;
   const dailyLimit = user?.subscription?.daily_limit;
+  const tokenLimit = user?.subscription?.monthly_token_limit ?? null;
+  const tokensUsed = user?.subscription?.tokens_used_period ?? 0;
+  const periodResetsAt = user?.subscription?.period_resets_at ?? null;
+  const tokenPct = tokenLimit && tokenLimit > 0
+    ? Math.min(100, Math.round((tokensUsed / tokenLimit) * 100))
+    : 0;
 
   const handleManageSubscription = () => {
     const url =
@@ -165,6 +193,32 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
             )}
           </View>
         </View>
+
+        {tokenLimit !== null && (
+          <View style={styles.tokensCard}>
+            <View style={styles.tokensHead}>
+              <Ionicons name="flash" size={14} color={colors.primary} />
+              <Text style={styles.tokensTitle}>{t('settings.tokensTitle')}</Text>
+              <Text style={styles.tokensCount}>
+                {formatTokens(tokensUsed)} / {formatTokens(tokenLimit)}
+              </Text>
+            </View>
+            <View style={styles.tokensBarTrack}>
+              <View
+                style={[
+                  styles.tokensBarFill,
+                  { width: `${tokenPct}%`, backgroundColor: tokenPct >= 90 ? colors.danger : colors.primary },
+                ]}
+              />
+            </View>
+            <Text style={styles.tokensFootnote}>
+              {periodResetsAt
+                ? t('settings.tokensResetIn', { days: daysUntil(periodResetsAt) })
+                : t('settings.tokensRolling')}
+            </Text>
+          </View>
+        )}
+
         {isPremium ? (
           <Pressable
             onPress={handleManageSubscription}
@@ -469,5 +523,44 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.md,
     fontWeight: '700',
+  },
+  tokensCard: {
+    backgroundColor: 'rgba(124,92,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(124,92,255,0.18)',
+    borderRadius: radius.md,
+    padding: spacing.sm + 2,
+    marginBottom: 2,
+    gap: 8,
+  },
+  tokensHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tokensTitle: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  tokensCount: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontVariant: ['tabular-nums'],
+  },
+  tokensBarTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  tokensBarFill: {
+    height: 6,
+    borderRadius: 3,
+  },
+  tokensFootnote: {
+    color: colors.textMuted,
+    fontSize: 11,
   },
 });

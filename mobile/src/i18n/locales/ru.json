@@ -279,7 +279,10 @@
     "termsOfService": "Условия использования", "version": "Версия",
     "disclaimer": "Hexalife предоставляет только wellness-образование. Это не заменяет профессиональный медицинский совет, диагноз или лечение. По любым медицинским вопросам всегда обращайтесь к квалифицированному врачу.",
     "couldNotOpenLink": "Не удалось открыть ссылку",
-    "couldNotOpenSubscription": "Не удалось открыть подписку"
+    "couldNotOpenSubscription": "Не удалось открыть подписку",
+    "tokensTitle": "Токены за период",
+    "tokensResetIn": "Сброс через {{days}} дней",
+    "tokensRolling": "Скользящий 30-дневный лимит"
   },
   "paywall": {
     "title": "Hexalife Premium",

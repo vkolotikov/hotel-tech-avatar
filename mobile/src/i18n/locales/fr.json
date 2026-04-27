@@ -279,7 +279,10 @@
     "termsOfService": "Conditions d'utilisation", "version": "Version",
     "disclaimer": "Hexalife propose uniquement de l'éducation au bien-être. Il ne remplace pas un avis médical, un diagnostic ou un traitement professionnel. Consultez toujours un clinicien qualifié pour toute question médicale.",
     "couldNotOpenLink": "Impossible d'ouvrir le lien",
-    "couldNotOpenSubscription": "Impossible d'ouvrir l'abonnement"
+    "couldNotOpenSubscription": "Impossible d'ouvrir l'abonnement",
+    "tokensTitle": "Jetons cette période",
+    "tokensResetIn": "Réinitialisation dans {{days}} jours",
+    "tokensRolling": "Budget glissant de 30 jours"
   },
   "paywall": {
     "title": "Hexalife Premium",
