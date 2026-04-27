@@ -100,5 +100,11 @@ Route::prefix('v1')->group(function () {
         Route::get('usage',                            [AdminController::class, 'usage']);
         Route::get('agents-bundle',                    [AdminController::class, 'bulkExport']);
         Route::post('agents-bundle',                   [AdminController::class, 'bulkImport']);
+
+        // ─── Users + subscriptions admin ───────────────────────────────
+        Route::get('users',                            [AdminController::class, 'listUsers']);
+        Route::get('users/{user}',                     [AdminController::class, 'showUser']);
+        Route::post('users/{user}/subscription',       [AdminController::class, 'updateUserSubscription']);
+        Route::get('usage-overview',                   [AdminController::class, 'usageOverview']);
     });
 });

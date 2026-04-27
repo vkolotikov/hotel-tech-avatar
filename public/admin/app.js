@@ -1726,3 +1726,314 @@ if (getAuthToken()) {
 } else {
   showLoginScreen();
 }
+
+// ─────────────────────────────────────────────────────────────────────
+//  TOP-LEVEL VIEW SWITCHING (Avatars / Users / Usage)
+// ─────────────────────────────────────────────────────────────────────
+
+const VIEW_NODES = {
+  agents: document.getElementById('view-agents'),
+  users:  document.getElementById('view-users'),
+  usage:  document.getElementById('view-usage'),
+};
+
+function switchView(name) {
+  Object.entries(VIEW_NODES).forEach(([n, node]) => {
+    if (node) node.hidden = (n !== name);
+  });
+  document.querySelectorAll('.admin-tab').forEach((btn) => {
+    btn.classList.toggle('admin-tab--active', btn.dataset.view === name);
+  });
+  if (name === 'users')  void loadUsers();
+  if (name === 'usage')  void loadUsageOverview();
+}
+
+document.querySelectorAll('.admin-tab').forEach((btn) => {
+  btn.addEventListener('click', () => switchView(btn.dataset.view));
+});
+
+// ─────────────────────────────────────────────────────────────────────
+//  USERS VIEW
+//  Search + paginated table + detail modal with subscription override.
+// ─────────────────────────────────────────────────────────────────────
+
+const usersState = { page: 1, perPage: 50, q: '', total: 0, lastPage: 1 };
+const usersListEl = document.getElementById('users-list');
+const usersPagerEl = document.getElementById('users-pager');
+const usersSearchEl = document.getElementById('users-search');
+const usersRefreshEl = document.getElementById('users-refresh');
+
+function tokensCompact(n) {
+  const v = Number(n) || 0;
+  if (v >= 1_000_000) return (v / 1_000_000).toFixed(v % 1_000_000 === 0 ? 0 : 1) + 'M';
+  if (v >= 1_000) return (v / 1_000).toFixed(v % 1_000 === 0 ? 0 : 1) + 'K';
+  return String(v);
+}
+
+async function loadUsers() {
+  if (!usersListEl) return;
+  usersListEl.innerHTML = '<p style="color:#94a3b8;padding:14px">Loading...</p>';
+  try {
+    const params = new URLSearchParams({
+      q: usersState.q,
+      page: String(usersState.page),
+      per_page: String(usersState.perPage),
+    });
+    const data = await api(`/api/v1/admin/users?${params.toString()}`);
+    usersState.total = data.total;
+    usersState.lastPage = data.last_page;
+    renderUsersList(data.data);
+    renderUsersPager();
+  } catch (err) {
+    usersListEl.innerHTML = `<p style="color:#ef4444;padding:14px">${escapeHtml(err.message || 'Failed to load')}</p>`;
+  }
+}
+
+function renderUsersList(rows) {
+  if (!rows || rows.length === 0) {
+    usersListEl.innerHTML = '<p style="color:#94a3b8;padding:14px">No users match this search.</p>';
+    return;
+  }
+  const head = `
+    <div class="users-row users-row--head">
+      <span>ID</span>
+      <span>Name</span>
+      <span>Email</span>
+      <span>Plan</span>
+      <span>Tokens 30d</span>
+      <span>Joined</span>
+    </div>`;
+  const body = rows.map((u) => {
+    const planClass = u.plan === 'free' ? 'users-row__plan--free' : '';
+    const joined = u.created_at ? new Date(u.created_at).toISOString().slice(0, 10) : '—';
+    return `
+      <div class="users-row" data-user-id="${u.id}">
+        <span class="users-row__id">#${u.id}</span>
+        <span class="users-row__name">${escapeHtml(u.name || '—')}</span>
+        <span class="users-row__email">${escapeHtml(u.email || '—')}</span>
+        <span><span class="users-row__plan ${planClass}">${escapeHtml(u.plan_name || u.plan || 'Free')}</span></span>
+        <span class="users-row__tokens">${tokensCompact(u.tokens_used_period)}</span>
+        <span class="users-row__id">${joined}</span>
+      </div>`;
+  }).join('');
+  usersListEl.innerHTML = head + body;
+  usersListEl.querySelectorAll('.users-row[data-user-id]').forEach((row) => {
+    row.addEventListener('click', () => openUserDetail(Number(row.dataset.userId)));
+  });
+}
+
+function renderUsersPager() {
+  const { page, lastPage, total } = usersState;
+  usersPagerEl.innerHTML = `
+    <button id="users-prev" ${page <= 1 ? 'disabled' : ''}>← Prev</button>
+    <span>Page ${page} / ${lastPage} · ${total} total</span>
+    <button id="users-next" ${page >= lastPage ? 'disabled' : ''}>Next →</button>
+  `;
+  const prev = document.getElementById('users-prev');
+  const next = document.getElementById('users-next');
+  if (prev) prev.addEventListener('click', () => { usersState.page--; void loadUsers(); });
+  if (next) next.addEventListener('click', () => { usersState.page++; void loadUsers(); });
+}
+
+let usersSearchTimer = null;
+if (usersSearchEl) {
+  usersSearchEl.addEventListener('input', (e) => {
+    clearTimeout(usersSearchTimer);
+    usersSearchTimer = setTimeout(() => {
+      usersState.q = e.target.value.trim();
+      usersState.page = 1;
+      void loadUsers();
+    }, 250);
+  });
+}
+if (usersRefreshEl) {
+  usersRefreshEl.addEventListener('click', () => { void loadUsers(); });
+}
+
+// ─── User detail modal ───────────────────────────────────────────────
+const userModalEl = document.getElementById('user-modal');
+const userModalNameEl = document.getElementById('user-modal-name');
+const userModalBodyEl = document.getElementById('user-modal-body');
+const userModalCloseEl = document.getElementById('user-modal-close');
+
+function closeUserModal() {
+  userModalEl.hidden = true;
+  userModalBodyEl.innerHTML = '';
+}
+if (userModalCloseEl) userModalCloseEl.addEventListener('click', closeUserModal);
+document.querySelectorAll('[data-user-close]').forEach((el) => {
+  el.addEventListener('click', closeUserModal);
+});
+
+async function openUserDetail(userId) {
+  userModalEl.hidden = false;
+  userModalNameEl.textContent = `User #${userId}`;
+  userModalBodyEl.innerHTML = 'Loading...';
+  try {
+    const data = await api(`/api/v1/admin/users/${userId}`);
+    renderUserDetail(data);
+  } catch (err) {
+    userModalBodyEl.innerHTML = `<p style="color:#ef4444">${escapeHtml(err.message || 'Failed')}</p>`;
+  }
+}
+
+function renderUserDetail(data) {
+  const u = data.user;
+  const s = data.subscription;
+  const p = data.profile;
+  userModalNameEl.textContent = `${u.name} · ${u.email}`;
+
+  const tokensRemainingLine = s.monthly_token_limit === null
+    ? 'Unlimited'
+    : `${tokensCompact(s.tokens_used_period)} / ${tokensCompact(s.monthly_token_limit)} used`;
+
+  const profileBlock = p ? `
+    <div class="user-modal__section">
+      <h4>Profile</h4>
+      <div class="user-modal__kv">
+        <span>Display name</span><span>${escapeHtml(p.display_name || '—')}</span>
+        <span>Language</span><span>${escapeHtml(p.preferred_language || '—')}</span>
+        <span>Age band</span><span>${escapeHtml(p.age_band || '—')}</span>
+        <span>Sex at birth</span><span>${escapeHtml(p.sex_at_birth || '—')}</span>
+        <span>Goals</span><span>${escapeHtml((p.goals || []).join(', ') || '—')}</span>
+        <span>Conditions</span><span>${escapeHtml((p.conditions || []).join(', ') || '—')}</span>
+        <span>Allergies</span><span>${escapeHtml((p.allergies || []).join(', ') || '—')}</span>
+      </div>
+    </div>` : '';
+
+  const conversationsBlock = (data.recent_conversations || []).length === 0
+    ? '<p style="color:#94a3b8;font-size:13px">No conversations yet.</p>'
+    : data.recent_conversations.map((c) => `
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px">
+          <span><strong>${escapeHtml(c.agent_name || '—')}</strong> · ${c.message_count} msgs</span>
+          <span style="color:#94a3b8">${c.last_message_at ? new Date(c.last_message_at).toLocaleString() : '—'}</span>
+        </div>`).join('');
+
+  userModalBodyEl.innerHTML = `
+    <div class="user-modal__section">
+      <h4>Subscription</h4>
+      <div class="user-modal__kv">
+        <span>Plan</span><span><strong>${escapeHtml(s.plan_name || s.plan || 'Free')}</strong> (${escapeHtml(s.status)})</span>
+        <span>Tokens period</span><span>${tokensRemainingLine}</span>
+        <span>Daily messages</span><span>${s.daily_limit === null ? 'Unlimited' : `${s.used_today} / ${s.daily_limit}`}</span>
+        <span>Renews at</span><span>${s.renews_at ? new Date(s.renews_at).toLocaleString() : '—'}</span>
+        <span>Trial ends</span><span>${s.trial_ends_at ? new Date(s.trial_ends_at).toLocaleString() : '—'}</span>
+        <span>Provider</span><span>${escapeHtml(s.billing_provider || '—')}</span>
+      </div>
+      <div style="margin-top:12px">
+        <h4>Manual override</h4>
+        <div class="user-modal__sub-controls">
+          <select id="user-modal-plan">
+            <option value="free">Free</option>
+            <option value="basic">Basic</option>
+            <option value="pro">Pro</option>
+            <option value="ultimate">Ultimate</option>
+          </select>
+          <select id="user-modal-status">
+            <option value="active">Active</option>
+            <option value="trialing">Trialing</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="expired">Expired</option>
+          </select>
+          <input id="user-modal-note" type="text" placeholder="Note (optional)">
+          <button id="user-modal-grant" type="button">Apply</button>
+        </div>
+        <p style="color:#94a3b8;font-size:11px;margin-top:6px">
+          Overrides the user's plan + status immediately. Logged in
+          billing_metadata.admin_overrides for audit. Use this for
+          comps, refund recovery, or to revoke access — payment-side
+          ops (Apple/Google refunds) still happen on RevenueCat.
+        </p>
+      </div>
+    </div>
+    ${profileBlock}
+    <div class="user-modal__section">
+      <h4>Recent conversations</h4>
+      ${conversationsBlock}
+    </div>
+  `;
+
+  // Pre-select current plan + status in the override form so a typo
+  // can't accidentally downgrade someone with the wrong default.
+  const planSel = document.getElementById('user-modal-plan');
+  const statusSel = document.getElementById('user-modal-status');
+  if (planSel && s.plan) planSel.value = s.plan;
+  if (statusSel && s.status && s.status !== 'none') statusSel.value = s.status;
+
+  const grantBtn = document.getElementById('user-modal-grant');
+  if (grantBtn) {
+    grantBtn.addEventListener('click', () => {
+      void grantSubscription(u.id, planSel.value, statusSel.value, document.getElementById('user-modal-note').value);
+    });
+  }
+}
+
+async function grantSubscription(userId, planSlug, status, note) {
+  const ok = window.confirm(`Set user #${userId} to ${planSlug} (${status})?`);
+  if (!ok) return;
+  try {
+    await api(`/api/v1/admin/users/${userId}/subscription`, {
+      method: 'POST',
+      body: JSON.stringify({ plan_slug: planSlug, status, note }),
+    });
+    setStatus(`User #${userId} set to ${planSlug}/${status}`);
+    await openUserDetail(userId);
+    void loadUsers();
+  } catch (err) {
+    alert('Failed: ' + (err.message || 'unknown'));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  USAGE OVERVIEW
+// ─────────────────────────────────────────────────────────────────────
+
+const usageOverviewEl = document.getElementById('usage-overview');
+const usageOverviewRefreshEl = document.getElementById('usage-overview-refresh');
+
+if (usageOverviewRefreshEl) {
+  usageOverviewRefreshEl.addEventListener('click', () => { void loadUsageOverview(); });
+}
+
+async function loadUsageOverview() {
+  if (!usageOverviewEl) return;
+  usageOverviewEl.innerHTML = '<p style="color:#94a3b8;padding:14px">Loading...</p>';
+  try {
+    const d = await api('/api/v1/admin/usage-overview');
+    const costUsd = ((d.cost_usd_cents_30d ?? 0) / 100).toFixed(2);
+    const tokensTotal = (d.tokens_in_30d ?? 0) + (d.tokens_out_30d ?? 0);
+    const planMix = (d.plan_mix || []).map((m) => `
+      <span class="usage-card__planpill">${escapeHtml(m.name || m.slug)}: ${m.user_count}</span>
+    `).join('');
+
+    usageOverviewEl.innerHTML = `
+      <div class="usage-card">
+        <div class="usage-card__label">Total users</div>
+        <div class="usage-card__value">${d.total_users.toLocaleString()}</div>
+        <div class="usage-card__sub">${d.active_users_30d} active in 30d</div>
+      </div>
+      <div class="usage-card">
+        <div class="usage-card__label">Messages sent · 30d</div>
+        <div class="usage-card__value">${(d.messages_sent_30d || 0).toLocaleString()}</div>
+        <div class="usage-card__sub">${d.llm_calls_30d.toLocaleString()} model calls</div>
+      </div>
+      <div class="usage-card">
+        <div class="usage-card__label">Tokens · 30d</div>
+        <div class="usage-card__value">${tokensCompact(tokensTotal)}</div>
+        <div class="usage-card__sub">${tokensCompact(d.tokens_in_30d)} in · ${tokensCompact(d.tokens_out_30d)} out</div>
+      </div>
+      <div class="usage-card">
+        <div class="usage-card__label">OpenAI cost · 30d</div>
+        <div class="usage-card__value">$${costUsd}</div>
+        <div class="usage-card__sub">All purposes (chat + verification + TTS + STT)</div>
+      </div>
+      ${planMix ? `
+        <div class="usage-card usage-card--full">
+          <div class="usage-card__label">Active plan mix</div>
+          <div class="usage-card__planmix">${planMix}</div>
+        </div>` : ''}
+    `;
+  } catch (err) {
+    usageOverviewEl.innerHTML = `<p style="color:#ef4444;padding:14px">${escapeHtml(err.message || 'Failed')}</p>`;
+  }
+}

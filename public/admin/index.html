@@ -8,7 +8,13 @@
   <script>window.SAAS_PLATFORM_URL = 'https://saas.hotel-tech.ai';</script>
 </head>
 <body>
-  <div class="admin-shell">
+  <nav class="admin-tabs" id="admin-tabs">
+    <button type="button" class="admin-tab admin-tab--active" data-view="agents">Avatars</button>
+    <button type="button" class="admin-tab" data-view="users">Users</button>
+    <button type="button" class="admin-tab" data-view="usage">Usage</button>
+  </nav>
+
+  <div class="admin-shell" id="view-agents">
     <aside class="admin-sidebar">
       <div class="admin-sidebar__header">
         <h1>AvatarHub Admin</h1>
@@ -221,6 +227,42 @@
       </form>
     </main>
   </div>
+
+  <!-- ─── Users view ──────────────────────────────────────────────── -->
+  <section class="admin-page" id="view-users" hidden>
+    <header class="admin-page__head">
+      <h2>Users</h2>
+      <div class="admin-page__tools">
+        <input id="users-search" type="search" placeholder="Search by name or email" autocomplete="off">
+        <button id="users-refresh" type="button">Refresh</button>
+      </div>
+    </header>
+    <div id="users-list" class="users-list"></div>
+    <div id="users-pager" class="users-pager"></div>
+  </section>
+
+  <!-- User detail modal -->
+  <div id="user-modal" class="user-modal" hidden>
+    <div class="user-modal__backdrop" data-user-close></div>
+    <section class="user-modal__panel" role="dialog" aria-modal="true">
+      <header class="user-modal__head">
+        <h3 id="user-modal-name">User</h3>
+        <button id="user-modal-close" type="button" aria-label="Close">x</button>
+      </header>
+      <div id="user-modal-body" class="user-modal__body">Loading...</div>
+    </section>
+  </div>
+
+  <!-- ─── Usage view ──────────────────────────────────────────────── -->
+  <section class="admin-page" id="view-usage" hidden>
+    <header class="admin-page__head">
+      <h2>Usage overview · last 30 days</h2>
+      <div class="admin-page__tools">
+        <button id="usage-overview-refresh" type="button">Refresh</button>
+      </div>
+    </header>
+    <div id="usage-overview" class="usage-overview">Loading...</div>
+  </section>
 
   <div id="usage-modal" class="usage-modal" hidden>
     <div class="usage-modal__backdrop" data-usage-close></div>

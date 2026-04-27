@@ -7,6 +7,9 @@ use App\Models\Agent;
 use App\Models\AgentKnowledgeFile;
 use App\Models\AgentPromptVersion;
 use App\Models\Message;
+use App\Models\SubscriptionEntitlement;
+use App\Models\SubscriptionPlan;
+use App\Models\User;
 use App\Models\Vertical;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -654,6 +657,251 @@ class AdminController extends Controller
             'by_day'   => $byDay,
             'by_model' => $byModel,
             'by_agent' => $byAgent,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  USERS ADMIN
+    //  Endpoints under /api/v1/admin/users let staff inspect and
+    //  manually adjust user state when RevenueCat / billing flows
+    //  alone aren't enough — comping a user, fixing entitlement
+    //  drift after a refund, debugging conversation history, etc.
+    //  Payment-side ops (refunds, dunning, subscription cancellation
+    //  through Apple/Google) still happen on RevenueCat.
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Paginated user list. Optional `?q=` filters by name OR email
+     * (LIKE %q%). Returns the same shape AdminController other list
+     * endpoints use — flat array + pagination meta — for parity with
+     * the existing admin SPA's table-rendering helpers.
+     */
+    public function listUsers(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->query('q', ''));
+        $perPage = max(10, min(200, (int) $request->query('per_page', 50)));
+
+        $query = User::query()
+            ->select('id', 'name', 'email', 'created_at')
+            ->orderBy('id', 'desc');
+
+        if ($q !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $q) . '%';
+            $query->where(function ($w) use ($like) {
+                $w->where('name', 'like', $like)
+                  ->orWhere('email', 'like', $like);
+            });
+        }
+
+        $page = $query->paginate($perPage);
+
+        // Pull plan slug + token usage in batch so the table can show
+        // them in the row without N+1 queries.
+        $userIds = collect($page->items())->pluck('id');
+        $entitlements = SubscriptionEntitlement::with('plan:id,slug,name')
+            ->whereIn('user_id', $userIds)
+            ->get()
+            ->keyBy('user_id');
+
+        $rows = collect($page->items())->map(function (User $u) use ($entitlements) {
+            $ent = $entitlements->get($u->id);
+            $plan = $ent?->plan;
+            return [
+                'id'          => $u->id,
+                'name'        => $u->name,
+                'email'       => $u->email,
+                'created_at'  => $u->created_at?->toIso8601String(),
+                'plan'        => $plan?->slug ?? 'free',
+                'plan_name'   => $plan?->name ?? 'Free',
+                'status'      => $ent?->status ?? 'none',
+                'tokens_used_period' => $u->tokensUsedThisPeriod(),
+            ];
+        });
+
+        return response()->json([
+            'data'         => $rows,
+            'current_page' => $page->currentPage(),
+            'last_page'    => $page->lastPage(),
+            'per_page'     => $page->perPage(),
+            'total'        => $page->total(),
+        ]);
+    }
+
+    /**
+     * Detailed view of a single user — profile, current plan +
+     * subscription state, token + message usage, recent conversations.
+     * Used by the admin's user-detail modal.
+     */
+    public function showUser(int $userId): JsonResponse
+    {
+        $user = User::with('profile', 'entitlement.plan')->findOrFail($userId);
+        $plan = $user->activePlan();
+
+        $tokenLimit = $plan?->monthly_token_limit;
+        $tokensUsed = $user->tokensUsedThisPeriod();
+        $msgsToday  = $user->messagesUsedToday();
+
+        // Recent conversations (10 most recent) + message count, last
+        // activity. Cheap aggregation — fine even for power users.
+        $recentConversations = DB::table('conversations')
+            ->leftJoin('messages', 'messages.conversation_id', '=', 'conversations.id')
+            ->leftJoin('agents', 'conversations.agent_id', '=', 'agents.id')
+            ->where('conversations.user_id', $user->id)
+            ->select(
+                'conversations.id',
+                'conversations.title',
+                'conversations.created_at',
+                'agents.name as agent_name',
+                'agents.slug as agent_slug',
+            )
+            ->selectRaw('COUNT(messages.id) as message_count')
+            ->selectRaw('MAX(messages.created_at) as last_message_at')
+            ->groupBy('conversations.id', 'conversations.title', 'conversations.created_at', 'agents.name', 'agents.slug')
+            ->orderByRaw('MAX(messages.created_at) DESC NULLS LAST')
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'user' => [
+                'id'         => $user->id,
+                'name'       => $user->name,
+                'email'      => $user->email,
+                'created_at' => $user->created_at?->toIso8601String(),
+            ],
+            'profile' => $user->profile ? [
+                'display_name'        => $user->profile->display_name,
+                'preferred_language'  => $user->profile->preferred_language,
+                'age_band'            => $user->profile->age_band,
+                'sex_at_birth'        => $user->profile->sex_at_birth,
+                'goals'               => $user->profile->goals ?? [],
+                'conditions'          => $user->profile->conditions ?? [],
+                'allergies'           => $user->profile->allergies ?? [],
+            ] : null,
+            'subscription' => [
+                'plan'                => $plan?->slug,
+                'plan_name'           => $plan?->name,
+                'status'              => $user->entitlement?->status ?? 'none',
+                'monthly_token_limit' => $tokenLimit,
+                'tokens_used_period'  => $tokensUsed,
+                'tokens_remaining'    => $tokenLimit === null ? null : max(0, $tokenLimit - $tokensUsed),
+                'daily_limit'         => $plan?->daily_message_limit,
+                'used_today'          => $msgsToday,
+                'trial_ends_at'       => $user->entitlement?->trial_ends_at,
+                'renews_at'           => $user->entitlement?->renews_at,
+                'billing_provider'    => $user->entitlement?->billing_provider,
+            ],
+            'recent_conversations' => $recentConversations,
+        ]);
+    }
+
+    /**
+     * Manually grant or revoke a subscription. Used by staff to comp
+     * a plan, recover from a billing-sync glitch, or revoke access on
+     * a chargeback. Logs an admin_metadata entry on the entitlement so
+     * the override is auditable.
+     *
+     * Body: { plan_slug: 'pro' | 'free' | …, status?: 'active' | 'cancelled' }
+     * Setting plan_slug='free' effectively revokes premium without
+     * deleting the row (we keep history for audit).
+     */
+    public function updateUserSubscription(Request $request, int $userId): JsonResponse
+    {
+        $validated = $request->validate([
+            'plan_slug' => 'required|string|exists:subscription_plans,slug',
+            'status'    => 'nullable|in:active,trialing,in_grace_period,cancelled,expired',
+            'note'      => 'nullable|string|max:240',
+        ]);
+
+        $user = User::findOrFail($userId);
+        $plan = SubscriptionPlan::where('slug', $validated['plan_slug'])->firstOrFail();
+
+        $entitlement = $user->entitlement
+            ?? new SubscriptionEntitlement(['user_id' => $user->id]);
+
+        $auditTrail = is_array($entitlement->billing_metadata) ? $entitlement->billing_metadata : [];
+        $auditTrail['admin_overrides'] = $auditTrail['admin_overrides'] ?? [];
+        $auditTrail['admin_overrides'][] = [
+            'at'         => now()->toIso8601String(),
+            'previous'   => [
+                'plan_id' => $entitlement->plan_id,
+                'status'  => $entitlement->status,
+            ],
+            'new'        => [
+                'plan_slug' => $plan->slug,
+                'status'    => $validated['status'] ?? 'active',
+            ],
+            'note'       => $validated['note'] ?? null,
+            'admin_user' => $request->header('X-Admin-Email', 'unknown'),
+        ];
+
+        $entitlement->fill([
+            'plan_id'           => $plan->id,
+            'status'            => $validated['status'] ?? 'active',
+            'billing_provider'  => $entitlement->billing_provider ?? 'admin_override',
+            'billing_metadata'  => $auditTrail,
+        ]);
+        $entitlement->save();
+
+        return response()->json([
+            'ok'           => true,
+            'subscription' => [
+                'plan'      => $plan->slug,
+                'plan_name' => $plan->name,
+                'status'    => $entitlement->status,
+            ],
+        ]);
+    }
+
+    /**
+     * Fleet-wide usage overview for the Usage tab. Counts users,
+     * tokens, messages, and rough OpenAI cost over the last 30 days.
+     * One-shot aggregate — no breakdown by user (use listUsers for
+     * per-row stats). Cheap enough at our scale; if it gets slow,
+     * back it with a materialised view of token_usage_daily.
+     */
+    public function usageOverview(): JsonResponse
+    {
+        $since = now()->subDays(30);
+
+        $totalUsers = User::count();
+
+        $activeUsers = (int) DB::table('messages')
+            ->join('conversations', 'messages.conversation_id', '=', 'conversations.id')
+            ->where('messages.role', 'user')
+            ->where('messages.created_at', '>=', $since)
+            ->distinct('conversations.user_id')
+            ->count('conversations.user_id');
+
+        $tokenTotals = DB::table('llm_calls')
+            ->where('created_at', '>=', $since)
+            ->selectRaw('SUM(COALESCE(prompt_tokens, 0)) as prompt_tokens')
+            ->selectRaw('SUM(COALESCE(completion_tokens, 0)) as completion_tokens')
+            ->selectRaw('SUM(COALESCE(cost_usd_cents, 0)) as cost_usd_cents')
+            ->selectRaw('COUNT(*) as call_count')
+            ->first();
+
+        $messagesSent = (int) Message::where('role', 'user')
+            ->where('created_at', '>=', $since)
+            ->count();
+
+        // Plan distribution — pie chart fodder.
+        $planMix = DB::table('subscription_entitlements')
+            ->join('subscription_plans', 'subscription_entitlements.plan_id', '=', 'subscription_plans.id')
+            ->whereIn('subscription_entitlements.status', ['active', 'in_grace_period', 'trialing'])
+            ->selectRaw('subscription_plans.slug, subscription_plans.name, COUNT(*) as user_count')
+            ->groupBy('subscription_plans.slug', 'subscription_plans.name')
+            ->get();
+
+        return response()->json([
+            'period_days'        => 30,
+            'total_users'        => $totalUsers,
+            'active_users_30d'   => $activeUsers,
+            'messages_sent_30d'  => $messagesSent,
+            'tokens_in_30d'      => (int) ($tokenTotals->prompt_tokens ?? 0),
+            'tokens_out_30d'     => (int) ($tokenTotals->completion_tokens ?? 0),
+            'llm_calls_30d'      => (int) ($tokenTotals->call_count ?? 0),
+            'cost_usd_cents_30d' => (int) ($tokenTotals->cost_usd_cents ?? 0),
+            'plan_mix'           => $planMix,
         ]);
     }
 }
