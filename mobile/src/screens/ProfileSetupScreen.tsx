@@ -679,7 +679,16 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
       await updateProfile(profile);
       onFinish();
     } catch (e) {
-      Alert.alert("Couldn't save", (e as Error).message);
+      // Surface as much diagnostic info as the API gave us. ApiError
+      // carries the parsed JSON body which on a 500 includes the
+      // exception class name in production. Helps us debug remote
+      // failures without enabling app.debug=true.
+      const err = e as Error & { status?: number; body?: { exception_class?: string } };
+      const cls = err.body?.exception_class ? ` [${err.body.exception_class}]` : '';
+      const status = err.status ? ` (HTTP ${err.status})` : '';
+      const detail = `${err.message ?? 'Unknown error'}${status}${cls}`;
+      console.warn('Profile save failed:', detail, err);
+      Alert.alert("Couldn't save", detail);
     } finally {
       setSaving(false);
     }

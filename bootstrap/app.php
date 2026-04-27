@@ -40,10 +40,16 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($request->is('api/*') || $request->expectsJson()) {
                 $debug = config('app.debug');
+                // In production, hide the message + trace but keep the
+                // exception class name so on-device error alerts give
+                // us enough to diagnose remotely (e.g. "QueryException"
+                // vs "RuntimeException") without leaking internals.
+                // Sentry separately captures the full trace.
                 return response()->json([
-                    'error'   => $debug ? $e->getMessage() : 'Server error',
-                    'message' => $debug ? $e->getMessage() : 'An unexpected error occurred.',
-                    'trace'   => $debug ? $e->getTrace() : null,
+                    'error'           => $debug ? $e->getMessage() : 'Server error',
+                    'message'         => $debug ? $e->getMessage() : 'An unexpected error occurred.',
+                    'exception_class' => $debug ? null : (new \ReflectionClass($e))->getShortName(),
+                    'trace'           => $debug ? $e->getTrace() : null,
                 ], 500);
             }
         });
