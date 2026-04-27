@@ -67,24 +67,24 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
         ? 'https://apps.apple.com/account/subscriptions'
         : 'https://play.google.com/store/account/subscriptions';
     Linking.openURL(url).catch(() =>
-      Alert.alert("Couldn't open subscription settings", url),
+      Alert.alert(t('settings.couldNotOpenSubscription'), url),
     );
   };
 
   const handleSignOut = () => {
     Alert.alert(
-      'Sign out',
-      'You will be signed out of Hexalife on this device.',
+      t('auth.signOut'),
+      t('auth.signOutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Sign out',
+          text: t('auth.signOut'),
           style: 'destructive',
           onPress: async () => {
             try {
               await logout();
             } catch (err) {
-              Alert.alert('Sign out failed', (err as Error).message);
+              Alert.alert(t('auth.signOutFailed'), (err as Error).message);
             }
           },
         },
@@ -94,14 +94,14 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
 
   const openLink = (url: string) => {
     Linking.openURL(url).catch(() =>
-      Alert.alert("Couldn't open link", url),
+      Alert.alert(t('settings.couldNotOpenLink'), url),
     );
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.section}>
-        <Text style={styles.sectionHeading}>Account</Text>
+        <Text style={styles.sectionHeading}>{t('settings.account')}</Text>
         <View style={styles.row}>
           <Ionicons name="person-outline" size={18} color={colors.textMuted} />
           <View style={styles.rowText}>
@@ -139,7 +139,7 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionHeading}>Subscription</Text>
+        <Text style={styles.sectionHeading}>{t('settings.subscription')}</Text>
         <View style={styles.row}>
           <Ionicons
             name={isPremium ? 'sparkles' : 'flash-outline'}
@@ -157,11 +157,11 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
             </View>
             {!isPremium && dailyLimit != null && remaining != null && (
               <Text style={styles.rowSub}>
-                {remaining} of {dailyLimit} messages left today
+                {t('settings.messagesLeft', { remaining, limit: dailyLimit })}
               </Text>
             )}
             {isPremium && (
-              <Text style={styles.rowSub}>Unlimited messages, all features</Text>
+              <Text style={styles.rowSub}>{t('settings.premiumPerks')}</Text>
             )}
           </View>
         </View>
@@ -171,7 +171,7 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
             style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
           >
             <Ionicons name="settings-outline" size={18} color={colors.textMuted} />
-            <Text style={styles.rowLink}>Manage subscription</Text>
+            <Text style={styles.rowLink}>{t('settings.manageSubscription')}</Text>
             <Ionicons
               name="open-outline"
               size={14}
@@ -188,19 +188,19 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
             ]}
           >
             <Ionicons name="sparkles" size={16} color={colors.textPrimary} />
-            <Text style={styles.upgradeCtaText}>Upgrade to Premium</Text>
+            <Text style={styles.upgradeCtaText}>{t('settings.upgradePremium')}</Text>
           </Pressable>
         )}
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionHeading}>Support</Text>
+        <Text style={styles.sectionHeading}>{t('settings.support')}</Text>
         <Pressable
           onPress={() => openLink('https://hexalife.app/privacy')}
           style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         >
           <Ionicons name="shield-checkmark-outline" size={18} color={colors.textMuted} />
-          <Text style={styles.rowLink}>Privacy policy</Text>
+          <Text style={styles.rowLink}>{t('settings.privacyPolicy')}</Text>
           <Ionicons
             name="open-outline"
             size={14}
@@ -213,7 +213,7 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
           style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         >
           <Ionicons name="document-text-outline" size={18} color={colors.textMuted} />
-          <Text style={styles.rowLink}>Terms of service</Text>
+          <Text style={styles.rowLink}>{t('settings.termsOfService')}</Text>
           <Ionicons
             name="open-outline"
             size={14}
@@ -224,18 +224,13 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionHeading}>About</Text>
+        <Text style={styles.sectionHeading}>{t('settings.about')}</Text>
         <View style={styles.disclaimer}>
-          <Text style={styles.disclaimerText}>
-            Hexalife offers wellness education only. It is not a substitute for
-            professional medical advice, diagnosis, or treatment. Always seek the
-            advice of a qualified clinician with any questions about a medical
-            condition.
-          </Text>
+          <Text style={styles.disclaimerText}>{t('settings.disclaimer')}</Text>
         </View>
         <View style={styles.row}>
           <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
-          <Text style={styles.rowLabel}>Version</Text>
+          <Text style={styles.rowLabel}>{t('settings.version')}</Text>
           <Text style={styles.rowValue}>{version}</Text>
         </View>
       </View>
@@ -245,7 +240,7 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
         style={({ pressed }) => [styles.signOutBtn, pressed && styles.rowPressed]}
       >
         <Ionicons name="log-out-outline" size={18} color={colors.danger} />
-        <Text style={styles.signOutLabel}>Sign out</Text>
+        <Text style={styles.signOutLabel}>{t('auth.signOut')}</Text>
       </Pressable>
 
       <PaywallScreen

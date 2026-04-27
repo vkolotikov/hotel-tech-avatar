@@ -12,6 +12,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, radius, fontSize } from '../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -24,8 +25,8 @@ type Slide = {
   key: string;
   icon: keyof typeof Ionicons.glyphMap;
   iconTint: string;
-  title: string;
-  body: string;
+  titleKey: string;
+  bodyKey: string;
 };
 
 const SLIDES: Slide[] = [
@@ -33,29 +34,27 @@ const SLIDES: Slide[] = [
     key: 'welcome',
     icon: 'leaf',
     iconTint: '#4ade80',
-    title: 'Welcome to Hexalife',
-    body:
-      'Six expert avatars — sleep, nutrition, fitness, mindfulness, skin and lab literacy — each grounded in current research. Ask anything in plain English and get a response that’s evidence-led, calm, and practical.',
+    titleKey: 'onboardingIntro.welcome',
+    bodyKey: 'onboardingIntro.welcomeBody',
   },
   {
     key: 'not-medical',
     icon: 'medkit',
     iconTint: '#f59e0b',
-    title: 'Not medical advice',
-    body:
-      'Hexalife is wellness education. It does not diagnose, prescribe, or replace a clinician. If you’re experiencing anything urgent, contact your doctor or local emergency services — the avatars will always redirect you to the right help.',
+    titleKey: 'onboardingIntro.notMedical',
+    bodyKey: 'onboardingIntro.notMedicalBody',
   },
   {
     key: 'safety-first',
     icon: 'shield-checkmark',
     iconTint: '#7c5cff',
-    title: 'Safety and sources',
-    body:
-      'Every health claim is checked against real sources before it reaches you. Unverifiable responses are replaced with a safer fallback, and crisis indicators route you directly to help. You’re in control of your data at all times.',
+    titleKey: 'onboardingIntro.safetyFirst',
+    bodyKey: 'onboardingIntro.safetyFirstBody',
   },
 ];
 
 export function OnboardingScreen({ onFinish }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(0);
   const listRef = useRef<FlatList<Slide>>(null);
@@ -81,7 +80,7 @@ export function OnboardingScreen({ onFinish }: Props) {
             hitSlop={8}
             style={({ pressed }) => [styles.skip, pressed && { opacity: 0.6 }]}
           >
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText}>{t('common.skip')}</Text>
           </Pressable>
         )}
       </View>
@@ -117,7 +116,7 @@ export function OnboardingScreen({ onFinish }: Props) {
           style={({ pressed }) => [styles.cta, pressed && { opacity: 0.85 }]}
         >
           <Text style={styles.ctaText}>
-            {isLast ? 'Get started' : 'Next'}
+            {isLast ? t('onboardingIntro.ctaGetStarted') : t('common.next')}
           </Text>
           <Ionicons
             name={isLast ? 'arrow-forward' : 'chevron-forward'}
@@ -132,13 +131,14 @@ export function OnboardingScreen({ onFinish }: Props) {
 }
 
 function OnboardingSlide({ slide }: { slide: Slide }) {
+  const { t } = useTranslation();
   return (
     <View style={[slideStyles.slide, { width: SCREEN_WIDTH }]}>
       <View style={[slideStyles.iconWrap, { borderColor: slide.iconTint + '55' }]}>
         <Ionicons name={slide.icon} size={48} color={slide.iconTint} />
       </View>
-      <Text style={slideStyles.title}>{slide.title}</Text>
-      <Text style={slideStyles.body}>{slide.body}</Text>
+      <Text style={slideStyles.title}>{t(slide.titleKey)}</Text>
+      <Text style={slideStyles.body}>{t(slide.bodyKey)}</Text>
     </View>
   );
 }

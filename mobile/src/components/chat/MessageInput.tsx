@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
@@ -72,6 +73,7 @@ export function MessageInput({
   disabled,
   onOpenVoiceMode,
 }: Props) {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const [pickerVisible, setPickerVisible] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -186,11 +188,11 @@ export function MessageInput({
   };
 
   const hint = recorder.isRecording
-    ? 'Listening… tap mic to finish'
+    ? t('chat.listening')
     : recorder.isTranscribing
-    ? 'Transcribing…'
+    ? t('chat.transcribing')
     : uploading
-    ? 'Uploading attachment…'
+    ? t('chat.uploading')
     : null;
 
   return (
@@ -265,7 +267,7 @@ export function MessageInput({
           ]}
           value={text}
           onChangeText={setText}
-          placeholder={recorder.isTranscribing ? '' : 'Message…'}
+          placeholder={recorder.isTranscribing ? '' : t('chat.messagePlaceholder')}
           placeholderTextColor={colors.textMuted}
           multiline
           editable={!disabled && !recorder.isTranscribing}

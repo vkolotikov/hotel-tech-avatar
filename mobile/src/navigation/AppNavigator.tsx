@@ -9,6 +9,7 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import * as SecureStore from 'expo-secure-store';
 import { AuthUser, me, onSessionExpired, storedToken } from '../api';
 import { configurePurchases } from '../billing/purchases';
@@ -168,6 +169,7 @@ function RootTabs({
   user: AuthUser | null;
   onRefreshUser: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const SettingsStackScreen = SettingsStackScreenFactory({ user, onRefreshUser });
 
   return (
@@ -187,7 +189,7 @@ function RootTabs({
         name="HomeTab"
         component={HomeStackScreen}
         options={({ route }) => ({
-          title: 'Home',
+          title: t('tabs.home'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" color={color} size={size} />
           ),
@@ -202,7 +204,7 @@ function RootTabs({
         name="LibraryTab"
         component={LibraryStackScreen}
         options={({ route }) => ({
-          title: 'Library',
+          title: t('tabs.library'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="library-outline" color={color} size={size} />
           ),
@@ -217,7 +219,7 @@ function RootTabs({
         name="HistoryTab"
         component={HistoryStackScreen}
         options={({ route }) => ({
-          title: 'History',
+          title: t('tabs.history'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="time-outline" color={color} size={size} />
           ),
@@ -232,7 +234,7 @@ function RootTabs({
         name="SettingsTab"
         component={SettingsStackScreen}
         options={{
-          title: 'Settings',
+          title: t('tabs.settings'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" color={color} size={size} />
           ),

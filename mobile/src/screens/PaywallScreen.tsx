@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import {
   fetchOfferings,
   isPurchasesAvailable,
@@ -76,6 +77,7 @@ const FEATURES: Array<{ icon: keyof typeof Ionicons.glyphMap; label: string }> =
 ];
 
 export function PaywallScreen({ visible, onClose, onEntitlementChanged, reason }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   const [selectedId, setSelectedId] = useState<'monthly' | 'annual'>('annual');
@@ -207,10 +209,8 @@ export function PaywallScreen({ visible, onClose, onEntitlementChanged, reason }
           <View style={styles.heroIconWrap}>
             <Ionicons name="sparkles" size={32} color={colors.primary} />
           </View>
-          <Text style={styles.heading}>Hexalife Premium</Text>
-          <Text style={styles.subheading}>
-            Six expert avatars, citation-backed, without the daily limit.
-          </Text>
+          <Text style={styles.heading}>{t('paywall.title')}</Text>
+          <Text style={styles.subheading}>{t('paywall.subtitle')}</Text>
 
           {reason && (
             <View style={styles.reasonCard}>

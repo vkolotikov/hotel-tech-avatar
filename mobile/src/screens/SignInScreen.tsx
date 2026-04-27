@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { AuthUser, login, register } from '../api';
 import { colors, spacing, radius, fontSize } from '../theme';
 
@@ -23,6 +24,7 @@ type Props = {
 type Mode = 'signin' | 'signup';
 
 export function SignInScreen({ onSignedIn }: Props) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -34,15 +36,15 @@ export function SignInScreen({ onSignedIn }: Props) {
   const handleSubmit = async () => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      Alert.alert('Missing info', 'Email and password are required.');
+      Alert.alert(t('common.errorTitle'), `${t('auth.email')} + ${t('auth.password')}.`);
       return;
     }
     if (mode === 'signup' && !name.trim()) {
-      Alert.alert('Missing info', 'Please enter your name.');
+      Alert.alert(t('common.errorTitle'), t('auth.name'));
       return;
     }
     if (mode === 'signup' && password.length < 8) {
-      Alert.alert('Password too short', 'Pick at least 8 characters.');
+      Alert.alert(t('common.errorTitle'), '8+ ' + t('auth.password'));
       return;
     }
 
@@ -53,8 +55,7 @@ export function SignInScreen({ onSignedIn }: Props) {
         : await register(name.trim(), trimmedEmail, password, deviceName);
       onSignedIn(user);
     } catch (error) {
-      const label = mode === 'signin' ? 'Sign in failed' : 'Sign up failed';
-      Alert.alert(label, (error as Error).message);
+      Alert.alert(t('common.errorTitle'), (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -82,7 +83,7 @@ export function SignInScreen({ onSignedIn }: Props) {
           <Text style={styles.brand}>Hexalife</Text>
         </View>
         <Text style={styles.subheading}>
-          {mode === 'signin' ? 'Sign in to continue' : 'Create your account'}
+          {mode === 'signin' ? t('auth.signInToContinue') : t('auth.createAccount')}
         </Text>
 
         <View style={styles.modeTabs}>
@@ -91,7 +92,7 @@ export function SignInScreen({ onSignedIn }: Props) {
             style={[styles.modeTab, mode === 'signin' && styles.modeTabActive]}
           >
             <Text style={[styles.modeTabText, mode === 'signin' && styles.modeTabTextActive]}>
-              Sign in
+              {t('auth.signIn')}
             </Text>
           </Pressable>
           <Pressable
@@ -99,27 +100,27 @@ export function SignInScreen({ onSignedIn }: Props) {
             style={[styles.modeTab, mode === 'signup' && styles.modeTabActive]}
           >
             <Text style={[styles.modeTabText, mode === 'signup' && styles.modeTabTextActive]}>
-              Sign up
+              {t('auth.signUp')}
             </Text>
           </Pressable>
         </View>
 
         {mode === 'signup' && (
           <>
-            <Text style={styles.label}>Name</Text>
+            <Text style={styles.label}>{t('auth.name')}</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
               autoComplete="name"
-              placeholder="Your name"
+              placeholder={t('auth.name')}
               placeholderTextColor={colors.textMuted}
             />
           </>
         )}
 
-        <Text style={styles.label}>Email</Text>
+        <Text style={styles.label}>{t('auth.email')}</Text>
         <TextInput
           style={styles.input}
           value={email}
@@ -131,14 +132,14 @@ export function SignInScreen({ onSignedIn }: Props) {
           placeholderTextColor={colors.textMuted}
         />
 
-        <Text style={styles.label}>Password</Text>
+        <Text style={styles.label}>{t('auth.password')}</Text>
         <TextInput
           style={styles.input}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
           autoComplete={mode === 'signup' ? 'new-password' : 'password'}
-          placeholder={mode === 'signup' ? 'At least 8 characters' : '••••••••'}
+          placeholder={mode === 'signup' ? '8+ characters' : '••••••••'}
           placeholderTextColor={colors.textMuted}
         />
 
@@ -151,16 +152,14 @@ export function SignInScreen({ onSignedIn }: Props) {
             <ActivityIndicator color={colors.textPrimary} />
           ) : (
             <Text style={styles.buttonText}>
-              {mode === 'signin' ? 'Sign in' : 'Create account'}
+              {mode === 'signin' ? t('auth.signIn') : t('auth.signUp')}
             </Text>
           )}
         </Pressable>
 
         <Pressable onPress={toggleMode} style={styles.switchLink}>
           <Text style={styles.switchLinkText}>
-            {mode === 'signin'
-              ? 'New here? Create an account'
-              : 'Already have an account? Sign in'}
+            {mode === 'signin' ? t('auth.noAccount') : t('auth.hasAccount')}
           </Text>
         </Pressable>
       </View>

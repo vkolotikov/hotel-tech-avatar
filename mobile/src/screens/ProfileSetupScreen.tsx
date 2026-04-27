@@ -856,21 +856,22 @@ function WelcomeStep() {
 }
 
 function AboutStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <StepHero icon="person-outline" tint={ACCENT} title="About you" />
+      <StepHero icon="person-outline" tint={ACCENT} title={t('profileSetup.aboutTitle')} />
 
-      <FieldLabel>Your name</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldName')}</FieldLabel>
       <TextInput
         style={styles.text}
-        placeholder="What should we call you?"
+        placeholder={t('profileSetup.fieldNamePlaceholder')}
         placeholderTextColor={colors.textMuted}
         value={profile.display_name ?? ''}
         onChangeText={(v) => set('display_name', v)}
         autoFocus
       />
 
-      <FieldLabel>Age</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldAge')}</FieldLabel>
       <ChipChoice
         options={AGE_OPTIONS}
         value={profile.age_band ?? null}
@@ -878,7 +879,7 @@ function AboutStep({ profile, set }: StepProps) {
         columns={3}
       />
 
-      <FieldLabel>Sex assigned at birth</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldSex')}</FieldLabel>
       <ChipChoice
         options={SEX_OPTIONS}
         value={profile.sex_at_birth ?? null}
@@ -886,7 +887,7 @@ function AboutStep({ profile, set }: StepProps) {
         columns={3}
       />
 
-      <FieldLabel optional>Pronouns</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldPronouns')}</FieldLabel>
       <View style={multiStyles.wrap}>
         {PRONOUN_OPTIONS.map((p) => (
           <Pressable
@@ -905,10 +906,11 @@ function AboutStep({ profile, set }: StepProps) {
 }
 
 function HeritageStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <StepHero icon="globe-outline" tint={ACCENT} title="Heritage" subtitle="Used silently to match advice to genetic-risk patterns. Optional, never displayed." />
-      <FieldLabel optional>Select all that apply</FieldLabel>
+      <StepHero icon="globe-outline" tint={ACCENT} title={t('profileSetup.heritageTitle')} subtitle={t('profileSetup.heritageSubtitle')} />
+      <FieldLabel optional>{t('profileSetup.heritageHelper')}</FieldLabel>
       <MultiChip
         options={ETHNICITY_OPTIONS}
         values={profile.ethnicity ?? []}
@@ -919,25 +921,26 @@ function HeritageStep({ profile, set }: StepProps) {
 }
 
 function BodyStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <StepHero icon="resize-outline" tint={ACCENT} title="Body baseline" />
+      <StepHero icon="resize-outline" tint={ACCENT} title={t('profileSetup.bodyTitle')} />
 
-      <FieldLabel>Height</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldHeight')}</FieldLabel>
       <Stepper
         value={profile.height_cm}
         onChange={(n) => set('height_cm', n)}
         min={120} max={220} unit="cm" icon="resize-outline" tint={ACCENT}
       />
 
-      <FieldLabel>Weight</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldWeight')}</FieldLabel>
       <Stepper
         value={profile.weight_kg}
         onChange={(n) => set('weight_kg', n)}
         min={30} max={250} unit="kg" icon="barbell-outline" tint={ACCENT}
       />
 
-      <FieldLabel optional>Waist (better metabolic risk signal than weight)</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldWaist')}</FieldLabel>
       <Stepper
         value={profile.waist_cm}
         onChange={(n) => set('waist_cm', n)}
@@ -948,18 +951,19 @@ function BodyStep({ profile, set }: StepProps) {
 }
 
 function DayStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <StepHero icon="sunny-outline" tint={ACCENT} title="Your day" />
+      <StepHero icon="sunny-outline" tint={ACCENT} title={t('profileSetup.dayTitle')} />
 
-      <FieldLabel>Daily activity</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldActivity')}</FieldLabel>
       <ChipChoice
         options={ACTIVITY_OPTIONS}
         value={profile.activity_level ?? null}
         onChange={(v) => set('activity_level', v)}
       />
 
-      <FieldLabel>Job type</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldJob')}</FieldLabel>
       <ChipChoice
         options={JOB_OPTIONS}
         value={profile.job_type ?? null}
@@ -967,7 +971,7 @@ function DayStep({ profile, set }: StepProps) {
         columns={3}
       />
 
-      <FieldLabel>Time outdoors per day</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldOutdoor')}</FieldLabel>
       <ChipChoice
         options={TIME_BAND_OUTDOOR}
         value={profile.outdoor_minutes_band ?? null}
@@ -975,7 +979,7 @@ function DayStep({ profile, set }: StepProps) {
         columns={2}
       />
 
-      <FieldLabel>Time per day for wellness</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldWellnessTime')}</FieldLabel>
       <ChipChoice
         options={TIME_BAND_WELLNESS}
         value={profile.wellness_time_band ?? null}
@@ -987,18 +991,19 @@ function DayStep({ profile, set }: StepProps) {
 }
 
 function SleepStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <StepHero icon="moon-outline" tint={ACCENT} title="Sleep" />
+      <StepHero icon="moon-outline" tint={ACCENT} title={t('profileSetup.sleepTitle')} />
 
-      <FieldLabel>Hours per night you aim for</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldSleepHours')}</FieldLabel>
       <Stepper
         value={profile.sleep_hours_target}
         onChange={(n) => set('sleep_hours_target', n)}
         min={3} max={14} unit="h" icon="moon-outline" tint={ACCENT}
       />
 
-      <FieldLabel>Sleep quality lately</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldSleepQuality')}</FieldLabel>
       <ChipChoice
         options={SLEEP_QUALITY_OPTIONS}
         value={profile.sleep_quality ?? null}
@@ -1006,7 +1011,7 @@ function SleepStep({ profile, set }: StepProps) {
         columns={3}
       />
 
-      <FieldLabel>Chronotype</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldChronotype')}</FieldLabel>
       <ChipChoice
         options={CHRONOTYPE_OPTIONS}
         value={profile.chronotype ?? null}
@@ -1018,31 +1023,33 @@ function SleepStep({ profile, set }: StepProps) {
 }
 
 function HabitsStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <StepHero icon="cafe-outline" tint={ACCENT} title="Habits" />
+      <StepHero icon="cafe-outline" tint={ACCENT} title={t('profileSetup.habitsTitle')} />
 
-      <FieldLabel>Smoking</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldSmoking')}</FieldLabel>
       <ChipChoice options={SMOKING_OPTIONS} value={profile.smoking_status ?? null} onChange={(v) => set('smoking_status', v)} columns={2} />
 
-      <FieldLabel>Alcohol</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldAlcohol')}</FieldLabel>
       <ChipChoice options={ALCOHOL_OPTIONS} value={profile.alcohol_freq ?? null} onChange={(v) => set('alcohol_freq', v)} columns={2} />
 
-      <FieldLabel>Caffeine</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldCaffeine')}</FieldLabel>
       <ChipChoice options={CAFFEINE_OPTIONS} value={profile.caffeine_freq ?? null} onChange={(v) => set('caffeine_freq', v)} columns={2} />
 
-      <FieldLabel>Stress level</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldStress')}</FieldLabel>
       <ChipChoice options={STRESS_OPTIONS} value={profile.stress_level ?? null} onChange={(v) => set('stress_level', v)} columns={3} />
     </>
   );
 }
 
 function EatingStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <StepHero icon="restaurant-outline" tint={ACCENT} title="Eating" />
+      <StepHero icon="restaurant-outline" tint={ACCENT} title={t('profileSetup.eatingTitle')} />
 
-      <FieldLabel>Eating pattern</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldEatingPattern')}</FieldLabel>
       <ChipChoice
         options={EATING_PATTERN_OPTIONS}
         value={profile.eating_pattern ?? null}
@@ -1050,7 +1057,7 @@ function EatingStep({ profile, set }: StepProps) {
         columns={2}
       />
 
-      <FieldLabel>Eating schedule</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldEatingSchedule')}</FieldLabel>
       <ChipChoice
         options={EATING_SCHEDULE_OPTIONS}
         value={profile.eating_schedule ?? null}
@@ -1058,7 +1065,7 @@ function EatingStep({ profile, set }: StepProps) {
         columns={2}
       />
 
-      <FieldLabel>Cooking skill</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldCookingSkill')}</FieldLabel>
       <ChipChoice
         options={COOKING_SKILL_OPTIONS}
         value={profile.cooking_skill ?? null}
@@ -1066,7 +1073,7 @@ function EatingStep({ profile, set }: StepProps) {
         columns={2}
       />
 
-      <FieldLabel>Time available to cook</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldCookingTime')}</FieldLabel>
       <ChipChoice
         options={TIME_BAND_COOKING}
         value={profile.cooking_time_band ?? null}
@@ -1074,14 +1081,14 @@ function EatingStep({ profile, set }: StepProps) {
         columns={2}
       />
 
-      <FieldLabel optional>Allergies</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldAllergies')}</FieldLabel>
       <MultiChip
         options={ALLERGY_OPTIONS}
         values={profile.allergies ?? []}
         onChange={(vs) => set('allergies', vs)}
       />
 
-      <FieldLabel optional>Intolerances (cause symptoms but aren't allergies)</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldIntolerances')}</FieldLabel>
       <MultiChip
         options={INTOLERANCE_OPTIONS}
         values={profile.intolerances ?? []}
@@ -1092,6 +1099,7 @@ function EatingStep({ profile, set }: StepProps) {
 }
 
 function HealthStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   const [medsInput, setMedsInput] = useState('');
   const meds = profile.medications ?? [];
   const addMed = (name: string) => {
@@ -1106,20 +1114,20 @@ function HealthStep({ profile, set }: StepProps) {
 
   return (
     <>
-      <StepHero icon="medical-outline" tint={ACCENT} title="Health" subtitle="So we never recommend something that's wrong for you." />
+      <StepHero icon="medical-outline" tint={ACCENT} title={t('profileSetup.healthTitle')} subtitle={t('profileSetup.healthSubtitle')} />
 
-      <FieldLabel optional>Diagnosed conditions</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldConditions')}</FieldLabel>
       <MultiChip
         options={CONDITION_OPTIONS}
         values={profile.conditions ?? []}
         onChange={(vs) => set('conditions', vs)}
       />
 
-      <FieldLabel optional>Current medications</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldMedications')}</FieldLabel>
       <View style={medsStyles.row}>
         <TextInput
           style={medsStyles.input}
-          placeholder="Type and add"
+          placeholder={t('profileSetup.medsAddPlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={medsInput}
           onChangeText={setMedsInput}
@@ -1154,21 +1162,21 @@ function HealthStep({ profile, set }: StepProps) {
         </View>
       ) : null}
 
-      <FieldLabel optional>Family history (first-degree relatives)</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldFamilyHistory')}</FieldLabel>
       <MultiChip
         options={FAMILY_HISTORY_OPTIONS}
         values={profile.family_history ?? []}
         onChange={(vs) => set('family_history', vs)}
       />
 
-      <FieldLabel optional>Past major injuries</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldInjuries')}</FieldLabel>
       <MultiChip
         options={INJURY_OPTIONS}
         values={profile.past_injuries ?? []}
         onChange={(vs) => set('past_injuries', vs)}
       />
 
-      <FieldLabel optional>Mental health context</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldMentalHealth')}</FieldLabel>
       <MultiChip
         options={MENTAL_HEALTH_OPTIONS}
         values={profile.mental_health ?? []}
@@ -1179,11 +1187,12 @@ function HealthStep({ profile, set }: StepProps) {
 }
 
 function LifeStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <StepHero icon="home-outline" tint={ACCENT} title="Life context" />
+      <StepHero icon="home-outline" tint={ACCENT} title={t('profileSetup.lifeTitle')} />
 
-      <FieldLabel>Living situation</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldLiving')}</FieldLabel>
       <ChipChoice
         options={LIVING_OPTIONS}
         value={profile.living_situation ?? null}
@@ -1191,7 +1200,7 @@ function LifeStep({ profile, set }: StepProps) {
         columns={2}
       />
 
-      <FieldLabel>Travel frequency</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldTravel')}</FieldLabel>
       <ChipChoice
         options={TRAVEL_OPTIONS}
         value={profile.travel_frequency ?? null}
@@ -1199,7 +1208,7 @@ function LifeStep({ profile, set }: StepProps) {
         columns={3}
       />
 
-      <FieldLabel>Should we focus on budget-friendly options?</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldBudget')}</FieldLabel>
       <View style={multiStyles.wrap}>
         <Pressable
           onPress={() => set('budget_conscious', true)}
@@ -1211,7 +1220,7 @@ function LifeStep({ profile, set }: StepProps) {
             color={profile.budget_conscious === true ? colors.primary : colors.textMuted}
           />
           <Text style={[multiStyles.chipText, profile.budget_conscious === true && multiStyles.chipTextSelected]}>
-            Yes, budget-friendly
+            {t('profileSetup.budgetYes')}
           </Text>
         </Pressable>
         <Pressable
@@ -1219,7 +1228,7 @@ function LifeStep({ profile, set }: StepProps) {
           style={[multiStyles.chip, profile.budget_conscious === false && multiStyles.chipSelected]}
         >
           <Text style={[multiStyles.chipText, profile.budget_conscious === false && multiStyles.chipTextSelected]}>
-            No constraint
+            {t('profileSetup.budgetNo')}
           </Text>
         </Pressable>
       </View>
@@ -1228,12 +1237,13 @@ function LifeStep({ profile, set }: StepProps) {
 }
 
 function FemaleStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   const status = profile.female_status ?? null;
   return (
     <>
-      <StepHero icon="female-outline" tint={ACCENT} title="Reproductive health" subtitle="Used to keep advice safe and relevant." />
+      <StepHero icon="female-outline" tint={ACCENT} title={t('profileSetup.femaleTitle')} subtitle={t('profileSetup.femaleSubtitle')} />
 
-      <FieldLabel>Current status</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldFemaleStatus')}</FieldLabel>
       <ChipChoice
         options={FEMALE_STATUS_OPTIONS}
         value={status}
@@ -1243,7 +1253,7 @@ function FemaleStep({ profile, set }: StepProps) {
 
       {status === 'pregnant' ? (
         <>
-          <FieldLabel>Weeks pregnant</FieldLabel>
+          <FieldLabel>{t('profileSetup.fieldPregnancyWeeks')}</FieldLabel>
           <Stepper
             value={profile.pregnancy_weeks}
             onChange={(n) => set('pregnancy_weeks', n)}
@@ -1254,7 +1264,7 @@ function FemaleStep({ profile, set }: StepProps) {
 
       {status === 'breastfeeding' ? (
         <>
-          <FieldLabel>Months breastfeeding</FieldLabel>
+          <FieldLabel>{t('profileSetup.fieldBreastfeedingMonths')}</FieldLabel>
           <Stepper
             value={profile.breastfeeding_months}
             onChange={(n) => set('breastfeeding_months', n)}
@@ -1265,7 +1275,7 @@ function FemaleStep({ profile, set }: StepProps) {
 
       {(status === 'regular' || status === 'irregular') ? (
         <>
-          <FieldLabel>Average cycle length</FieldLabel>
+          <FieldLabel>{t('profileSetup.fieldCycleLength')}</FieldLabel>
           <Stepper
             value={profile.cycle_length_days}
             onChange={(n) => set('cycle_length_days', n)}
@@ -1274,7 +1284,7 @@ function FemaleStep({ profile, set }: StepProps) {
         </>
       ) : null}
 
-      <FieldLabel optional>Contraception</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldContraception')}</FieldLabel>
       <ChipChoice
         options={CONTRACEPTION_OPTIONS}
         value={profile.contraception ?? null}
@@ -1286,6 +1296,7 @@ function FemaleStep({ profile, set }: StepProps) {
 }
 
 function GoalsStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   const selected = (profile.goals ?? []) as string[];
   const toggle = (key: string) => {
     if (selected.includes(key)) {
@@ -1304,7 +1315,7 @@ function GoalsStep({ profile, set }: StepProps) {
 
   return (
     <>
-      <StepHero icon="flag-outline" tint={ACCENT} title="Your goals" subtitle="Pick up to 3 — your team is built around them." />
+      <StepHero icon="flag-outline" tint={ACCENT} title={t('profileSetup.goalsTitle')} subtitle={t('profileSetup.goalsSubtitle')} />
 
       <View style={chipStyles.grid}>
         {GOAL_OPTIONS.map((g) => {
@@ -1334,12 +1345,12 @@ function GoalsStep({ profile, set }: StepProps) {
         <View style={teamStyles.card}>
           <Ionicons name="people-circle-outline" size={20} color={ACCENT} />
           <Text style={teamStyles.text}>
-            Your team will include {teamMembers.join(', ')}.
+            {t('profileSetup.teamPrefix')} {teamMembers.join(', ')}.
           </Text>
         </View>
       ) : null}
 
-      <FieldLabel optional>What started this for you?</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldMotivation')}</FieldLabel>
       <ChipChoice
         options={MOTIVATION_OPTIONS}
         value={profile.motivation_trigger ?? null}
@@ -1347,17 +1358,17 @@ function GoalsStep({ profile, set }: StepProps) {
         columns={2}
       />
 
-      <FieldLabel optional>In your own words</FieldLabel>
+      <FieldLabel optional>{t('profileSetup.fieldMotivationText')}</FieldLabel>
       <TextInput
         style={[styles.text, { minHeight: 70 }]}
-        placeholder="Anything you've tried before, or a specific reason now?"
+        placeholder={t('profileSetup.motivationPlaceholder')}
         placeholderTextColor={colors.textMuted}
         value={profile.motivation_text ?? ''}
         onChangeText={(v) => set('motivation_text', v)}
         multiline
       />
 
-      <FieldLabel>Timeline</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldTimeline')}</FieldLabel>
       <ChipChoice
         options={TIMELINE_OPTIONS}
         value={profile.goal_timeline ?? null}
@@ -1365,7 +1376,7 @@ function GoalsStep({ profile, set }: StepProps) {
         columns={2}
       />
 
-      <FieldLabel>How confident do you feel about hitting these goals?</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldConfidence')}</FieldLabel>
       <ConfidenceSlider
         value={profile.goal_confidence}
         onChange={(n) => set('goal_confidence', n)}
@@ -1376,33 +1387,35 @@ function GoalsStep({ profile, set }: StepProps) {
 }
 
 function CoachingStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <StepHero icon="sparkles-outline" tint={ACCENT} title="Coaching style" subtitle="Shapes how every avatar talks to you." />
+      <StepHero icon="sparkles-outline" tint={ACCENT} title={t('profileSetup.coachingTitle')} subtitle={t('profileSetup.coachingSubtitle')} />
 
-      <FieldLabel>Tone</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldTone')}</FieldLabel>
       <ChipChoice options={COACHING_TONE_OPTIONS} value={profile.coaching_tone ?? null} onChange={(v) => set('coaching_tone', v)} columns={2} />
 
-      <FieldLabel>Detail level</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldDetail')}</FieldLabel>
       <ChipChoice options={COACHING_DETAIL_OPTIONS} value={profile.coaching_detail ?? null} onChange={(v) => set('coaching_detail', v)} columns={3} />
 
-      <FieldLabel>Pace</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldPace')}</FieldLabel>
       <ChipChoice options={COACHING_PACE_OPTIONS} value={profile.coaching_pace ?? null} onChange={(v) => set('coaching_pace', v)} columns={2} />
 
-      <FieldLabel>Routines or variety?</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldStyle')}</FieldLabel>
       <ChipChoice options={COACHING_STYLE_OPTIONS} value={profile.coaching_style ?? null} onChange={(v) => set('coaching_style', v)} columns={2} />
 
-      <FieldLabel>Accountability</FieldLabel>
+      <FieldLabel>{t('profileSetup.fieldAccountability')}</FieldLabel>
       <ChipChoice options={ACCOUNTABILITY_OPTIONS} value={profile.accountability_style ?? null} onChange={(v) => set('accountability_style', v)} columns={2} />
     </>
   );
 }
 
 function ReviewStep({ profile, jumpTo, steps }: { profile: Partial<UserProfile>; jumpTo: (i: number) => void; steps: StepKey[] }) {
-  const summary = useMemo(() => buildSummary(profile), [profile]);
+  const { t } = useTranslation();
+  const summary = useMemo(() => buildSummary(profile, t), [profile, t]);
   return (
     <>
-      <StepHero icon="checkmark-done-outline" tint={ACCENT} title="You're set" subtitle="Your starting team is ready. Edit any section before saving." />
+      <StepHero icon="checkmark-done-outline" tint={ACCENT} title={t('profileSetup.reviewTitle')} subtitle={t('profileSetup.reviewSubtitle')} />
       {summary.map((sec) => {
         const idx = steps.indexOf(sec.step);
         return (
@@ -1416,7 +1429,7 @@ function ReviewStep({ profile, jumpTo, steps }: { profile: Partial<UserProfile>;
               <Text style={reviewStyles.title}>{sec.title}</Text>
               <Ionicons name="pencil" size={14} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
             </View>
-            <Text style={reviewStyles.body}>{sec.body || 'Tap to fill'}</Text>
+            <Text style={reviewStyles.body}>{sec.body || t('common.tapToSet')}</Text>
           </Pressable>
         );
       })}
@@ -1424,19 +1437,22 @@ function ReviewStep({ profile, jumpTo, steps }: { profile: Partial<UserProfile>;
   );
 }
 
-function buildSummary(p: Partial<UserProfile>): { step: StepKey; icon: IoniconName; title: string; body: string }[] {
+function buildSummary(
+  p: Partial<UserProfile>,
+  t: (key: string) => string,
+): { step: StepKey; icon: IoniconName; title: string; body: string }[] {
   const arr = (a?: string[]) => (a && a.length ? a.join(', ') : '');
   return [
-    { step: 'about',    icon: 'person-outline',    title: 'About',     body: [p.display_name, p.age_band, p.sex_at_birth].filter(Boolean).join(' · ') },
-    { step: 'body',     icon: 'resize-outline',    title: 'Body',      body: [p.height_cm && `${p.height_cm} cm`, p.weight_kg && `${p.weight_kg} kg`].filter(Boolean).join(' · ') },
-    { step: 'day',      icon: 'sunny-outline',     title: 'Day',       body: [p.activity_level, p.job_type].filter(Boolean).join(' · ') },
-    { step: 'sleep',    icon: 'moon-outline',      title: 'Sleep',     body: [p.sleep_hours_target && `${p.sleep_hours_target}h`, p.sleep_quality, p.chronotype].filter(Boolean).join(' · ') },
-    { step: 'habits',   icon: 'cafe-outline',      title: 'Habits',    body: [p.smoking_status, p.alcohol_freq, p.caffeine_freq, p.stress_level].filter(Boolean).join(' · ') },
-    { step: 'eating',   icon: 'restaurant-outline', title: 'Eating',   body: [p.eating_pattern, p.eating_schedule, arr(p.allergies)].filter(Boolean).join(' · ') },
-    { step: 'health',   icon: 'medical-outline',   title: 'Health',    body: [arr(p.conditions), arr(p.medications), arr(p.family_history)].filter(Boolean).join(' · ') },
-    { step: 'life',     icon: 'home-outline',      title: 'Life',      body: [p.living_situation, p.travel_frequency].filter(Boolean).join(' · ') },
-    { step: 'goals',    icon: 'flag-outline',      title: 'Goals',     body: [arr(p.goals), p.goal_timeline].filter(Boolean).join(' · ') },
-    { step: 'coaching', icon: 'sparkles-outline',  title: 'Style',     body: [p.coaching_tone, p.coaching_detail, p.coaching_pace].filter(Boolean).join(' · ') },
+    { step: 'about',    icon: 'person-outline',    title: t('profileSetup.reviewSection.about'),  body: [p.display_name, p.age_band, p.sex_at_birth].filter(Boolean).join(' · ') },
+    { step: 'body',     icon: 'resize-outline',    title: t('profileSetup.reviewSection.body'),   body: [p.height_cm && `${p.height_cm} cm`, p.weight_kg && `${p.weight_kg} kg`].filter(Boolean).join(' · ') },
+    { step: 'day',      icon: 'sunny-outline',     title: t('profileSetup.reviewSection.day'),    body: [p.activity_level, p.job_type].filter(Boolean).join(' · ') },
+    { step: 'sleep',    icon: 'moon-outline',      title: t('profileSetup.reviewSection.sleep'),  body: [p.sleep_hours_target && `${p.sleep_hours_target}h`, p.sleep_quality, p.chronotype].filter(Boolean).join(' · ') },
+    { step: 'habits',   icon: 'cafe-outline',      title: t('profileSetup.reviewSection.habits'), body: [p.smoking_status, p.alcohol_freq, p.caffeine_freq, p.stress_level].filter(Boolean).join(' · ') },
+    { step: 'eating',   icon: 'restaurant-outline', title: t('profileSetup.reviewSection.eating'), body: [p.eating_pattern, p.eating_schedule, arr(p.allergies)].filter(Boolean).join(' · ') },
+    { step: 'health',   icon: 'medical-outline',   title: t('profileSetup.reviewSection.health'), body: [arr(p.conditions), arr(p.medications), arr(p.family_history)].filter(Boolean).join(' · ') },
+    { step: 'life',     icon: 'home-outline',      title: t('profileSetup.reviewSection.life'),   body: [p.living_situation, p.travel_frequency].filter(Boolean).join(' · ') },
+    { step: 'goals',    icon: 'flag-outline',      title: t('profileSetup.reviewSection.goals'),  body: [arr(p.goals), p.goal_timeline].filter(Boolean).join(' · ') },
+    { step: 'coaching', icon: 'sparkles-outline',  title: t('profileSetup.reviewSection.style'),  body: [p.coaching_tone, p.coaching_detail, p.coaching_pace].filter(Boolean).join(' · ') },
   ];
 }
 

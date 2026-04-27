@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Audio } from 'expo-av';
 import { transcribeAudio } from '../api/transcribe';
 import { fetchAndPlay, useMessagePlayback } from '../hooks/useMessagePlayback';
@@ -42,13 +43,13 @@ const METERING_INTERVAL_MS = 120;
 
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking' | 'paused' | 'error';
 
-const PHASE_LABELS: Record<Phase, string> = {
-  idle: 'Tap to start',
-  listening: 'Listening…',
-  thinking: 'Thinking…',
-  speaking: 'Speaking…',
-  paused: 'Tap to resume',
-  error: 'Tap to retry',
+const PHASE_KEYS: Record<Phase, string> = {
+  idle: 'voiceMode.phaseIdle',
+  listening: 'voiceMode.phaseListening',
+  thinking: 'voiceMode.phaseThinking',
+  speaking: 'voiceMode.phaseSpeaking',
+  paused: 'voiceMode.phasePaused',
+  error: 'voiceMode.phaseError',
 };
 
 export function VoiceModeScreen({
@@ -60,8 +61,14 @@ export function VoiceModeScreen({
   onUserSpoke,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>('idle');
+  // Pulled into locals so the JSX below doesn't carry phase-string
+  // comparisons that the react-native/no-raw-text linter trips on.
+  const isListening = phase === 'listening';
+  const isSpeaking = phase === 'speaking';
+  const isThinking = phase === 'thinking';
   const recordingRef = useRef<Audio.Recording | null>(null);
   const lastLoudAtRef = useRef<number>(0);
   const recordingStartedAtRef = useRef<number>(0);
@@ -133,11 +140,11 @@ export function VoiceModeScreen({
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
         Alert.alert(
-          'Microphone access required',
-          'Enable microphone access in Settings to use voice mode.',
+          t('voiceMode.permissionRequired'),
+          t('voiceMode.permissionBody'),
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('voiceMode.openSettings'), onPress: () => Linking.openSettings() },
           ],
         );
         setPhase('paused');
@@ -268,7 +275,7 @@ export function VoiceModeScreen({
       <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.topBar}>
           <Text style={styles.title} numberOfLines={1}>
-            {avatarName} - voice mode
+            {t('voiceMode.title', { name: avatarName })}
           </Text>
           <Pressable
             onPress={handleClose}
@@ -298,19 +305,19 @@ export function VoiceModeScreen({
             )}
           </Animated.View>
           <View style={[styles.statusPill, { borderColor: accent }]}>
-            {(phase === 'listening' || phase === 'speaking') && (
+            {(isListening || isSpeaking) && (
               <View style={[styles.statusDot, { backgroundColor: accent }]} />
             )}
-            <Text style={styles.statusText}>{PHASE_LABELS[phase]}</Text>
+            <Text style={styles.statusText}>{t(PHASE_KEYS[phase])}</Text>
           </View>
           <Text style={styles.helper}>
-            {phase === 'listening'
-              ? 'Speak naturally — I will pause when you do.'
-              : phase === 'speaking'
-              ? `${avatarName} is speaking. Tap to interrupt.`
-              : phase === 'thinking'
-              ? 'Hang on a moment…'
-              : 'Tap the mic and start talking. I will reply by voice.'}
+            {isListening
+              ? t('voiceMode.helperListening')
+              : isSpeaking
+              ? t('voiceMode.helperSpeaking', { name: avatarName })
+              : isThinking
+              ? t('voiceMode.helperThinking')
+              : t('voiceMode.helperIdle')}
           </Text>
         </View>
 
