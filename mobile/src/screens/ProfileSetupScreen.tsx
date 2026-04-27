@@ -404,14 +404,18 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
 
-// Female slide is conditional — only shown when sex_at_birth=F AND age 12-55.
+// Female-health slide is conditional — only when sex_at_birth=F and the
+// user is in reproductive age. We exclude `under-18` because that
+// range straddles 12-17 and our content was authored for adults; we
+// also exclude 55+ because most users in those bands are post-
+// menopausal and the cycle / pregnancy questions are noise. Users in
+// excluded bands can still set female_status manually from Settings →
+// Edit profile if they want.
 function femaleSlideRelevant(profile: Partial<UserProfile>): boolean {
   if (profile.sex_at_birth !== 'F') return false;
   const band = profile.age_band ?? null;
   if (!band) return true; // unknown — show, user can skip
-  if (band === 'under-18') return true;
-  if (band === '18-24' || band === '25-34' || band === '35-44' || band === '45-54') return true;
-  return false;
+  return band === '18-24' || band === '25-34' || band === '35-44' || band === '45-54';
 }
 
 // ─── Reusable UI primitives ──────────────────────────────────────────────
@@ -434,10 +438,11 @@ function StepHero({ icon, tint, title, subtitle }: {
 }
 
 function FieldLabel({ children, optional }: { children: string; optional?: boolean }) {
+  const { t } = useTranslation();
   return (
     <Text style={fieldStyles.label}>
       {children}
-      {optional ? <Text style={fieldStyles.optional}>  Optional</Text> : null}
+      {optional ? <Text style={fieldStyles.optional}>  {t('common.optional')}</Text> : null}
     </Text>
   );
 }
@@ -544,6 +549,7 @@ function Stepper({ value, onChange, min, max, step = 1, unit, icon, tint }: {
   icon: IoniconName;
   tint: string;
 }) {
+  const { t } = useTranslation();
   const safeStep = step;
   const display = value ?? Math.round((min + max) / 2);
   const change = (delta: number) => onChange(clamp(display + delta, min, max));
@@ -554,7 +560,9 @@ function Stepper({ value, onChange, min, max, step = 1, unit, icon, tint }: {
         onPress={() => onChange(display)}
       >
         <Ionicons name={icon} size={18} color={tint} />
-        <Text style={[stepperStyles.emptyText, { color: tint }]}>Tap to set ({display} {unit})</Text>
+        <Text style={[stepperStyles.emptyText, { color: tint }]}>
+          {t('common.tapToSet')} ({display} {unit})
+        </Text>
       </Pressable>
     );
   }

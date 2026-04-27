@@ -128,7 +128,7 @@ export function SignInScreen({ onSignedIn }: Props) {
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
-          placeholder="you@example.com"
+          placeholder={t('auth.emailPlaceholder')}
           placeholderTextColor={colors.textMuted}
         />
 
@@ -139,7 +139,7 @@ export function SignInScreen({ onSignedIn }: Props) {
           onChangeText={setPassword}
           secureTextEntry
           autoComplete={mode === 'signup' ? 'new-password' : 'password'}
-          placeholder={mode === 'signup' ? '8+ characters' : '••••••••'}
+          placeholder={mode === 'signup' ? t('auth.passwordHint') : '••••••••'}
           placeholderTextColor={colors.textMuted}
         />
 

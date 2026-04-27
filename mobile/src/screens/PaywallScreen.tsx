@@ -232,7 +232,7 @@ export function PaywallScreen({ visible, onClose, onEntitlementChanged, reason }
             {loadingOfferings && (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color={colors.textMuted} size="small" />
-                <Text style={styles.loadingLabel}>Loading plans…</Text>
+                <Text style={styles.loadingLabel}>{t('paywall.loadingPlans')}</Text>
               </View>
             )}
             {plans.map((plan) => {

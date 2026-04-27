@@ -86,6 +86,22 @@ export function useChatStream(conversationId: number) {
             buffer += event.content;
             setState((s) => ({ ...s, streamingText: buffer }));
           } else if (event.type === 'done') {
+            // Guard against malformed `done` events. A missing
+            // message_id means we'd assign id=undefined, which then
+            // breaks FlatList's String(m.id) keyExtractor and
+            // duplicates the row across re-renders. Reject the event
+            // instead and surface as an error so the user can retry.
+            if (typeof event.message_id !== 'number' || event.message_id <= 0) {
+              es.close();
+              esRef.current = null;
+              setState((s) => ({
+                ...s,
+                isPending: false,
+                streamingText: '',
+                error: new Error('Stream completed without a valid message id'),
+              }));
+              return;
+            }
             finalMessage = {
               id: event.message_id,
               conversation_id: conversationId,

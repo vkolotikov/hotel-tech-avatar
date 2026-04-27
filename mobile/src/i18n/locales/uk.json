@@ -17,6 +17,8 @@
     "forgotPassword": "Забули пароль?",
     "noAccount": "Немає облікового запису?",
     "hasAccount": "Вже маєте обліковий запис?",
+    "emailPlaceholder": "ти@приклад.com",
+    "passwordHint": "8+ символів",
     "signOut": "Вийти",
     "signOutConfirm": "Ви вийдете з облікового запису на цьому пристрої.",
     "signOutFailed": "Не вдалося вийти"
@@ -259,6 +261,8 @@
     "phaseListening": "Слухаю…", "phaseThinking": "Думаю…",
     "phaseSpeaking": "Говорить…", "phasePaused": "Торкніться, щоб продовжити",
     "phaseError": "Торкніться, щоб повторити",
+    "timedOutTitle": "Відповідь не отримано",
+    "timedOutBody": "Ми зачекали, але відповідь не надійшла. Перевірте з'єднання і спробуйте знову.",
     "helperListening": "Говоріть природно — я зупинюся, коли зупинитеся ви.",
     "helperSpeaking": "{{name}} говорить. Торкніться, щоб перервати.",
     "helperThinking": "Хвилинку…",
@@ -293,7 +297,8 @@
     "ctaSubscribe": "Почати пробний період",
     "ctaRestore": "Відновити покупки",
     "purchaseFailed": "Покупка не вдалася",
-    "restoreFailed": "Не вдалося відновити"
+    "restoreFailed": "Не вдалося відновити",
+    "loadingPlans": "Завантаження тарифів…"
   },
   "tabs": { "home": "Головна", "library": "Бібліотека", "history": "Історія", "settings": "Налаштування" },
   "avatarHome": {
@@ -304,6 +309,8 @@
     "watchDemo": "Дивитись демо",
     "newChatTitle": "Розпочати нову розмову?",
     "newChatBody": "Поточну розмову з {{name}} збережемо в історії, відкриємо нову.",
-    "couldNotStart": "Не вдалося розпочати розмову"
+    "couldNotStart": "Не вдалося розпочати розмову",
+    "couldNotLoad": "Не вдалося завантажити аватари",
+    "noAvatarsYet": "Аватари поки недоступні."
   }
 }

@@ -17,6 +17,8 @@
     "forgotPassword": "Nie pamiętasz hasła?",
     "noAccount": "Nie masz konta?",
     "hasAccount": "Masz już konto?",
+    "emailPlaceholder": "ty@przyklad.com",
+    "passwordHint": "8+ znaków",
     "signOut": "Wyloguj",
     "signOutConfirm": "Zostaniesz wylogowany na tym urządzeniu.",
     "signOutFailed": "Wylogowanie nie powiodło się"
@@ -259,6 +261,8 @@
     "phaseListening": "Słucham…", "phaseThinking": "Myślę…",
     "phaseSpeaking": "Mówi…", "phasePaused": "Stuknij, aby wznowić",
     "phaseError": "Stuknij, aby ponowić",
+    "timedOutTitle": "Brak odpowiedzi",
+    "timedOutBody": "Czekaliśmy, ale odpowiedź nie nadeszła. Sprawdź połączenie i spróbuj ponownie.",
     "helperListening": "Mów naturalnie — zatrzymam się, gdy ty się zatrzymasz.",
     "helperSpeaking": "{{name}} mówi. Stuknij, aby przerwać.",
     "helperThinking": "Chwilkę…",
@@ -293,7 +297,8 @@
     "ctaSubscribe": "Zacznij darmowy okres",
     "ctaRestore": "Przywróć zakupy",
     "purchaseFailed": "Zakup nie powiódł się",
-    "restoreFailed": "Przywracanie nie powiodło się"
+    "restoreFailed": "Przywracanie nie powiodło się",
+    "loadingPlans": "Wczytywanie planów…"
   },
   "tabs": { "home": "Główna", "library": "Biblioteka", "history": "Historia", "settings": "Ustawienia" },
   "avatarHome": {
@@ -304,6 +309,8 @@
     "watchDemo": "Obejrzyj demo",
     "newChatTitle": "Rozpocząć nową rozmowę?",
     "newChatBody": "Zachowamy bieżącą rozmowę z {{name}} w historii i otworzymy nową.",
-    "couldNotStart": "Nie udało się rozpocząć rozmowy"
+    "couldNotStart": "Nie udało się rozpocząć rozmowy",
+    "couldNotLoad": "Nie udało się załadować awatarów",
+    "noAvatarsYet": "Brak dostępnych awatarów."
   }
 }

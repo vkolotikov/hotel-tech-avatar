@@ -17,6 +17,8 @@
     "forgotPassword": "Aizmirsi paroli?",
     "noAccount": "Vēl nav konta?",
     "hasAccount": "Jau ir konts?",
+    "emailPlaceholder": "tu@piemers.com",
+    "passwordHint": "8+ rakstzīmes",
     "signOut": "Iziet",
     "signOutConfirm": "Tu tiksi izrakstīts šajā ierīcē.",
     "signOutFailed": "Neizdevās iziet"
@@ -259,6 +261,8 @@
     "phaseListening": "Klausos…", "phaseThinking": "Domāju…",
     "phaseSpeaking": "Runā…", "phasePaused": "Pieskaries, lai turpinātu",
     "phaseError": "Pieskaries, lai mēģinātu vēlreiz",
+    "timedOutTitle": "Atbilde nav saņemta",
+    "timedOutBody": "Mēs gaidījām, bet atbilde nepienāca. Pārbaudi savienojumu un mēģini vēlreiz.",
     "helperListening": "Runā dabiski — apstāšos, kad apstāsies tu.",
     "helperSpeaking": "{{name}} runā. Pieskaries, lai pārtrauktu.",
     "helperThinking": "Mirkli…",
@@ -293,7 +297,8 @@
     "ctaSubscribe": "Sākt bezmaksas izmēģinājumu",
     "ctaRestore": "Atjaunot pirkumus",
     "purchaseFailed": "Pirkums neizdevās",
-    "restoreFailed": "Atjaunošana neizdevās"
+    "restoreFailed": "Atjaunošana neizdevās",
+    "loadingPlans": "Ielādē plānus…"
   },
   "tabs": { "home": "Sākums", "library": "Bibliotēka", "history": "Vēsture", "settings": "Iestatījumi" },
   "avatarHome": {
@@ -304,6 +309,8 @@
     "watchDemo": "Skatīt demo",
     "newChatTitle": "Sākt jaunu sarunu?",
     "newChatBody": "Pašreizējo sarunu ar {{name}} saglabāsim vēsturē, atvērsim jaunu.",
-    "couldNotStart": "Neizdevās sākt sarunu"
+    "couldNotStart": "Neizdevās sākt sarunu",
+    "couldNotLoad": "Neizdevās ielādēt avatārus",
+    "noAvatarsYet": "Pagaidām nav pieejamu avatāru."
   }
 }

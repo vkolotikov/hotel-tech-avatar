@@ -31,6 +31,8 @@
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "noAccount": "¿No tienes cuenta?",
     "hasAccount": "¿Ya tienes cuenta?",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "passwordHint": "8+ caracteres",
     "signOut": "Cerrar sesión",
     "signOutConfirm": "Se cerrará tu sesión en este dispositivo.",
     "signOutFailed": "Error al cerrar sesión"
@@ -285,6 +287,8 @@
     "phaseSpeaking": "Hablando…",
     "phasePaused": "Toca para reanudar",
     "phaseError": "Toca para reintentar",
+    "timedOutTitle": "No recibí respuesta",
+    "timedOutBody": "Esperamos pero no llegó respuesta. Revisa tu conexión y vuelve a intentarlo.",
     "helperListening": "Habla con naturalidad — me detendré cuando tú lo hagas.",
     "helperSpeaking": "{{name}} está hablando. Toca para interrumpir.",
     "helperThinking": "Un momento…",
@@ -319,7 +323,8 @@
     "ctaSubscribe": "Empezar prueba gratuita",
     "ctaRestore": "Restaurar compras",
     "purchaseFailed": "Compra fallida",
-    "restoreFailed": "Restauración fallida"
+    "restoreFailed": "Restauración fallida",
+    "loadingPlans": "Cargando planes…"
   },
   "tabs": { "home": "Inicio", "library": "Biblioteca", "history": "Historial", "settings": "Ajustes" },
   "avatarHome": {
@@ -330,6 +335,8 @@
     "watchDemo": "Ver demo",
     "newChatTitle": "¿Iniciar un nuevo chat?",
     "newChatBody": "Mantenemos la conversación actual con {{name}} en tu historial y abrimos una nueva.",
-    "couldNotStart": "No se pudo iniciar el chat"
+    "couldNotStart": "No se pudo iniciar el chat",
+    "couldNotLoad": "No se pudieron cargar los avatares",
+    "noAvatarsYet": "Aún no hay avatares disponibles."
   }
 }

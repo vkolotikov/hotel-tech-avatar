@@ -31,6 +31,8 @@
     "forgotPassword": "Forgot password?",
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
+    "emailPlaceholder": "you@example.com",
+    "passwordHint": "8+ characters",
     "signOut": "Sign out",
     "signOutConfirm": "You will be signed out of Hexalife on this device.",
     "signOutFailed": "Sign out failed"
@@ -442,6 +444,8 @@
     "phaseSpeaking": "Speaking…",
     "phasePaused": "Tap to resume",
     "phaseError": "Tap to retry",
+    "timedOutTitle": "I didn't catch a reply",
+    "timedOutBody": "We waited but no reply came back. Check your connection and try again.",
     "helperListening": "Speak naturally — I will pause when you do.",
     "helperSpeaking": "{{name}} is speaking. Tap to interrupt.",
     "helperThinking": "Hang on a moment…",
@@ -482,7 +486,8 @@
     "ctaSubscribe": "Start free trial",
     "ctaRestore": "Restore purchases",
     "purchaseFailed": "Purchase failed",
-    "restoreFailed": "Restore failed"
+    "restoreFailed": "Restore failed",
+    "loadingPlans": "Loading plans…"
   },
   "tabs": {
     "home": "Home",
@@ -498,6 +503,8 @@
     "watchDemo": "Watch demo",
     "newChatTitle": "Start a new chat?",
     "newChatBody": "This keeps the current conversation with {{name}} in your history and opens a fresh one.",
-    "couldNotStart": "Couldn't start chat"
+    "couldNotStart": "Couldn't start chat",
+    "couldNotLoad": "Couldn't load avatars",
+    "noAvatarsYet": "No avatars available yet."
   }
 }

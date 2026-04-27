@@ -12,6 +12,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAvatars } from '../hooks/useAvatars';
 import { useConversations, useCreateConversation } from '../hooks/useConversations';
 import { IntroVideoModal } from '../components/avatars/IntroVideoModal';
@@ -24,6 +25,7 @@ type Nav = NativeStackNavigationProp<LibraryStackParamList, 'LibraryHome'>;
 
 export function LibraryScreen() {
   const navigation = useNavigation<Nav>();
+  const { t } = useTranslation();
   const { data: avatars, isLoading, isError } = useAvatars();
   const { data: conversationsData } = useConversations();
   const createMutation = useCreateConversation();
@@ -62,7 +64,7 @@ export function LibraryScreen() {
         promptSuggestions: avatar.prompt_suggestions,
       });
     } catch (err) {
-      Alert.alert('Could not start chat', (err as Error).message ?? 'Unknown error');
+      Alert.alert(t('avatarHome.couldNotStart'), (err as Error).message ?? '');
     }
   };
 
@@ -76,7 +78,7 @@ export function LibraryScreen() {
   if (isError || !avatars) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Couldn't load library</Text>
+        <Text style={styles.errorText}>{t('avatarHome.couldNotLoad')}</Text>
       </View>
     );
   }

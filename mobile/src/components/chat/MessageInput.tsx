@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -78,6 +78,11 @@ export function MessageInput({
   const [pickerVisible, setPickerVisible] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  // Ref-backed lock so a rapid double-tap can't both pass the
+  // canSend check before React re-renders with the new state. The
+  // disabled prop on Pressable only updates after re-render — the
+  // gap between two synchronous taps is faster than that.
+  const sendingRef = useRef(false);
   const insets = useSafeAreaInsets();
 
   // Mic in this row is dictation-only — record once, transcribe, append
@@ -97,18 +102,23 @@ export function MessageInput({
     (text.trim().length > 0 || attachments.length > 0);
 
   const handleSend = async () => {
-    if (!canSend) return;
-    const trimmed = text.trim();
-    const ids = attachments.map((a) => a.id);
-    const opts: { voice?: boolean; attachmentIds?: number[] } = {};
-    if (ids.length > 0) opts.attachmentIds = ids;
-    const result = onSend(trimmed, Object.keys(opts).length > 0 ? opts : undefined);
-    if (result && typeof (result as Promise<boolean>).then === 'function') {
-      const ok = await (result as Promise<boolean>);
-      if (ok === false) return;
+    if (!canSend || sendingRef.current) return;
+    sendingRef.current = true;
+    try {
+      const trimmed = text.trim();
+      const ids = attachments.map((a) => a.id);
+      const opts: { voice?: boolean; attachmentIds?: number[] } = {};
+      if (ids.length > 0) opts.attachmentIds = ids;
+      const result = onSend(trimmed, Object.keys(opts).length > 0 ? opts : undefined);
+      if (result && typeof (result as Promise<boolean>).then === 'function') {
+        const ok = await (result as Promise<boolean>);
+        if (ok === false) return;
+      }
+      setText('');
+      setAttachments([]);
+    } finally {
+      sendingRef.current = false;
     }
-    setText('');
-    setAttachments([]);
   };
 
   const runUpload = async (asset: { uri: string; name: string; mimeType: string | null }) => {

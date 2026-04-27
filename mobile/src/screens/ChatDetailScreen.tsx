@@ -16,6 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useMessages, messagesKey } from '../hooks/useMessages';
 import { useChatStream } from '../hooks/useChatStream';
 import { useAvatars } from '../hooks/useAvatars';
@@ -44,6 +45,7 @@ export function ChatDetailScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const {
     conversationId,
     avatarSlug,
@@ -97,16 +99,16 @@ export function ChatDetailScreen() {
 
   const handleNewChat = () => {
     Alert.alert(
-      'Start a new chat?',
-      `This keeps the current conversation with ${avatarName} in your history and opens a fresh one.`,
+      t('avatarHome.newChatTitle'),
+      t('avatarHome.newChatBody', { name: avatarName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'New chat',
+          text: t('avatarHome.newChat'),
           onPress: async () => {
             const agent = avatars?.find((a) => a.slug === avatarSlug);
             if (!agent) {
-              Alert.alert('Could not start new chat', 'Avatar not available.');
+              Alert.alert(t('avatarHome.couldNotStart'), '');
               return;
             }
             try {
@@ -114,10 +116,6 @@ export function ChatDetailScreen() {
                 agentId: agent.id,
                 title: null,
               });
-              // Replace current ChatDetail rather than stacking another —
-              // the old conversation is already saved, and back-nav from
-              // the new one should go to the screen the user came from
-              // (AvatarHome / Library / History), not the old chat.
               navigation.replace('ChatDetail', {
                 conversationId: conversation.id,
                 avatarSlug: agent.slug,
@@ -126,7 +124,7 @@ export function ChatDetailScreen() {
                 promptSuggestions: agent.prompt_suggestions,
               });
             } catch (err) {
-              Alert.alert('Could not start new chat', (err as Error).message);
+              Alert.alert(t('avatarHome.couldNotStart'), (err as Error).message);
             }
           },
         },
@@ -286,8 +284,8 @@ export function ChatDetailScreen() {
         {Background}
         {TopBar}
         <View style={styles.centerOverlay}>
-          <Text style={styles.errorText}>Couldn't load messages</Text>
-          <Text style={styles.retryText} onPress={() => refetch()}>Tap to retry</Text>
+          <Text style={styles.errorText}>{t('chat.couldNotLoad')}</Text>
+          <Text style={styles.retryText} onPress={() => refetch()}>{t('chat.tapRetry')}</Text>
         </View>
       </View>
     );

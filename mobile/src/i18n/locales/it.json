@@ -17,6 +17,8 @@
     "forgotPassword": "Password dimenticata?",
     "noAccount": "Non hai un account?",
     "hasAccount": "Hai già un account?",
+    "emailPlaceholder": "tu@esempio.com",
+    "passwordHint": "8+ caratteri",
     "signOut": "Esci",
     "signOutConfirm": "Verrai disconnesso da questo dispositivo.",
     "signOutFailed": "Disconnessione fallita"
@@ -259,6 +261,8 @@
     "phaseListening": "In ascolto…", "phaseThinking": "Penso…",
     "phaseSpeaking": "Parla…", "phasePaused": "Tocca per riprendere",
     "phaseError": "Tocca per riprovare",
+    "timedOutTitle": "Nessuna risposta ricevuta",
+    "timedOutBody": "Abbiamo aspettato ma non è arrivata risposta. Controlla la connessione e riprova.",
     "helperListening": "Parla naturalmente — mi fermerò quando ti fermi tu.",
     "helperSpeaking": "{{name}} sta parlando. Tocca per interrompere.",
     "helperThinking": "Un attimo…",
@@ -293,7 +297,8 @@
     "ctaSubscribe": "Inizia prova gratuita",
     "ctaRestore": "Ripristina acquisti",
     "purchaseFailed": "Acquisto fallito",
-    "restoreFailed": "Ripristino fallito"
+    "restoreFailed": "Ripristino fallito",
+    "loadingPlans": "Caricamento piani…"
   },
   "tabs": { "home": "Home", "library": "Libreria", "history": "Cronologia", "settings": "Impostazioni" },
   "avatarHome": {
@@ -304,6 +309,8 @@
     "watchDemo": "Guarda demo",
     "newChatTitle": "Iniziare una nuova chat?",
     "newChatBody": "Manteniamo la conversazione attuale con {{name}} nella cronologia e ne apriamo una nuova.",
-    "couldNotStart": "Impossibile avviare la chat"
+    "couldNotStart": "Impossibile avviare la chat",
+    "couldNotLoad": "Impossibile caricare gli avatar",
+    "noAvatarsYet": "Nessun avatar disponibile ancora."
   }
 }

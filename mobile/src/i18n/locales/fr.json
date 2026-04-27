@@ -17,6 +17,8 @@
     "forgotPassword": "Mot de passe oublié ?",
     "noAccount": "Pas de compte ?",
     "hasAccount": "Vous avez déjà un compte ?",
+    "emailPlaceholder": "vous@exemple.com",
+    "passwordHint": "8+ caractères",
     "signOut": "Se déconnecter",
     "signOutConfirm": "Vous serez déconnecté de Hexalife sur cet appareil.",
     "signOutFailed": "Échec de la déconnexion"
@@ -259,6 +261,8 @@
     "phaseListening": "Écoute…", "phaseThinking": "Réflexion…",
     "phaseSpeaking": "Parle…", "phasePaused": "Touchez pour reprendre",
     "phaseError": "Touchez pour réessayer",
+    "timedOutTitle": "Pas de réponse reçue",
+    "timedOutBody": "Nous avons attendu mais aucune réponse n'est arrivée. Vérifiez votre connexion et réessayez.",
     "helperListening": "Parlez naturellement — je m'arrête quand vous vous arrêtez.",
     "helperSpeaking": "{{name}} parle. Touchez pour interrompre.",
     "helperThinking": "Un instant…",
@@ -293,7 +297,8 @@
     "ctaSubscribe": "Démarrer l'essai gratuit",
     "ctaRestore": "Restaurer les achats",
     "purchaseFailed": "Achat échoué",
-    "restoreFailed": "Restauration échouée"
+    "restoreFailed": "Restauration échouée",
+    "loadingPlans": "Chargement des offres…"
   },
   "tabs": { "home": "Accueil", "library": "Bibliothèque", "history": "Historique", "settings": "Réglages" },
   "avatarHome": {
@@ -304,6 +309,8 @@
     "watchDemo": "Voir la démo",
     "newChatTitle": "Démarrer une nouvelle conversation ?",
     "newChatBody": "On garde la conversation actuelle avec {{name}} dans votre historique et on en ouvre une nouvelle.",
-    "couldNotStart": "Impossible de démarrer la conversation"
+    "couldNotStart": "Impossible de démarrer la conversation",
+    "couldNotLoad": "Impossible de charger les avatars",
+    "noAvatarsYet": "Pas encore d'avatars disponibles."
   }
 }

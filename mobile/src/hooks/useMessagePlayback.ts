@@ -29,6 +29,16 @@ async function stopInternal(): Promise<void> {
     try { await s.stopAsync(); } catch { /* ignore — may already be unloaded */ }
     try { await s.unloadAsync(); } catch { /* ignore */ }
   }
+  // Restore the audio session to a recording-friendly default after
+  // playback ends. Otherwise the iOS session stays in playback-only
+  // mode and the next mic recording (dictation, voice mode) comes
+  // back muted on some devices. allowsRecordingIOS:true prepares the
+  // session for whoever needs it next; useVoiceRecorder will set it
+  // again before actually starting a recording.
+  await Audio.setAudioModeAsync({
+    playsInSilentModeIOS: true,
+    allowsRecordingIOS: true,
+  }).catch(() => { /* best-effort; not fatal if the session is gone */ });
   if (wasActive) notify();
 }
 

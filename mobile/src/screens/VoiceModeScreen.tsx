@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  AppState,
   Image,
   Linking,
   Modal,
@@ -117,6 +118,24 @@ export function VoiceModeScreen({
     }
   }, [visible, teardownRecording, playback]);
 
+  // If the user backgrounds the app mid-listen we must release the
+  // mic immediately. Without this, the recording keeps running for
+  // up to MAX_RECORDING_MS while the app is hidden, draining battery
+  // and capturing audio the user didn't intend to share. We also
+  // pause auto-rearm on foreground so they explicitly tap to resume.
+  useEffect(() => {
+    if (!visible) return;
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'background' || next === 'inactive') {
+        pausedRef.current = true;
+        void teardownRecording();
+        void playback.stop();
+        setPhase('paused');
+      }
+    });
+    return () => sub.remove();
+  }, [visible, teardownRecording, playback]);
+
   // Watch agent playback finishing so we can re-arm the mic. While the
   // agent is speaking the singleton's activeKey is non-null. The moment
   // it goes back to null AND we're in the speaking phase, switch to
@@ -227,8 +246,16 @@ export function VoiceModeScreen({
           setPhase('paused');
         }
       } else {
-        // No reply text (e.g. send was rejected) — bounce back to idle.
-        setPhase('paused');
+        // null reply = send rejected OR the 30-second polling deadline
+        // elapsed without an agent message. Either way we owe the user
+        // a clear signal that we lost their utterance — silently
+        // bouncing to "paused" makes it look like the system stuck.
+        setPhase('error');
+        Alert.alert(
+          t('voiceMode.timedOutTitle'),
+          t('voiceMode.timedOutBody'),
+          [{ text: t('common.retry') }],
+        );
       }
     } catch (err) {
       console.warn('Voice mode: transcription failed', err);

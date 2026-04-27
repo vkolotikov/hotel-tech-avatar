@@ -16,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { useAvatars } from '../hooks/useAvatars';
 import { useConversations, useCreateConversation } from '../hooks/useConversations';
 import { IntroVideoModal } from '../components/avatars/IntroVideoModal';
@@ -117,10 +118,20 @@ export function AvatarHomeScreen() {
     );
   }
 
-  if (isError || !avatars || avatars.length === 0) {
+  if (isError) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Couldn't load avatars</Text>
+        <Text style={styles.errorText}>{t('avatarHome.couldNotLoad')}</Text>
+      </View>
+    );
+  }
+  if (!avatars || avatars.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Ionicons name="people-circle-outline" size={56} color={colors.textMuted} />
+        <Text style={[styles.errorText, { marginTop: spacing.md }]}>
+          {t('avatarHome.noAvatarsYet')}
+        </Text>
       </View>
     );
   }

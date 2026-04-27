@@ -17,6 +17,8 @@
     "forgotPassword": "Забыли пароль?",
     "noAccount": "Нет аккаунта?",
     "hasAccount": "Уже есть аккаунт?",
+    "emailPlaceholder": "ты@пример.com",
+    "passwordHint": "8+ символов",
     "signOut": "Выйти",
     "signOutConfirm": "Вы будете выведены из аккаунта на этом устройстве.",
     "signOutFailed": "Не удалось выйти"
@@ -259,6 +261,8 @@
     "phaseListening": "Слушаю…", "phaseThinking": "Думаю…",
     "phaseSpeaking": "Говорит…", "phasePaused": "Нажмите для продолжения",
     "phaseError": "Нажмите для повтора",
+    "timedOutTitle": "Ответ не получен",
+    "timedOutBody": "Мы подождали, но ответ не пришёл. Проверьте подключение и попробуйте снова.",
     "helperListening": "Говорите естественно — я остановлюсь, когда остановитесь вы.",
     "helperSpeaking": "{{name}} говорит. Нажмите, чтобы прервать.",
     "helperThinking": "Минутку…",
@@ -293,7 +297,8 @@
     "ctaSubscribe": "Начать пробный период",
     "ctaRestore": "Восстановить покупки",
     "purchaseFailed": "Не удалось купить",
-    "restoreFailed": "Не удалось восстановить"
+    "restoreFailed": "Не удалось восстановить",
+    "loadingPlans": "Загрузка тарифов…"
   },
   "tabs": { "home": "Главная", "library": "Библиотека", "history": "История", "settings": "Настройки" },
   "avatarHome": {
@@ -304,6 +309,8 @@
     "watchDemo": "Смотреть демо",
     "newChatTitle": "Начать новый чат?",
     "newChatBody": "Текущий разговор с {{name}} останется в истории, откроется новый.",
-    "couldNotStart": "Не удалось начать чат"
+    "couldNotStart": "Не удалось начать чат",
+    "couldNotLoad": "Не удалось загрузить аватары",
+    "noAvatarsYet": "Аватары пока недоступны."
   }
 }
