@@ -129,6 +129,14 @@ body {
   white-space: nowrap;
 }
 
+/* The HTML `hidden` attribute applies `display: none` via the UA
+   stylesheet, but any later `display: flex|grid|block` rule wins. The
+   user-modal + usage-modal both use `display: flex`, so without this
+   reset they show up by default before JS toggles them off. */
+[hidden] {
+  display: none !important;
+}
+
 /* ─── Top tab bar (Avatars / Users / Usage) ───────────────────────── */
 .admin-tabs {
   display: flex;
