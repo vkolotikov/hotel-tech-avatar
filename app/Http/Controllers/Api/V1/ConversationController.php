@@ -342,7 +342,13 @@ class ConversationController extends Controller
 
         $openai   = app(OpenAiService::class);
         $filename = 'voice-input.' . $ext;
-        $text     = $openai->transcribe($tmpPath, null, $filename);
+
+        // Pass the user's preferred language to Whisper so transcription
+        // doesn't drift into a different language (especially common
+        // when the user speaks softly or the device mic picks up
+        // ambient noise). Falls back to auto-detect when not set.
+        $language = $request->user()?->profile?->preferred_language;
+        $text     = $openai->transcribe($tmpPath, null, $filename, $language);
 
         return response()->json(['text' => $text]);
     }

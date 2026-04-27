@@ -1,0 +1,296 @@
+{
+  "common": {
+    "next": "Tālāk", "back": "Atpakaļ", "save": "Saglabāt",
+    "saveAndStart": "Saglabāt un sākt", "cancel": "Atcelt",
+    "skip": "Izlaist", "done": "Gatavs", "retry": "Mēģināt vēlreiz",
+    "edit": "Rediģēt", "close": "Aizvērt", "letsGo": "Sākam",
+    "optional": "Pēc izvēles", "loading": "Ielādē…",
+    "yes": "Jā", "no": "Nē", "preferNotToSay": "Nevēlos atbildēt",
+    "errorTitle": "Kaut kas nogāja greizi", "tapToSet": "Pieskaries, lai iestatītu"
+  },
+  "auth": {
+    "signIn": "Pierakstīties", "signUp": "Reģistrēties",
+    "signInToContinue": "Pierakstieties, lai turpinātu",
+    "createAccount": "Izveido savu kontu",
+    "name": "Vārds", "email": "E-pasts", "password": "Parole",
+    "confirmPassword": "Apstipriniet paroli",
+    "forgotPassword": "Aizmirsi paroli?",
+    "noAccount": "Vēl nav konta?",
+    "hasAccount": "Jau ir konts?",
+    "signOut": "Iziet",
+    "signOutConfirm": "Tu tiksi izrakstīts šajā ierīcē.",
+    "signOutFailed": "Neizdevās iziet"
+  },
+  "languagePicker": {
+    "title": "Izvēlies valodu",
+    "subtitle": "Lietotnei un kā ar tevi runās avatāri. Vēlāk var mainīt iestatījumos."
+  },
+  "onboardingIntro": {
+    "welcome": "Laipni lūgti Hexalife",
+    "welcomeBody": "Seši ekspertu avatāri — miegs, uzturs, fitness, apzinātība, āda un analīzes — visi balstīti uz aktuāliem pētījumiem. Jautā jebko un saņem mierīgu, uz pierādījumiem balstītu atbildi.",
+    "notMedical": "Nav medicīnisks padoms",
+    "notMedicalBody": "Hexalife ir wellness izglītība. Tā nediagnozē, neizraksta zāles un neaizvieto ārstu. Steidzamos gadījumos sazinies ar ārstu vai ātro palīdzību — avatāri vienmēr novirzīs uz pareizo palīdzību.",
+    "safetyFirst": "Drošība un avoti",
+    "safetyFirstBody": "Katrs apgalvojums par veselību tiek pārbaudīts pret reāliem avotiem, pirms nonāk pie tevis. Nepārbaudāmas atbildes tiek aizstātas ar drošāku alternatīvu, un krīzes pazīmes novirza tevi tieši pie palīdzības. Tu vienmēr kontrolē savus datus.",
+    "ctaGetStarted": "Sākt"
+  },
+  "profileSetup": {
+    "welcomeTitle": "Laipni lūgti Hexalife",
+    "welcomeSubtitle": "Pielāgosim sešus wellness avatārus tev. Aptuveni 3 minūtes.",
+    "privacyText": "Tavi dati pieder tev. Mēs nekad nepārdodam veselības datus, un tu vari tos rediģēt vai dzēst iestatījumos.",
+    "aboutTitle": "Par tevi",
+    "fieldName": "Tavs vārds",
+    "fieldNamePlaceholder": "Kā tevi saukt?",
+    "fieldAge": "Vecums", "fieldSex": "Piedzimstot piešķirtais dzimums",
+    "fieldPronouns": "Vietniekvārdi",
+    "sexFemale": "Sievietes", "sexMale": "Vīrieša", "sexIntersex": "Interseksuāls",
+    "heritageTitle": "Izcelsme",
+    "heritageSubtitle": "Tiek izmantota fonā, lai pielāgotu padomus ģenētiskā riska modeļiem. Pēc izvēles, nekad netiek rādīta.",
+    "heritageHelper": "Atzīmē visu, kas attiecas",
+    "bodyTitle": "Ķermeņa pamatdati",
+    "fieldHeight": "Augums", "fieldWeight": "Svars",
+    "fieldWaist": "Vidukļa apkārtmērs (labāks metabolisma riska rādītājs nekā svars)",
+    "dayTitle": "Tava diena",
+    "fieldActivity": "Ikdienas aktivitāte",
+    "fieldJob": "Darba veids",
+    "fieldOutdoor": "Laiks brīvā dabā dienā",
+    "fieldWellnessTime": "Laiks dienā wellness",
+    "sleepTitle": "Miegs",
+    "fieldSleepHours": "Cik stundas naktī centies gulēt",
+    "fieldSleepQuality": "Miega kvalitāte pēdējā laikā",
+    "fieldChronotype": "Hronotips",
+    "habitsTitle": "Paradumi",
+    "fieldSmoking": "Smēķēšana", "fieldAlcohol": "Alkohols",
+    "fieldCaffeine": "Kofeīns", "fieldStress": "Stresa līmenis",
+    "eatingTitle": "Uzturs",
+    "fieldEatingPattern": "Uztura modelis",
+    "fieldEatingSchedule": "Ēdienreižu grafiks",
+    "fieldCookingSkill": "Gatavošanas prasmes",
+    "fieldCookingTime": "Cik laika gatavošanai",
+    "fieldAllergies": "Alerģijas",
+    "fieldIntolerances": "Nepanesība (rada simptomus, bet nav alerģija)",
+    "healthTitle": "Veselība",
+    "healthSubtitle": "Lai mēs nekad neieteiktu kaut ko tev nepiemērotu.",
+    "fieldConditions": "Diagnosticētas slimības",
+    "fieldMedications": "Pašreizējie medikamenti",
+    "fieldFamilyHistory": "Ģimenes vēsture (pirmās pakāpes radinieki)",
+    "fieldInjuries": "Nopietnas traumas pagātnē",
+    "fieldMentalHealth": "Garīgās veselības konteksts",
+    "medsAddPlaceholder": "Ieraksti un pievieno",
+    "lifeTitle": "Dzīves konteksts",
+    "fieldLiving": "Mājokļa situācija",
+    "fieldTravel": "Ceļošanas biežums",
+    "fieldBudget": "Vai dot priekšroku budžetam draudzīgām opcijām?",
+    "budgetYes": "Jā, budžetam draudzīgi", "budgetNo": "Bez ierobežojumiem",
+    "femaleTitle": "Reproduktīvā veselība",
+    "femaleSubtitle": "Lai padomi būtu droši un atbilstoši.",
+    "fieldFemaleStatus": "Pašreizējais statuss",
+    "fieldPregnancyWeeks": "Grūtniecības nedēļas",
+    "fieldBreastfeedingMonths": "Mēneši zīdīšanā",
+    "fieldCycleLength": "Vidējais cikla garums",
+    "fieldContraception": "Kontracepcija",
+    "goalsTitle": "Tavi mērķi",
+    "goalsSubtitle": "Izvēlies līdz 3 — komanda tiek veidota ap tiem.",
+    "teamPrefix": "Tavā komandā būs",
+    "fieldMotivation": "Kas pamudināja tevi sākt?",
+    "fieldMotivationText": "Saviem vārdiem",
+    "motivationPlaceholder": "Kaut kas, ko jau mēģināji, vai konkrēts iemesls tagad?",
+    "fieldTimeline": "Termiņš",
+    "fieldConfidence": "Cik pārliecināts/-a esi par mērķu sasniegšanu?",
+    "coachingTitle": "Koučinga stils",
+    "coachingSubtitle": "Nosaka, kā ar tevi runā katrs avatārs.",
+    "fieldTone": "Tonis", "fieldDetail": "Detalizācijas līmenis",
+    "fieldPace": "Temps",
+    "fieldStyle": "Rutīnas vai daudzveidība?",
+    "fieldAccountability": "Atbildība",
+    "reviewTitle": "Gatavs",
+    "reviewSubtitle": "Tava sākuma komanda ir gatava. Rediģē jebkuru sadaļu pirms saglabāšanas.",
+    "reviewSection": {
+      "about": "Par tevi", "body": "Ķermenis", "day": "Diena",
+      "sleep": "Miegs", "habits": "Paradumi", "eating": "Uzturs",
+      "health": "Veselība", "life": "Dzīve", "goals": "Mērķi", "style": "Stils"
+    }
+  },
+  "ageBand": {
+    "under-18": "Zem 18", "18-24": "18–24", "25-34": "25–34",
+    "35-44": "35–44", "45-54": "45–54", "55-64": "55–64", "65+": "65+"
+  },
+  "activity": {
+    "sedentary": "Sēdošs", "sedentarySub": "Galvenokārt sēžot",
+    "light": "Viegla", "lightSub": "Dažas pastaigas",
+    "moderate": "Mērena", "moderateSub": "3-4 reizes/ned",
+    "active": "Aktīva", "activeSub": "5+ reizes/ned",
+    "athlete": "Sportists", "athleteSub": "Sacensības vai katru dienu"
+  },
+  "jobType": {
+    "desk": "Visu dienu pie galda", "mixed": "Jaukts",
+    "feet": "Uz kājām", "physical": "Fizisks darbs",
+    "shift": "Maiņu darbs", "none": "Nestrādāju"
+  },
+  "timeBand": {
+    "under-15": "<15 min", "15-30": "15–30 min", "15-60": "15–60 min",
+    "30-60": "30–60 min", "60-120": "1–2 stundas",
+    "60+": "1 stunda+", "120+": "2 stundas+"
+  },
+  "sleepQuality": { "great": "Labs", "okay": "Mērens", "poor": "Slikts" },
+  "chronotype": {
+    "morning": "Cīrulis", "morningSub": "Ceļos agri, aktīvs līdz pusdienlaikam",
+    "night": "Pūce", "nightSub": "Ceļos vēlu, virsotne vakarā",
+    "shift": "Maiņas / jaukts", "shiftSub": "Mainīgs grafiks"
+  },
+  "smoking": { "never": "Nekad", "quit": "Pārtraucu", "occasional": "Reizēm", "daily": "Katru dienu" },
+  "alcohol": { "none": "Nelietoju", "light": "1–3 reizes/ned", "moderate": "4–7 reizes/ned", "heavy": "8+ reizes/ned" },
+  "caffeine": { "none": "Nelietoju", "1-2": "1–2 tases", "3-4": "3–4 tases", "5+": "5+ tases" },
+  "stress": { "low": "Zems", "medium": "Vidējs", "high": "Augsts" },
+  "eatingPattern": {
+    "omnivore": "Visēdējs", "pescatarian": "Pesketārietis",
+    "vegetarian": "Veģetārietis", "vegan": "Vegāns",
+    "mediterranean": "Vidusjūras", "keto": "Keto",
+    "paleo": "Paleo", "no-specific": "Bez īpaša"
+  },
+  "eatingSchedule": {
+    "3-meals": "3 ēdienreizes", "2-meals": "2 ēdienreizes",
+    "if": "Intervālu badošanās", "snacky": "Uzkodas",
+    "skip-breakfast": "Bez brokastīm"
+  },
+  "cookingSkill": { "none": "Negatavoju", "basic": "Pamati", "intermediate": "Vidēji", "advanced": "Augstas" },
+  "living": {
+    "alone": "Viens/-a", "partner": "Ar partneri",
+    "family-kids": "Ģimene ar bērniem", "parents": "Ar vecākiem",
+    "roommates": "Ar īres biedriem"
+  },
+  "travel": { "rarely": "Reti", "monthly": "Mēnesī", "weekly": "Nedēļā+" },
+  "femaleStatus": {
+    "regular": "Regulārs cikls", "irregular": "Neregulārs cikls",
+    "trying": "Plānoju grūtniecību", "pregnant": "Grūtniece",
+    "breastfeeding": "Zīdīšana", "perimenopause": "Perimenopauze",
+    "menopause": "Menopauze", "post-menopause": "Pēcmenopauze",
+    "prefer-not-to-say": "Nevēlos atbildēt"
+  },
+  "contraception": {
+    "none": "Nav", "pill": "Tabletes",
+    "iud-hormonal": "Spirāle (hormonāla)", "iud-copper": "Spirāle (vara)",
+    "implant": "Implants", "patch": "Plāksteris", "ring": "Gredzens",
+    "injection": "Injekcija", "natural": "Dabīga / izsekošana",
+    "prefer-not-to-say": "Nevēlos atbildēt"
+  },
+  "goal": {
+    "fitness": "Veidot formu", "weight": "Pārvaldīt svaru",
+    "energy": "Vairāk enerģijas", "sleep": "Labāks miegs",
+    "stress": "Mazināt stresu", "nutrition": "Labāks uzturs",
+    "gut": "Zarnu veselība", "skin": "Āda un skaistums",
+    "longevity": "Mūža garums", "labs": "Saprast analīzes"
+  },
+  "motivation": {
+    "health-scare": "Veselības trauksme", "event": "Tuvojas notikums",
+    "birthday": "Liela dzimšanas diena", "doctor": "Ārsts teica",
+    "energy": "Gribu vairāk enerģijas", "specific-goal": "Konkrēts mērķis",
+    "ready": "Esmu gatavs/-a", "other": "Kaut kas cits"
+  },
+  "timeline": { "weeks": "Nedēļās", "months": "Mēnešos", "year": "Šogad", "no-deadline": "Bez termiņa" },
+  "coachingTone": {
+    "friendly": "Draudzīgs", "friendlySub": "Kā draugs",
+    "expert": "Eksperts", "expertSub": "Kā klīnicists",
+    "direct": "Tiešs", "directSub": "Bez liekvārdības",
+    "gentle": "Maigs", "gentleSub": "Maigs un atbalstošs"
+  },
+  "coachingDetail": { "brief": "Īsi", "balanced": "Līdzsvaroti", "thorough": "Detalizēti" },
+  "coachingPace": { "slow": "Lēni un stabili", "fast": "Ātri un mērķtiecīgi" },
+  "coachingStyleOpt": { "routines": "Rutīnas", "variety": "Daudzveidība" },
+  "accountability": { "solo": "Viens/-a", "track": "Sekot visam", "coach": "Trenē mani", "compete": "Sacensties" },
+  "ethnicity": {
+    "white": "Baltā / Eiropas", "black": "Melnā / Āfrikas",
+    "east-asian": "Austrumāzijas", "south-asian": "Dienvidāzijas",
+    "hispanic": "Latīņamerikas", "middle-eastern": "Tuvie Austrumi",
+    "indigenous": "Pamatiedzīvotāji", "mixed": "Jaukta", "other": "Cita",
+    "prefer-not-to-say": "Nevēlos atbildēt"
+  },
+  "allergy": {
+    "peanuts": "Zemesrieksti", "tree-nuts": "Rieksti",
+    "dairy": "Piena produkti", "eggs": "Olas", "gluten": "Glutēns",
+    "shellfish": "Vēžveidīgie", "soy": "Soja", "sesame": "Sezams",
+    "fish": "Zivis", "none": "Nav"
+  },
+  "intolerance": {
+    "lactose": "Laktoze", "fructose": "Fruktoze",
+    "fodmap": "FODMAP jutīgums", "gluten-non-coeliac": "Glutēns (ne celiakija)",
+    "histamine": "Histamīns", "caffeine": "Kofeīns", "none": "Nav"
+  },
+  "condition": {
+    "t2d": "2. tipa diabēts", "t1d": "1. tipa diabēts",
+    "prediabetes": "Pirmsdiabēts", "hbp": "Augsts asinsspiediens",
+    "hcl": "Augsts holesterīns", "heart": "Sirds slimība",
+    "asthma": "Astma", "ibs": "KZS / IZS", "autoimmune": "Autoimūna",
+    "anxiety": "Trauksme", "depression": "Depresija",
+    "adhd": "UDHS", "thyroid": "Vairogdziedzeris",
+    "endometriosis": "Endometrioze", "pcos": "PCOS"
+  },
+  "familyHistory": {
+    "heart": "Sirds slimība", "t2d": "2. tipa diabēts",
+    "cancer": "Vēzis", "dementia": "Demence", "stroke": "Insults",
+    "mental": "Garīgā veselība", "none": "Nav"
+  },
+  "injury": {
+    "lower-back": "Mugurkaula apakša", "knee": "Celis",
+    "shoulder": "Plecs", "hip": "Gurns", "neck": "Kakls",
+    "ankle": "Potīte", "wrist": "Plaukstas locītava", "none": "Nav"
+  },
+  "mentalHealth": {
+    "anxiety": "Trauksme", "depression": "Depresija",
+    "adhd": "UDHS", "eating-disorder": "Ēšanas traucējumi",
+    "ocd": "OKT", "prefer-not-to-say": "Nevēlos atbildēt"
+  },
+  "chat": {
+    "messagePlaceholder": "Ziņojums…",
+    "listening": "Klausos… pieskaries mikrofonam, lai pabeigtu",
+    "transcribing": "Transkribē…", "uploading": "Augšupielādē…",
+    "speakingPill": "{{name}} runā · pieskaries, lai apturētu",
+    "newChat": "Sākt jaunu sarunu?",
+    "newChatBody": "Pašreizējo sarunu ar {{name}} saglabāsim vēsturē, atvērsim jaunu.",
+    "newChatCta": "Jauna saruna",
+    "couldNotLoad": "Neizdevās ielādēt ziņojumus",
+    "tapRetry": "Pieskaries, lai mēģinātu vēlreiz",
+    "speakBtn": "Lasīt", "stopBtn": "Stop",
+    "couldNotPlay": "Neizdevās atskaņot balsi"
+  },
+  "voiceMode": {
+    "title": "{{name}} - balss režīms",
+    "phaseIdle": "Pieskaries, lai sāktu",
+    "phaseListening": "Klausos…", "phaseThinking": "Domāju…",
+    "phaseSpeaking": "Runā…", "phasePaused": "Pieskaries, lai turpinātu",
+    "phaseError": "Pieskaries, lai mēģinātu vēlreiz",
+    "helperListening": "Runā dabiski — apstāšos, kad apstāsies tu.",
+    "helperSpeaking": "{{name}} runā. Pieskaries, lai pārtrauktu.",
+    "helperThinking": "Mirkli…",
+    "helperIdle": "Pieskaries mikrofonam un runā. Atbildēšu ar balsi.",
+    "permissionRequired": "Nepieciešama piekļuve mikrofonam",
+    "permissionBody": "Iespējo mikrofona piekļuvi iestatījumos, lai izmantotu balss režīmu.",
+    "openSettings": "Atvērt iestatījumus"
+  },
+  "settings": {
+    "account": "Konts", "subscription": "Abonements",
+    "support": "Atbalsts", "about": "Par",
+    "editProfile": "Rediģēt profilu", "language": "Valoda",
+    "manageSubscription": "Pārvaldīt abonementu",
+    "upgradePremium": "Iegūt Premium", "premiumBadge": "PREMIUM",
+    "messagesLeft": "{{remaining}} no {{limit}} ziņām šodien",
+    "premiumPerks": "Neierobežotas ziņas, visas funkcijas",
+    "privacyPolicy": "Privātuma politika",
+    "termsOfService": "Lietošanas noteikumi", "version": "Versija",
+    "disclaimer": "Hexalife piedāvā tikai wellness izglītību. Tā neaizvieto profesionālu medicīnisko padomu, diagnozi vai ārstēšanu. Medicīniskos jautājumos vienmēr konsultējies ar kvalificētu klīnicistu.",
+    "couldNotOpenLink": "Neizdevās atvērt saiti",
+    "couldNotOpenSubscription": "Neizdevās atvērt abonementu"
+  },
+  "paywall": {
+    "title": "Hexalife Premium",
+    "subtitle": "Seši ekspertu avatāri ar avotiem, bez dienas ierobežojuma.",
+    "trialNote": "5 dienas bez maksas · atcel jebkurā brīdī",
+    "annualSave": "Ietaupi 20%",
+    "monthly": "Mēnesī", "annual": "Gadā",
+    "ctaSubscribe": "Sākt bezmaksas izmēģinājumu",
+    "ctaRestore": "Atjaunot pirkumus",
+    "purchaseFailed": "Pirkums neizdevās",
+    "restoreFailed": "Atjaunošana neizdevās"
+  },
+  "tabs": { "home": "Sākums", "library": "Bibliotēka", "history": "Vēsture", "settings": "Iestatījumi" }
+}

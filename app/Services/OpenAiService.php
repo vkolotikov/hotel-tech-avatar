@@ -20,18 +20,27 @@ class OpenAiService
 
     /**
      * Transcribe audio to text.
+     *
+     * `$language` is an ISO-639-1 code (en, es, fr, …). Passing it
+     * tells Whisper / gpt-4o-transcribe to expect that language and
+     * dramatically reduces transcription drift in voice mode — without
+     * it, a user speaking Latvian into a Russian-detected stream would
+     * come back as garbled mixed text. Null = auto-detect (legacy).
      */
-    public function transcribe(string $audioPath, string $model = null, string $filename = null): string
+    public function transcribe(string $audioPath, string $model = null, string $filename = null, ?string $language = null): string
     {
         $model    = $model ?? config('services.openai.transcribe_model', 'gpt-4o-transcribe');
         $filename = $filename ?: basename($audioPath);
 
+        $payload = ['model' => $model];
+        if ($language) {
+            $payload['language'] = $language;
+        }
+
         $response = Http::withToken($this->apiKey)
             ->timeout($this->timeout)
             ->attach('file', file_get_contents($audioPath), $filename)
-            ->post("{$this->baseUrl}/audio/transcriptions", [
-                'model' => $model,
-            ]);
+            ->post("{$this->baseUrl}/audio/transcriptions", $payload);
 
         if (!$response->successful()) {
             throw new \RuntimeException('Transcription failed: ' . $response->body());

@@ -45,6 +45,7 @@ final class UserProfileController extends Controller
             // Identity
             'display_name'         => 'nullable|string|max:80',
             'pronouns'             => 'nullable|string|max:32',
+            'preferred_language'   => 'nullable|in:en,es,fr,de,pl,it,ru,uk,lv',
 
             // Demographics
             'birth_year'           => 'nullable|integer|min:1900|max:' . (int) date('Y'),
@@ -145,6 +146,7 @@ final class UserProfileController extends Controller
         return [
             // Identity
             'display_name'         => $profile->display_name,
+            'preferred_language'   => $profile->preferred_language,
             'pronouns'             => $profile->pronouns,
             // Demographics
             'birth_year'           => $profile->birth_year,

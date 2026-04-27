@@ -10,7 +10,7 @@ class UserProfile extends Model
     protected $fillable = [
         'user_id',
         // Identity
-        'display_name', 'pronouns',
+        'display_name', 'preferred_language', 'pronouns',
         // Demographics
         'birth_year', 'age_band', 'ethnicity',
         // Body

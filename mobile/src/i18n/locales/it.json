@@ -1,0 +1,296 @@
+{
+  "common": {
+    "next": "Avanti", "back": "Indietro", "save": "Salva",
+    "saveAndStart": "Salva e inizia", "cancel": "Annulla",
+    "skip": "Salta", "done": "Fatto", "retry": "Riprova",
+    "edit": "Modifica", "close": "Chiudi", "letsGo": "Iniziamo",
+    "optional": "Opzionale", "loading": "Caricamento…",
+    "yes": "Sì", "no": "No", "preferNotToSay": "Preferisco non dire",
+    "errorTitle": "Qualcosa è andato storto", "tapToSet": "Tocca per impostare"
+  },
+  "auth": {
+    "signIn": "Accedi", "signUp": "Registrati",
+    "signInToContinue": "Accedi per continuare",
+    "createAccount": "Crea il tuo account",
+    "name": "Nome", "email": "Email", "password": "Password",
+    "confirmPassword": "Conferma password",
+    "forgotPassword": "Password dimenticata?",
+    "noAccount": "Non hai un account?",
+    "hasAccount": "Hai già un account?",
+    "signOut": "Esci",
+    "signOutConfirm": "Verrai disconnesso da questo dispositivo.",
+    "signOutFailed": "Disconnessione fallita"
+  },
+  "languagePicker": {
+    "title": "Scegli la tua lingua",
+    "subtitle": "Per l'app e per come gli avatar parlano con te. Modificabile nelle Impostazioni."
+  },
+  "onboardingIntro": {
+    "welcome": "Benvenuto in Hexalife",
+    "welcomeBody": "Sei avatar esperti — sonno, nutrizione, fitness, mindfulness, pelle e referti — tutti basati sulla ricerca attuale. Chiedi qualsiasi cosa e ricevi una risposta calma e supportata da prove.",
+    "notMedical": "Non è un consiglio medico",
+    "notMedicalBody": "Hexalife è educazione al benessere. Non diagnostica, non prescrive e non sostituisce un medico. Per emergenze contatta il tuo medico o il pronto soccorso — gli avatar ti indirizzeranno sempre alla giusta assistenza.",
+    "safetyFirst": "Sicurezza e fonti",
+    "safetyFirstBody": "Ogni affermazione di salute viene verificata su fonti reali prima di arrivare a te. Le risposte non verificabili vengono sostituite con un'alternativa più sicura, e gli indicatori di crisi ti indirizzano direttamente all'aiuto. Hai sempre il controllo dei tuoi dati.",
+    "ctaGetStarted": "Inizia"
+  },
+  "profileSetup": {
+    "welcomeTitle": "Benvenuto in Hexalife",
+    "welcomeSubtitle": "Adattiamo i tuoi sei avatar di benessere a te. Circa 3 minuti.",
+    "privacyText": "I tuoi dati sono tuoi. Non vendiamo mai dati sanitari e puoi modificarli o eliminarli nelle Impostazioni.",
+    "aboutTitle": "Su di te",
+    "fieldName": "Il tuo nome",
+    "fieldNamePlaceholder": "Come ti chiamiamo?",
+    "fieldAge": "Età", "fieldSex": "Sesso assegnato alla nascita",
+    "fieldPronouns": "Pronomi",
+    "sexFemale": "Femminile", "sexMale": "Maschile", "sexIntersex": "Intersex",
+    "heritageTitle": "Origini",
+    "heritageSubtitle": "Usato in background per adattare i consigli ai pattern di rischio genetico. Opzionale, mai mostrato.",
+    "heritageHelper": "Seleziona tutti quelli che si applicano",
+    "bodyTitle": "Dati corporei",
+    "fieldHeight": "Altezza", "fieldWeight": "Peso",
+    "fieldWaist": "Vita (miglior segnale di rischio metabolico del peso)",
+    "dayTitle": "La tua giornata",
+    "fieldActivity": "Attività quotidiana",
+    "fieldJob": "Tipo di lavoro",
+    "fieldOutdoor": "Tempo all'aperto al giorno",
+    "fieldWellnessTime": "Tempo al giorno per il benessere",
+    "sleepTitle": "Sonno",
+    "fieldSleepHours": "Ore a notte che cerchi",
+    "fieldSleepQuality": "Qualità del sonno recente",
+    "fieldChronotype": "Cronotipo",
+    "habitsTitle": "Abitudini",
+    "fieldSmoking": "Fumo", "fieldAlcohol": "Alcol",
+    "fieldCaffeine": "Caffeina", "fieldStress": "Livello di stress",
+    "eatingTitle": "Alimentazione",
+    "fieldEatingPattern": "Modello alimentare",
+    "fieldEatingSchedule": "Orari dei pasti",
+    "fieldCookingSkill": "Abilità in cucina",
+    "fieldCookingTime": "Tempo per cucinare",
+    "fieldAllergies": "Allergie",
+    "fieldIntolerances": "Intolleranze (causano sintomi ma non sono allergie)",
+    "healthTitle": "Salute",
+    "healthSubtitle": "Per non consigliarti mai qualcosa di sbagliato per te.",
+    "fieldConditions": "Condizioni diagnosticate",
+    "fieldMedications": "Farmaci attuali",
+    "fieldFamilyHistory": "Storia familiare (parenti di primo grado)",
+    "fieldInjuries": "Infortuni gravi passati",
+    "fieldMentalHealth": "Contesto salute mentale",
+    "medsAddPlaceholder": "Scrivi e aggiungi",
+    "lifeTitle": "Contesto di vita",
+    "fieldLiving": "Situazione abitativa",
+    "fieldTravel": "Frequenza dei viaggi",
+    "fieldBudget": "Vuoi opzioni economiche?",
+    "budgetYes": "Sì, economiche", "budgetNo": "Nessun vincolo",
+    "femaleTitle": "Salute riproduttiva",
+    "femaleSubtitle": "Per mantenere consigli sicuri e pertinenti.",
+    "fieldFemaleStatus": "Stato attuale",
+    "fieldPregnancyWeeks": "Settimane di gravidanza",
+    "fieldBreastfeedingMonths": "Mesi di allattamento",
+    "fieldCycleLength": "Lunghezza media del ciclo",
+    "fieldContraception": "Contraccezione",
+    "goalsTitle": "I tuoi obiettivi",
+    "goalsSubtitle": "Scegli fino a 3 — la tua squadra è costruita intorno a loro.",
+    "teamPrefix": "La tua squadra includerà",
+    "fieldMotivation": "Cosa ti ha spinto a iniziare?",
+    "fieldMotivationText": "Con parole tue",
+    "motivationPlaceholder": "Qualcosa che hai già provato, o un motivo specifico ora?",
+    "fieldTimeline": "Tempistica",
+    "fieldConfidence": "Quanto ti senti sicuro di raggiungere questi obiettivi?",
+    "coachingTitle": "Stile di coaching",
+    "coachingSubtitle": "Definisce come ogni avatar parla con te.",
+    "fieldTone": "Tono", "fieldDetail": "Livello di dettaglio",
+    "fieldPace": "Ritmo",
+    "fieldStyle": "Routine o varietà?",
+    "fieldAccountability": "Responsabilità",
+    "reviewTitle": "Tutto pronto",
+    "reviewSubtitle": "La tua squadra iniziale è pronta. Modifica qualsiasi sezione prima di salvare.",
+    "reviewSection": {
+      "about": "Su di te", "body": "Corpo", "day": "Giornata",
+      "sleep": "Sonno", "habits": "Abitudini", "eating": "Alimentazione",
+      "health": "Salute", "life": "Vita", "goals": "Obiettivi", "style": "Stile"
+    }
+  },
+  "ageBand": {
+    "under-18": "Sotto i 18", "18-24": "18–24", "25-34": "25–34",
+    "35-44": "35–44", "45-54": "45–54", "55-64": "55–64", "65+": "65+"
+  },
+  "activity": {
+    "sedentary": "Sedentaria", "sedentarySub": "Per lo più seduto",
+    "light": "Leggera", "lightSub": "Qualche camminata",
+    "moderate": "Moderata", "moderateSub": "3-4 sessioni/sett",
+    "active": "Attiva", "activeSub": "5+ sessioni/sett",
+    "athlete": "Atleta", "athleteSub": "Gare o quotidiano"
+  },
+  "jobType": {
+    "desk": "Scrivania tutto il giorno", "mixed": "Misto",
+    "feet": "In piedi", "physical": "Lavoro fisico",
+    "shift": "Turni", "none": "Non lavoro"
+  },
+  "timeBand": {
+    "under-15": "<15 min", "15-30": "15–30 min", "15-60": "15–60 min",
+    "30-60": "30–60 min", "60-120": "1–2 ore",
+    "60+": "1 ora+", "120+": "2 ore+"
+  },
+  "sleepQuality": { "great": "Buona", "okay": "Discreta", "poor": "Scarsa" },
+  "chronotype": {
+    "morning": "Mattiniero", "morningSub": "Sveglia presto, attivo prima di mezzogiorno",
+    "night": "Nottambulo", "nightSub": "Sveglia tardi, picco la sera",
+    "shift": "Turni / misto", "shiftSub": "Orari che cambiano"
+  },
+  "smoking": { "never": "Mai", "quit": "Smesso", "occasional": "Occasionale", "daily": "Quotidiano" },
+  "alcohol": { "none": "Niente", "light": "1–3 drink/sett", "moderate": "4–7 drink/sett", "heavy": "8+ drink/sett" },
+  "caffeine": { "none": "Niente", "1-2": "1–2 tazze", "3-4": "3–4 tazze", "5+": "5+ tazze" },
+  "stress": { "low": "Basso", "medium": "Medio", "high": "Alto" },
+  "eatingPattern": {
+    "omnivore": "Onnivoro", "pescatarian": "Pescetariano",
+    "vegetarian": "Vegetariano", "vegan": "Vegano",
+    "mediterranean": "Mediterranea", "keto": "Cheto",
+    "paleo": "Paleo", "no-specific": "Nessuno specifico"
+  },
+  "eatingSchedule": {
+    "3-meals": "3 pasti/giorno", "2-meals": "2 pasti/giorno",
+    "if": "Digiuno intermittente", "snacky": "Spuntini",
+    "skip-breakfast": "Salto colazione"
+  },
+  "cookingSkill": { "none": "Non cucino", "basic": "Base", "intermediate": "Intermedia", "advanced": "Avanzata" },
+  "living": {
+    "alone": "Solo/a", "partner": "Con il partner",
+    "family-kids": "Famiglia con figli", "parents": "Con i genitori",
+    "roommates": "Con coinquilini"
+  },
+  "travel": { "rarely": "Raramente", "monthly": "Mensile", "weekly": "Settimanale+" },
+  "femaleStatus": {
+    "regular": "Ciclo regolare", "irregular": "Ciclo irregolare",
+    "trying": "Cerco di concepire", "pregnant": "Incinta",
+    "breastfeeding": "Allattamento", "perimenopause": "Perimenopausa",
+    "menopause": "Menopausa", "post-menopause": "Post-menopausa",
+    "prefer-not-to-say": "Preferisco non dire"
+  },
+  "contraception": {
+    "none": "Nessuna", "pill": "Pillola",
+    "iud-hormonal": "Spirale (ormonale)", "iud-copper": "Spirale (rame)",
+    "implant": "Impianto", "patch": "Cerotto", "ring": "Anello",
+    "injection": "Iniezione", "natural": "Naturale / monitoraggio",
+    "prefer-not-to-say": "Preferisco non dire"
+  },
+  "goal": {
+    "fitness": "Costruire forma", "weight": "Gestire il peso",
+    "energy": "Più energia", "sleep": "Dormire meglio",
+    "stress": "Ridurre lo stress", "nutrition": "Nutrizione migliore",
+    "gut": "Salute intestinale", "skin": "Pelle e bellezza",
+    "longevity": "Longevità", "labs": "Capire i referti"
+  },
+  "motivation": {
+    "health-scare": "Spavento di salute", "event": "Evento in arrivo",
+    "birthday": "Grande compleanno", "doctor": "L'ha detto il medico",
+    "energy": "Voglio più energia", "specific-goal": "Obiettivo specifico",
+    "ready": "Sono pronto/a", "other": "Qualcos'altro"
+  },
+  "timeline": { "weeks": "In settimane", "months": "In mesi", "year": "Quest'anno", "no-deadline": "Senza scadenza" },
+  "coachingTone": {
+    "friendly": "Amichevole", "friendlySub": "Come un amico",
+    "expert": "Esperto", "expertSub": "Come un clinico",
+    "direct": "Diretto", "directSub": "Senza fronzoli",
+    "gentle": "Gentile", "gentleSub": "Dolce e di supporto"
+  },
+  "coachingDetail": { "brief": "Breve", "balanced": "Bilanciato", "thorough": "Dettagliato" },
+  "coachingPace": { "slow": "Lento e costante", "fast": "Veloce e focalizzato" },
+  "coachingStyleOpt": { "routines": "Routine", "variety": "Varietà" },
+  "accountability": { "solo": "Solo/a", "track": "Traccia tutto", "coach": "Allenami", "compete": "Competi" },
+  "ethnicity": {
+    "white": "Bianco / Europeo", "black": "Nero / Africano",
+    "east-asian": "Asia orientale", "south-asian": "Asia del sud",
+    "hispanic": "Ispanico / Latino", "middle-eastern": "Medio Oriente",
+    "indigenous": "Indigeno", "mixed": "Misto", "other": "Altro",
+    "prefer-not-to-say": "Preferisco non dire"
+  },
+  "allergy": {
+    "peanuts": "Arachidi", "tree-nuts": "Frutta secca",
+    "dairy": "Latticini", "eggs": "Uova", "gluten": "Glutine",
+    "shellfish": "Crostacei", "soy": "Soia", "sesame": "Sesamo",
+    "fish": "Pesce", "none": "Nessuna"
+  },
+  "intolerance": {
+    "lactose": "Lattosio", "fructose": "Fruttosio",
+    "fodmap": "Sensibile ai FODMAP", "gluten-non-coeliac": "Glutine (non celiaco)",
+    "histamine": "Istamina", "caffeine": "Caffeina", "none": "Nessuna"
+  },
+  "condition": {
+    "t2d": "Diabete tipo 2", "t1d": "Diabete tipo 1",
+    "prediabetes": "Pre-diabete", "hbp": "Pressione alta",
+    "hcl": "Colesterolo alto", "heart": "Malattia cardiaca",
+    "asthma": "Asma", "ibs": "SII / MICI", "autoimmune": "Autoimmune",
+    "anxiety": "Ansia", "depression": "Depressione",
+    "adhd": "ADHD", "thyroid": "Tiroide",
+    "endometriosis": "Endometriosi", "pcos": "PCOS"
+  },
+  "familyHistory": {
+    "heart": "Malattia cardiaca", "t2d": "Diabete tipo 2",
+    "cancer": "Tumore", "dementia": "Demenza", "stroke": "Ictus",
+    "mental": "Salute mentale", "none": "Nessuna"
+  },
+  "injury": {
+    "lower-back": "Zona lombare", "knee": "Ginocchio",
+    "shoulder": "Spalla", "hip": "Anca", "neck": "Collo",
+    "ankle": "Caviglia", "wrist": "Polso", "none": "Nessuna"
+  },
+  "mentalHealth": {
+    "anxiety": "Ansia", "depression": "Depressione",
+    "adhd": "ADHD", "eating-disorder": "Disturbo alimentare",
+    "ocd": "DOC", "prefer-not-to-say": "Preferisco non dire"
+  },
+  "chat": {
+    "messagePlaceholder": "Messaggio…",
+    "listening": "In ascolto… tocca il microfono per finire",
+    "transcribing": "Trascrizione…", "uploading": "Caricamento…",
+    "speakingPill": "{{name}} sta parlando · tocca per fermare",
+    "newChat": "Iniziare una nuova chat?",
+    "newChatBody": "Manteniamo la conversazione attuale con {{name}} nella cronologia e ne apriamo una nuova.",
+    "newChatCta": "Nuova chat",
+    "couldNotLoad": "Impossibile caricare i messaggi",
+    "tapRetry": "Tocca per riprovare",
+    "speakBtn": "Leggi", "stopBtn": "Stop",
+    "couldNotPlay": "Impossibile riprodurre la voce"
+  },
+  "voiceMode": {
+    "title": "{{name}} - modalità voce",
+    "phaseIdle": "Tocca per iniziare",
+    "phaseListening": "In ascolto…", "phaseThinking": "Penso…",
+    "phaseSpeaking": "Parla…", "phasePaused": "Tocca per riprendere",
+    "phaseError": "Tocca per riprovare",
+    "helperListening": "Parla naturalmente — mi fermerò quando ti fermi tu.",
+    "helperSpeaking": "{{name}} sta parlando. Tocca per interrompere.",
+    "helperThinking": "Un attimo…",
+    "helperIdle": "Tocca il microfono e parla. Ti rispondo a voce.",
+    "permissionRequired": "Accesso al microfono necessario",
+    "permissionBody": "Attiva l'accesso al microfono nelle Impostazioni per usare la modalità voce.",
+    "openSettings": "Apri Impostazioni"
+  },
+  "settings": {
+    "account": "Account", "subscription": "Abbonamento",
+    "support": "Supporto", "about": "Info",
+    "editProfile": "Modifica profilo", "language": "Lingua",
+    "manageSubscription": "Gestisci abbonamento",
+    "upgradePremium": "Passa a Premium", "premiumBadge": "PREMIUM",
+    "messagesLeft": "{{remaining}} di {{limit}} messaggi oggi",
+    "premiumPerks": "Messaggi illimitati, tutte le funzioni",
+    "privacyPolicy": "Privacy",
+    "termsOfService": "Termini di servizio", "version": "Versione",
+    "disclaimer": "Hexalife offre solo educazione al benessere. Non sostituisce consigli medici professionali, diagnosi o trattamenti. Per qualsiasi questione medica consulta sempre un clinico qualificato.",
+    "couldNotOpenLink": "Impossibile aprire il link",
+    "couldNotOpenSubscription": "Impossibile aprire l'abbonamento"
+  },
+  "paywall": {
+    "title": "Hexalife Premium",
+    "subtitle": "Sei avatar esperti, con fonti, senza limite giornaliero.",
+    "trialNote": "5 giorni gratis · annulla quando vuoi",
+    "annualSave": "Risparmia 20%",
+    "monthly": "Mensile", "annual": "Annuale",
+    "ctaSubscribe": "Inizia prova gratuita",
+    "ctaRestore": "Ripristina acquisti",
+    "purchaseFailed": "Acquisto fallito",
+    "restoreFailed": "Ripristino fallito"
+  },
+  "tabs": { "home": "Home", "library": "Libreria", "history": "Cronologia", "settings": "Impostazioni" }
+}

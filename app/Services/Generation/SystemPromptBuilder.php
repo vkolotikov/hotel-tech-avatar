@@ -64,6 +64,16 @@ final class SystemPromptBuilder
     ): string {
         $parts = [];
 
+        // 0. Language directive — sits at the top so it overrides any
+        //    English-by-default behaviour the model defaults to. We
+        //    feed BOTH the ISO code and the language name so the model
+        //    can't confuse "en" with "English". Falls through silently
+        //    when the user hasn't picked a language yet.
+        $langPart = $this->renderLanguageDirective($userProfile);
+        if ($langPart !== null) {
+            $parts[] = $langPart;
+        }
+
         // 1. Identity — always rendered so "what's your name?" works
         //    regardless of what's in system_instructions.
         $identityLine = "You are {$agent->name}";
@@ -271,6 +281,39 @@ final class SystemPromptBuilder
      *      peanuts users must NEVER be recommended peanut-containing
      *      foods regardless of nutritional fit.
      */
+    /**
+     * Renders the language preference as a hard top-of-prompt rule. We
+     * pin to nine supported codes; anything else (or null) skips the
+     * block, leaving the model in its default English behaviour.
+     */
+    private function renderLanguageDirective(?UserProfile $profile): ?string
+    {
+        $code = $profile?->preferred_language;
+        if (!$code) return null;
+
+        $name = match ($code) {
+            'en' => 'English',
+            'es' => 'Spanish (Español)',
+            'fr' => 'French (Français)',
+            'de' => 'German (Deutsch)',
+            'pl' => 'Polish (Polski)',
+            'it' => 'Italian (Italiano)',
+            'ru' => 'Russian (Русский)',
+            'uk' => 'Ukrainian (Українська)',
+            'lv' => 'Latvian (Latviešu)',
+            default => null,
+        };
+        if (!$name) return null;
+
+        return "# Language\n"
+            . "REPLY IN {$name} (ISO code: {$code}). Every message must be written in {$name}, "
+            . "including markdown headings, table headers, and follow-up questions. "
+            . "Citations stay as-is (PMID:1234, etc) — those are technical identifiers, not prose. "
+            . "If the user writes in a different language, still reply in {$name} unless they "
+            . "explicitly ask to switch. Avatar names (Nora, Luna, Zen, Axel, Aura, Dr. Integra) "
+            . "and the brand name (Hexalife) stay in their original form.";
+    }
+
     private function renderUserContext(?UserProfile $profile, ?string $userDisplayName): ?string
     {
         $name = null;

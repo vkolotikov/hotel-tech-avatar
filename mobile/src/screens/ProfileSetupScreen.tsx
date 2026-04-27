@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { setLanguage, SUPPORTED_LANGUAGES, type LanguageCode } from '../i18n';
 import {
   fetchProfile,
   updateProfile,
@@ -57,6 +59,7 @@ type Props = {
 };
 
 type StepKey =
+  | 'language'
   | 'welcome'
   | 'about'
   | 'heritage'
@@ -73,6 +76,7 @@ type StepKey =
   | 'review';
 
 const ALL_STEPS_SETUP: StepKey[] = [
+  'language',
   'welcome',
   'about',
   'heritage',
@@ -90,6 +94,7 @@ const ALL_STEPS_SETUP: StepKey[] = [
 ];
 
 const ALL_STEPS_EDIT: StepKey[] = [
+  'language',
   'about',
   'heritage',
   'body',
@@ -608,6 +613,7 @@ const ACCENT = colors.primary;
 export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const isEdit = mode === 'edit';
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Partial<UserProfile>>({});
@@ -626,6 +632,7 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
   // `step === 'foo'` comparisons inline — the react-native/no-raw-text
   // linter flags string literals inside JSX expressions even when they
   // are pure JS booleans.
+  const onLanguage = step === 'language';
   const onWelcome  = step === 'welcome';
   const onAbout    = step === 'about';
   const onHeritage = step === 'heritage';
@@ -718,6 +725,7 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            {onLanguage && <LanguageStep profile={profile} set={set} />}
             {onWelcome && <WelcomeStep />}
             {onAbout && <AboutStep profile={profile} set={set} />}
             {onHeritage && <HeritageStep profile={profile} set={set} />}
@@ -739,7 +747,7 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
         <View style={styles.cta}>
           {onWelcome ? (
             <Pressable onPress={goNext} style={[styles.primary, { backgroundColor: ACCENT }]}>
-              <Text style={styles.primaryText}>Let's go</Text>
+              <Text style={styles.primaryText}>{t('common.letsGo')}</Text>
               <Ionicons name="arrow-forward" size={18} color={colors.textPrimary} />
             </Pressable>
           ) : isLast ? (
@@ -751,7 +759,7 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
               {saving ? <ActivityIndicator color={colors.textPrimary} /> : (
                 <>
                   <Ionicons name="checkmark" size={18} color={colors.textPrimary} />
-                  <Text style={styles.primaryText}>Save & start</Text>
+                  <Text style={styles.primaryText}>{t('common.saveAndStart')}</Text>
                 </>
               )}
             </Pressable>
@@ -765,7 +773,7 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
                 !canAdvance && { opacity: 0.5 },
               ]}
             >
-              <Text style={styles.primaryText}>Next</Text>
+              <Text style={styles.primaryText}>{t('common.next')}</Text>
               <Ionicons name="arrow-forward" size={18} color={colors.textPrimary} />
             </Pressable>
           )}
@@ -782,19 +790,65 @@ type StepProps = {
   set: <K extends keyof UserProfile>(key: K, value: UserProfile[K]) => void;
 };
 
+function LanguageStep({ profile, set }: StepProps) {
+  const { t } = useTranslation();
+  const current = profile.preferred_language ?? null;
+
+  // Picking a language must (a) write it onto the profile so it
+  // persists when we save, (b) flip the i18n runtime so the rest of
+  // the wizard already shows in the chosen language as you click. The
+  // SecureStore persistence inside setLanguage() means even if the
+  // user backs out and re-enters, their pick stays.
+  const pick = (code: LanguageCode) => {
+    set('preferred_language', code);
+    void setLanguage(code);
+  };
+
+  return (
+    <>
+      <StepHero
+        icon="language-outline"
+        tint={ACCENT}
+        title={t('languagePicker.title')}
+        subtitle={t('languagePicker.subtitle')}
+      />
+      <View style={chipStyles.grid}>
+        {SUPPORTED_LANGUAGES.map((lang) => {
+          const selected = current === lang.code;
+          return (
+            <Pressable
+              key={lang.code}
+              onPress={() => pick(lang.code as LanguageCode)}
+              style={({ pressed }) => [
+                chipStyles.card, chipStyles.cardHalf,
+                selected && chipStyles.cardSelected,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text style={langStyles.native}>{lang.native}</Text>
+              <Text style={langStyles.english}>{lang.name}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </>
+  );
+}
+
 function WelcomeStep() {
+  const { t } = useTranslation();
   return (
     <>
       <StepHero
         icon="sparkles-outline"
         tint={ACCENT}
-        title="Welcome to Hexalife"
-        subtitle="Let's tailor your six wellness avatars to who you are. Takes about 3 minutes."
+        title={t('profileSetup.welcomeTitle')}
+        subtitle={t('profileSetup.welcomeSubtitle')}
       />
       <View style={privacyStyles.card}>
         <Ionicons name="shield-checkmark-outline" size={20} color={ACCENT} />
         <Text style={privacyStyles.text}>
-          Your data stays yours. We never sell health data and you can edit or delete it anytime in Settings.
+          {t('profileSetup.privacyText')}
         </Text>
       </View>
     </>
@@ -1465,6 +1519,20 @@ const heroStyles = StyleSheet.create({
     fontSize: fontSize.sm,
     textAlign: 'center',
     paddingHorizontal: spacing.md,
+  },
+});
+
+const langStyles = StyleSheet.create({
+  native: {
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  english: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    textAlign: 'center',
   },
 });
 

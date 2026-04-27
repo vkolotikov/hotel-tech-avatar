@@ -1,0 +1,296 @@
+{
+  "common": {
+    "next": "Далі", "back": "Назад", "save": "Зберегти",
+    "saveAndStart": "Зберегти й почати", "cancel": "Скасувати",
+    "skip": "Пропустити", "done": "Готово", "retry": "Повторити",
+    "edit": "Змінити", "close": "Закрити", "letsGo": "Поїхали",
+    "optional": "Необов'язково", "loading": "Завантаження…",
+    "yes": "Так", "no": "Ні", "preferNotToSay": "Не хочу відповідати",
+    "errorTitle": "Щось пішло не так", "tapToSet": "Торкніться, щоб задати"
+  },
+  "auth": {
+    "signIn": "Увійти", "signUp": "Реєстрація",
+    "signInToContinue": "Увійдіть, щоб продовжити",
+    "createAccount": "Створіть обліковий запис",
+    "name": "Ім'я", "email": "Ел. пошта", "password": "Пароль",
+    "confirmPassword": "Підтвердьте пароль",
+    "forgotPassword": "Забули пароль?",
+    "noAccount": "Немає облікового запису?",
+    "hasAccount": "Вже маєте обліковий запис?",
+    "signOut": "Вийти",
+    "signOutConfirm": "Ви вийдете з облікового запису на цьому пристрої.",
+    "signOutFailed": "Не вдалося вийти"
+  },
+  "languagePicker": {
+    "title": "Оберіть мову",
+    "subtitle": "Для застосунку та як з вами говоритимуть аватари. Можна змінити в Налаштуваннях."
+  },
+  "onboardingIntro": {
+    "welcome": "Ласкаво просимо до Hexalife",
+    "welcomeBody": "Шість аватарів-експертів — сон, харчування, фітнес, усвідомленість, шкіра й аналізи — усі базовані на актуальних дослідженнях. Запитайте що завгодно — отримаєте спокійну, обґрунтовану відповідь.",
+    "notMedical": "Це не медична порада",
+    "notMedicalBody": "Hexalife — це освіта у сфері wellness. Ми не діагностуємо, не призначаємо ліки і не замінюємо лікаря. У невідкладних випадках звертайтесь до лікаря або швидкої — аватари завжди скерують вас до правильної допомоги.",
+    "safetyFirst": "Безпека та джерела",
+    "safetyFirstBody": "Кожне твердження про здоров'я перевіряється за реальними джерелами, перш ніж потрапити до вас. Неперевірені відповіді замінюються безпечнішим варіантом, а ознаки кризи спрямують вас прямо до допомоги. Ви завжди контролюєте свої дані.",
+    "ctaGetStarted": "Почати"
+  },
+  "profileSetup": {
+    "welcomeTitle": "Ласкаво просимо до Hexalife",
+    "welcomeSubtitle": "Налаштуємо шість wellness-аватарів під вас. Близько 3 хвилин.",
+    "privacyText": "Ваші дані належать вам. Ми ніколи не продаємо медичні дані, ви можете змінити чи видалити їх у Налаштуваннях.",
+    "aboutTitle": "Про вас",
+    "fieldName": "Ваше ім'я",
+    "fieldNamePlaceholder": "Як до вас звертатися?",
+    "fieldAge": "Вік", "fieldSex": "Стать при народженні",
+    "fieldPronouns": "Займенники",
+    "sexFemale": "Жіноча", "sexMale": "Чоловіча", "sexIntersex": "Інтерсекс",
+    "heritageTitle": "Походження",
+    "heritageSubtitle": "Використовується у фоні, щоб враховувати генетичні ризики. Необов'язково, не відображається.",
+    "heritageHelper": "Виберіть усе, що підходить",
+    "bodyTitle": "Параметри тіла",
+    "fieldHeight": "Зріст", "fieldWeight": "Вага",
+    "fieldWaist": "Талія (кращий показник метаболічного ризику, ніж вага)",
+    "dayTitle": "Ваш день",
+    "fieldActivity": "Щоденна активність",
+    "fieldJob": "Тип роботи",
+    "fieldOutdoor": "Час на вулиці на день",
+    "fieldWellnessTime": "Час на день для wellness",
+    "sleepTitle": "Сон",
+    "fieldSleepHours": "До скількох годин на ніч прагнете",
+    "fieldSleepQuality": "Якість сну останнім часом",
+    "fieldChronotype": "Хронотип",
+    "habitsTitle": "Звички",
+    "fieldSmoking": "Куріння", "fieldAlcohol": "Алкоголь",
+    "fieldCaffeine": "Кофеїн", "fieldStress": "Рівень стресу",
+    "eatingTitle": "Харчування",
+    "fieldEatingPattern": "Модель харчування",
+    "fieldEatingSchedule": "Графік прийомів їжі",
+    "fieldCookingSkill": "Навички готування",
+    "fieldCookingTime": "Скільки часу на готування",
+    "fieldAllergies": "Алергії",
+    "fieldIntolerances": "Непереносимості (викликають симптоми, але не алергія)",
+    "healthTitle": "Здоров'я",
+    "healthSubtitle": "Щоб ніколи не радити вам невідповідне.",
+    "fieldConditions": "Діагностовані стани",
+    "fieldMedications": "Поточні ліки",
+    "fieldFamilyHistory": "Сімейний анамнез (родичі першої лінії)",
+    "fieldInjuries": "Серйозні травми в минулому",
+    "fieldMentalHealth": "Психічне здоров'я",
+    "medsAddPlaceholder": "Введіть і додайте",
+    "lifeTitle": "Контекст життя",
+    "fieldLiving": "З ким живете",
+    "fieldTravel": "Частота поїздок",
+    "fieldBudget": "Враховувати бюджетні варіанти?",
+    "budgetYes": "Так, бюджетні", "budgetNo": "Без обмежень",
+    "femaleTitle": "Репродуктивне здоров'я",
+    "femaleSubtitle": "Щоб поради були безпечними та доречними.",
+    "fieldFemaleStatus": "Поточний статус",
+    "fieldPregnancyWeeks": "Тиждень вагітності",
+    "fieldBreastfeedingMonths": "Місяців грудного вигодовування",
+    "fieldCycleLength": "Середня тривалість циклу",
+    "fieldContraception": "Контрацепція",
+    "goalsTitle": "Ваші цілі",
+    "goalsSubtitle": "Виберіть до 3 — навколо них формуємо команду.",
+    "teamPrefix": "У вашу команду увійдуть",
+    "fieldMotivation": "Що вас спонукало почати?",
+    "fieldMotivationText": "Своїми словами",
+    "motivationPlaceholder": "Щось, що вже пробували, чи конкретна причина зараз?",
+    "fieldTimeline": "Терміни",
+    "fieldConfidence": "Наскільки ви впевнені, що досягнете цілей?",
+    "coachingTitle": "Стиль коучингу",
+    "coachingSubtitle": "Визначає, як кожен аватар з вами говорить.",
+    "fieldTone": "Тон", "fieldDetail": "Рівень деталей",
+    "fieldPace": "Темп",
+    "fieldStyle": "Рутини чи різноманіття?",
+    "fieldAccountability": "Відповідальність",
+    "reviewTitle": "Усе готово",
+    "reviewSubtitle": "Стартова команда готова. Змініть будь-який розділ перед збереженням.",
+    "reviewSection": {
+      "about": "Про вас", "body": "Тіло", "day": "День",
+      "sleep": "Сон", "habits": "Звички", "eating": "Харчування",
+      "health": "Здоров'я", "life": "Життя", "goals": "Цілі", "style": "Стиль"
+    }
+  },
+  "ageBand": {
+    "under-18": "До 18", "18-24": "18–24", "25-34": "25–34",
+    "35-44": "35–44", "45-54": "45–54", "55-64": "55–64", "65+": "65+"
+  },
+  "activity": {
+    "sedentary": "Сидячий", "sedentarySub": "Переважно сидячи",
+    "light": "Легка", "lightSub": "Кілька прогулянок",
+    "moderate": "Помірна", "moderateSub": "3-4 рази/тиж",
+    "active": "Активна", "activeSub": "5+ разів/тиж",
+    "athlete": "Спортсмен", "athleteSub": "Змагання чи щодня"
+  },
+  "jobType": {
+    "desk": "Цілий день за столом", "mixed": "Змішана",
+    "feet": "На ногах", "physical": "Фізична робота",
+    "shift": "Змінна робота", "none": "Не працюю"
+  },
+  "timeBand": {
+    "under-15": "<15 хв", "15-30": "15–30 хв", "15-60": "15–60 хв",
+    "30-60": "30–60 хв", "60-120": "1–2 години",
+    "60+": "1 година+", "120+": "2 години+"
+  },
+  "sleepQuality": { "great": "Чудова", "okay": "Нормальна", "poor": "Погана" },
+  "chronotype": {
+    "morning": "Жайворонок", "morningSub": "Прокидаюся рано, активний до полудня",
+    "night": "Сова", "nightSub": "Прокидаюся пізно, пік увечері",
+    "shift": "Зміни / змішаний", "shiftSub": "Графік змінюється"
+  },
+  "smoking": { "never": "Ніколи", "quit": "Кинув", "occasional": "Іноді", "daily": "Щодня" },
+  "alcohol": { "none": "Не вживаю", "light": "1–3 рази/тиж", "moderate": "4–7 разів/тиж", "heavy": "8+ разів/тиж" },
+  "caffeine": { "none": "Не вживаю", "1-2": "1–2 чашки", "3-4": "3–4 чашки", "5+": "5+ чашок" },
+  "stress": { "low": "Низький", "medium": "Середній", "high": "Високий" },
+  "eatingPattern": {
+    "omnivore": "Всеїдний", "pescatarian": "Пескетаріанець",
+    "vegetarian": "Вегетаріанець", "vegan": "Веган",
+    "mediterranean": "Середземноморська", "keto": "Кето",
+    "paleo": "Палео", "no-specific": "Без дієти"
+  },
+  "eatingSchedule": {
+    "3-meals": "3 прийоми/день", "2-meals": "2 прийоми/день",
+    "if": "Інтервальне голодування", "snacky": "Перекуски",
+    "skip-breakfast": "Без сніданку"
+  },
+  "cookingSkill": { "none": "Не готую", "basic": "Базові", "intermediate": "Середні", "advanced": "Просунуті" },
+  "living": {
+    "alone": "Сам/а", "partner": "З партнером",
+    "family-kids": "Сім'я з дітьми", "parents": "З батьками",
+    "roommates": "З сусідами"
+  },
+  "travel": { "rarely": "Рідко", "monthly": "Щомісяця", "weekly": "Щотижня+" },
+  "femaleStatus": {
+    "regular": "Регулярний цикл", "irregular": "Нерегулярний цикл",
+    "trying": "Планую вагітність", "pregnant": "Вагітна",
+    "breastfeeding": "Грудне вигодовування", "perimenopause": "Перименопауза",
+    "menopause": "Менопауза", "post-menopause": "Постменопауза",
+    "prefer-not-to-say": "Не хочу відповідати"
+  },
+  "contraception": {
+    "none": "Немає", "pill": "Таблетки",
+    "iud-hormonal": "Спіраль (гормональна)", "iud-copper": "Спіраль (мідна)",
+    "implant": "Імплант", "patch": "Пластир", "ring": "Кільце",
+    "injection": "Ін'єкція", "natural": "Природна / відстеження",
+    "prefer-not-to-say": "Не хочу відповідати"
+  },
+  "goal": {
+    "fitness": "Розвинути форму", "weight": "Контроль ваги",
+    "energy": "Більше енергії", "sleep": "Кращий сон",
+    "stress": "Зменшити стрес", "nutrition": "Краще харчування",
+    "gut": "Здоров'я ШКТ", "skin": "Шкіра і краса",
+    "longevity": "Довголіття", "labs": "Зрозуміти аналізи"
+  },
+  "motivation": {
+    "health-scare": "Тривожний сигнал", "event": "Подія попереду",
+    "birthday": "Великий день народження", "doctor": "Лікар сказав",
+    "energy": "Хочу енергії", "specific-goal": "Конкретна ціль",
+    "ready": "Я готовий(а)", "other": "Щось інше"
+  },
+  "timeline": { "weeks": "За тижні", "months": "За місяці", "year": "Цього року", "no-deadline": "Без терміну" },
+  "coachingTone": {
+    "friendly": "Дружній", "friendlySub": "Як друг",
+    "expert": "Експерт", "expertSub": "Як клініцист",
+    "direct": "Прямий", "directSub": "Без води",
+    "gentle": "М'який", "gentleSub": "М'який і підтримуючий"
+  },
+  "coachingDetail": { "brief": "Коротко", "balanced": "Збалансовано", "thorough": "Детально" },
+  "coachingPace": { "slow": "Повільно і стабільно", "fast": "Швидко і сфокусовано" },
+  "coachingStyleOpt": { "routines": "Рутини", "variety": "Різноманіття" },
+  "accountability": { "solo": "Сам/а", "track": "Відстежувати все", "coach": "Тренуйте мене", "compete": "Змагання" },
+  "ethnicity": {
+    "white": "Біла / Європейська", "black": "Чорна / Африканська",
+    "east-asian": "Східна Азія", "south-asian": "Південна Азія",
+    "hispanic": "Латиноамериканська", "middle-eastern": "Близький Схід",
+    "indigenous": "Корінна", "mixed": "Змішана", "other": "Інша",
+    "prefer-not-to-say": "Не хочу відповідати"
+  },
+  "allergy": {
+    "peanuts": "Арахіс", "tree-nuts": "Горіхи",
+    "dairy": "Молочні", "eggs": "Яйця", "gluten": "Глютен",
+    "shellfish": "Молюски", "soy": "Соя", "sesame": "Кунжут",
+    "fish": "Риба", "none": "Немає"
+  },
+  "intolerance": {
+    "lactose": "Лактоза", "fructose": "Фруктоза",
+    "fodmap": "FODMAP-чутливість", "gluten-non-coeliac": "Глютен (не целіакія)",
+    "histamine": "Гістамін", "caffeine": "Кофеїн", "none": "Немає"
+  },
+  "condition": {
+    "t2d": "Діабет 2 типу", "t1d": "Діабет 1 типу",
+    "prediabetes": "Переддіабет", "hbp": "Гіпертонія",
+    "hcl": "Високий холестерин", "heart": "Серцеві захворювання",
+    "asthma": "Астма", "ibs": "СПК / ЗЗК", "autoimmune": "Аутоімунне",
+    "anxiety": "Тривожність", "depression": "Депресія",
+    "adhd": "СДУГ", "thyroid": "Щитоподібна",
+    "endometriosis": "Ендометріоз", "pcos": "СПКЯ"
+  },
+  "familyHistory": {
+    "heart": "Серцеві захворювання", "t2d": "Діабет 2 типу",
+    "cancer": "Рак", "dementia": "Деменція", "stroke": "Інсульт",
+    "mental": "Психічні", "none": "Немає"
+  },
+  "injury": {
+    "lower-back": "Поперек", "knee": "Коліно",
+    "shoulder": "Плече", "hip": "Стегно", "neck": "Шия",
+    "ankle": "Щиколотка", "wrist": "Зап'ясток", "none": "Немає"
+  },
+  "mentalHealth": {
+    "anxiety": "Тривожність", "depression": "Депресія",
+    "adhd": "СДУГ", "eating-disorder": "Розлад харчової поведінки",
+    "ocd": "ОКР", "prefer-not-to-say": "Не хочу відповідати"
+  },
+  "chat": {
+    "messagePlaceholder": "Повідомлення…",
+    "listening": "Слухаю… торкніться мікрофона, щоб закінчити",
+    "transcribing": "Транскрибую…", "uploading": "Завантаження…",
+    "speakingPill": "{{name}} говорить · торкніться, щоб зупинити",
+    "newChat": "Розпочати нову розмову?",
+    "newChatBody": "Поточну розмову з {{name}} збережемо в історії, відкриємо нову.",
+    "newChatCta": "Нова розмова",
+    "couldNotLoad": "Не вдалося завантажити повідомлення",
+    "tapRetry": "Торкніться, щоб повторити",
+    "speakBtn": "Озвучити", "stopBtn": "Стоп",
+    "couldNotPlay": "Не вдалося відтворити голос"
+  },
+  "voiceMode": {
+    "title": "{{name}} - голосовий режим",
+    "phaseIdle": "Торкніться, щоб почати",
+    "phaseListening": "Слухаю…", "phaseThinking": "Думаю…",
+    "phaseSpeaking": "Говорить…", "phasePaused": "Торкніться, щоб продовжити",
+    "phaseError": "Торкніться, щоб повторити",
+    "helperListening": "Говоріть природно — я зупинюся, коли зупинитеся ви.",
+    "helperSpeaking": "{{name}} говорить. Торкніться, щоб перервати.",
+    "helperThinking": "Хвилинку…",
+    "helperIdle": "Торкніться мікрофона і говоріть. Відповім голосом.",
+    "permissionRequired": "Потрібен доступ до мікрофона",
+    "permissionBody": "Увімкніть доступ до мікрофона в Налаштуваннях для голосового режиму.",
+    "openSettings": "Відкрити налаштування"
+  },
+  "settings": {
+    "account": "Обліковий запис", "subscription": "Підписка",
+    "support": "Підтримка", "about": "Про застосунок",
+    "editProfile": "Змінити профіль", "language": "Мова",
+    "manageSubscription": "Керування підпискою",
+    "upgradePremium": "Перейти на Premium", "premiumBadge": "PREMIUM",
+    "messagesLeft": "{{remaining}} з {{limit}} повідомлень сьогодні",
+    "premiumPerks": "Безлімітні повідомлення, всі функції",
+    "privacyPolicy": "Політика конфіденційності",
+    "termsOfService": "Умови використання", "version": "Версія",
+    "disclaimer": "Hexalife надає тільки wellness-освіту. Не замінює професійну медичну консультацію, діагностику чи лікування. З медичних питань завжди звертайтеся до кваліфікованого лікаря.",
+    "couldNotOpenLink": "Не вдалося відкрити посилання",
+    "couldNotOpenSubscription": "Не вдалося відкрити підписку"
+  },
+  "paywall": {
+    "title": "Hexalife Premium",
+    "subtitle": "Шість аватарів-експертів, з джерелами, без денного ліміту.",
+    "trialNote": "5 днів безкоштовно · скасуйте будь-коли",
+    "annualSave": "Економія 20%",
+    "monthly": "Щомісяця", "annual": "Щорічно",
+    "ctaSubscribe": "Почати пробний період",
+    "ctaRestore": "Відновити покупки",
+    "purchaseFailed": "Покупка не вдалася",
+    "restoreFailed": "Не вдалося відновити"
+  },
+  "tabs": { "home": "Головна", "library": "Бібліотека", "history": "Історія", "settings": "Налаштування" }
+}

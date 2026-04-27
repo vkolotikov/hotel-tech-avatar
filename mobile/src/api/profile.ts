@@ -83,9 +83,12 @@ export type CoachingPace = 'slow' | 'fast' | null;
 export type CoachingStyle = 'routines' | 'variety' | null;
 export type AccountabilityStyle = 'solo' | 'track' | 'coach' | 'compete' | null;
 
+export type LanguageCode = 'en' | 'es' | 'fr' | 'de' | 'pl' | 'it' | 'ru' | 'uk' | 'lv';
+
 export type UserProfile = {
   // Identity
   display_name: string | null;
+  preferred_language: LanguageCode | null;
   pronouns: string | null;
   // Demographics
   birth_year: number | null;

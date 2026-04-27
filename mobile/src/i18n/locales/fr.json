@@ -1,0 +1,296 @@
+{
+  "common": {
+    "next": "Suivant", "back": "Retour", "save": "Enregistrer",
+    "saveAndStart": "Enregistrer et démarrer", "cancel": "Annuler",
+    "skip": "Passer", "done": "Terminé", "retry": "Réessayer",
+    "edit": "Modifier", "close": "Fermer", "letsGo": "C'est parti",
+    "optional": "Facultatif", "loading": "Chargement…",
+    "yes": "Oui", "no": "Non", "preferNotToSay": "Je préfère ne pas dire",
+    "errorTitle": "Une erreur s'est produite", "tapToSet": "Appuyer pour définir"
+  },
+  "auth": {
+    "signIn": "Se connecter", "signUp": "S'inscrire",
+    "signInToContinue": "Connectez-vous pour continuer",
+    "createAccount": "Créez votre compte",
+    "name": "Nom", "email": "E-mail", "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "noAccount": "Pas de compte ?",
+    "hasAccount": "Vous avez déjà un compte ?",
+    "signOut": "Se déconnecter",
+    "signOutConfirm": "Vous serez déconnecté de Hexalife sur cet appareil.",
+    "signOutFailed": "Échec de la déconnexion"
+  },
+  "languagePicker": {
+    "title": "Choisissez votre langue",
+    "subtitle": "Pour l'application et la façon dont vos avatars vous parlent. Modifiable dans les Réglages."
+  },
+  "onboardingIntro": {
+    "welcome": "Bienvenue sur Hexalife",
+    "welcomeBody": "Six avatars experts — sommeil, nutrition, fitness, pleine conscience, peau et lecture d'analyses — fondés sur la recherche actuelle. Posez vos questions et recevez une réponse calme et fondée sur des preuves.",
+    "notMedical": "Pas un avis médical",
+    "notMedicalBody": "Hexalife est une éducation au bien-être. Elle ne diagnostique pas, ne prescrit pas et ne remplace pas un clinicien. En cas d'urgence, contactez votre médecin ou les services d'urgence — les avatars vous orienteront vers la bonne aide.",
+    "safetyFirst": "Sécurité et sources",
+    "safetyFirstBody": "Chaque affirmation de santé est vérifiée par rapport à des sources réelles avant de vous parvenir. Les réponses non vérifiables sont remplacées par une option plus sûre, et les indicateurs de crise vous redirigent vers de l'aide. Vous gardez le contrôle de vos données.",
+    "ctaGetStarted": "Commencer"
+  },
+  "profileSetup": {
+    "welcomeTitle": "Bienvenue sur Hexalife",
+    "welcomeSubtitle": "Adaptons vos six avatars de bien-être à qui vous êtes. Environ 3 minutes.",
+    "privacyText": "Vos données vous appartiennent. Nous ne vendons jamais vos données de santé et vous pouvez les modifier ou les supprimer dans les Réglages.",
+    "aboutTitle": "À propos de vous",
+    "fieldName": "Votre prénom",
+    "fieldNamePlaceholder": "Comment vous appeler ?",
+    "fieldAge": "Âge", "fieldSex": "Sexe assigné à la naissance",
+    "fieldPronouns": "Pronoms",
+    "sexFemale": "Féminin", "sexMale": "Masculin", "sexIntersex": "Intersexe",
+    "heritageTitle": "Origines",
+    "heritageSubtitle": "Utilisé en arrière-plan pour adapter les conseils aux risques génétiques. Facultatif, jamais affiché.",
+    "heritageHelper": "Sélectionnez tout ce qui s'applique",
+    "bodyTitle": "Données corporelles",
+    "fieldHeight": "Taille", "fieldWeight": "Poids",
+    "fieldWaist": "Tour de taille (meilleur signal métabolique que le poids)",
+    "dayTitle": "Votre journée",
+    "fieldActivity": "Activité quotidienne",
+    "fieldJob": "Type de travail",
+    "fieldOutdoor": "Temps en plein air par jour",
+    "fieldWellnessTime": "Temps quotidien pour le bien-être",
+    "sleepTitle": "Sommeil",
+    "fieldSleepHours": "Heures visées par nuit",
+    "fieldSleepQuality": "Qualité du sommeil récente",
+    "fieldChronotype": "Chronotype",
+    "habitsTitle": "Habitudes",
+    "fieldSmoking": "Tabac", "fieldAlcohol": "Alcool",
+    "fieldCaffeine": "Caféine", "fieldStress": "Niveau de stress",
+    "eatingTitle": "Alimentation",
+    "fieldEatingPattern": "Régime",
+    "fieldEatingSchedule": "Rythme des repas",
+    "fieldCookingSkill": "Niveau en cuisine",
+    "fieldCookingTime": "Temps disponible pour cuisiner",
+    "fieldAllergies": "Allergies",
+    "fieldIntolerances": "Intolérances (causent des symptômes mais pas allergiques)",
+    "healthTitle": "Santé",
+    "healthSubtitle": "Pour ne jamais vous recommander quelque chose qui ne vous convient pas.",
+    "fieldConditions": "Conditions diagnostiquées",
+    "fieldMedications": "Médicaments actuels",
+    "fieldFamilyHistory": "Antécédents familiaux (parents au premier degré)",
+    "fieldInjuries": "Blessures importantes passées",
+    "fieldMentalHealth": "Contexte santé mentale",
+    "medsAddPlaceholder": "Tapez et ajoutez",
+    "lifeTitle": "Contexte de vie",
+    "fieldLiving": "Situation de logement",
+    "fieldTravel": "Fréquence des voyages",
+    "fieldBudget": "Voulez-vous des options économiques ?",
+    "budgetYes": "Oui, économique", "budgetNo": "Sans contrainte",
+    "femaleTitle": "Santé reproductive",
+    "femaleSubtitle": "Pour garder les conseils sûrs et pertinents.",
+    "fieldFemaleStatus": "Statut actuel",
+    "fieldPregnancyWeeks": "Semaines de grossesse",
+    "fieldBreastfeedingMonths": "Mois d'allaitement",
+    "fieldCycleLength": "Durée moyenne du cycle",
+    "fieldContraception": "Contraception",
+    "goalsTitle": "Vos objectifs",
+    "goalsSubtitle": "Choisissez jusqu'à 3 — votre équipe est construite autour.",
+    "teamPrefix": "Votre équipe inclura",
+    "fieldMotivation": "Qu'est-ce qui vous a poussé à commencer ?",
+    "fieldMotivationText": "Dans vos propres mots",
+    "motivationPlaceholder": "Quelque chose que vous avez essayé, ou une raison spécifique maintenant ?",
+    "fieldTimeline": "Échéance",
+    "fieldConfidence": "Quelle confiance avez-vous d'atteindre ces objectifs ?",
+    "coachingTitle": "Style de coaching",
+    "coachingSubtitle": "Définit la façon dont les avatars vous parlent.",
+    "fieldTone": "Ton", "fieldDetail": "Niveau de détail",
+    "fieldPace": "Rythme",
+    "fieldStyle": "Routines ou variété ?",
+    "fieldAccountability": "Responsabilité",
+    "reviewTitle": "Tout est prêt",
+    "reviewSubtitle": "Votre équipe initiale est prête. Modifiez n'importe quelle section avant d'enregistrer.",
+    "reviewSection": {
+      "about": "À propos", "body": "Corps", "day": "Journée",
+      "sleep": "Sommeil", "habits": "Habitudes", "eating": "Alimentation",
+      "health": "Santé", "life": "Vie", "goals": "Objectifs", "style": "Style"
+    }
+  },
+  "ageBand": {
+    "under-18": "Moins de 18", "18-24": "18–24", "25-34": "25–34",
+    "35-44": "35–44", "45-54": "45–54", "55-64": "55–64", "65+": "65+"
+  },
+  "activity": {
+    "sedentary": "Sédentaire", "sedentarySub": "Surtout assis",
+    "light": "Légère", "lightSub": "Quelques marches",
+    "moderate": "Modérée", "moderateSub": "3-4 séances/sem",
+    "active": "Active", "activeSub": "5+ séances/sem",
+    "athlete": "Athlète", "athleteSub": "Compétition ou quotidien"
+  },
+  "jobType": {
+    "desk": "Bureau toute la journée", "mixed": "Mixte",
+    "feet": "Debout", "physical": "Travail physique",
+    "shift": "Horaires décalés", "none": "Sans emploi"
+  },
+  "timeBand": {
+    "under-15": "<15 min", "15-30": "15–30 min", "15-60": "15–60 min",
+    "30-60": "30–60 min", "60-120": "1–2 heures",
+    "60+": "1 heure+", "120+": "2 heures+"
+  },
+  "sleepQuality": { "great": "Bonne", "okay": "Moyenne", "poor": "Mauvaise" },
+  "chronotype": {
+    "morning": "Lève-tôt", "morningSub": "Actif tôt, énergique avant midi",
+    "night": "Couche-tard", "nightSub": "Lève tard, pic le soir",
+    "shift": "Décalé / mixte", "shiftSub": "Horaire qui change"
+  },
+  "smoking": { "never": "Jamais", "quit": "Arrêté", "occasional": "Occasionnel", "daily": "Quotidien" },
+  "alcohol": { "none": "Aucun", "light": "1–3 verres/sem", "moderate": "4–7 verres/sem", "heavy": "8+ verres/sem" },
+  "caffeine": { "none": "Aucune", "1-2": "1–2 tasses", "3-4": "3–4 tasses", "5+": "5+ tasses" },
+  "stress": { "low": "Bas", "medium": "Moyen", "high": "Élevé" },
+  "eatingPattern": {
+    "omnivore": "Omnivore", "pescatarian": "Pescétarien",
+    "vegetarian": "Végétarien", "vegan": "Végan",
+    "mediterranean": "Méditerranéen", "keto": "Cétogène",
+    "paleo": "Paléo", "no-specific": "Sans spécifique"
+  },
+  "eatingSchedule": {
+    "3-meals": "3 repas/jour", "2-meals": "2 repas/jour",
+    "if": "Jeûne intermittent", "snacky": "Grignotage",
+    "skip-breakfast": "Sans petit-déj"
+  },
+  "cookingSkill": { "none": "Je ne cuisine pas", "basic": "Basique", "intermediate": "Intermédiaire", "advanced": "Avancée" },
+  "living": {
+    "alone": "Seul·e", "partner": "En couple",
+    "family-kids": "Famille avec enfants", "parents": "Chez les parents",
+    "roommates": "Colocation"
+  },
+  "travel": { "rarely": "Rarement", "monthly": "Mensuel", "weekly": "Hebdomadaire+" },
+  "femaleStatus": {
+    "regular": "Cycle régulier", "irregular": "Cycle irrégulier",
+    "trying": "Essai bébé", "pregnant": "Enceinte",
+    "breastfeeding": "Allaitement", "perimenopause": "Périménopause",
+    "menopause": "Ménopause", "post-menopause": "Post-ménopause",
+    "prefer-not-to-say": "Je préfère ne pas dire"
+  },
+  "contraception": {
+    "none": "Aucune", "pill": "Pilule",
+    "iud-hormonal": "DIU (hormonal)", "iud-copper": "DIU (cuivre)",
+    "implant": "Implant", "patch": "Patch", "ring": "Anneau",
+    "injection": "Injection", "natural": "Naturelle / suivi",
+    "prefer-not-to-say": "Je préfère ne pas dire"
+  },
+  "goal": {
+    "fitness": "Forme physique", "weight": "Gérer mon poids",
+    "energy": "Plus d'énergie", "sleep": "Mieux dormir",
+    "stress": "Réduire le stress", "nutrition": "Mieux manger",
+    "gut": "Santé intestinale", "skin": "Peau et beauté",
+    "longevity": "Longévité", "labs": "Comprendre mes analyses"
+  },
+  "motivation": {
+    "health-scare": "Alerte santé", "event": "Événement à venir",
+    "birthday": "Anniversaire important", "doctor": "Mon médecin l'a dit",
+    "energy": "Plus d'énergie", "specific-goal": "Objectif précis",
+    "ready": "Je suis prêt·e", "other": "Autre chose"
+  },
+  "timeline": { "weeks": "En semaines", "months": "En mois", "year": "Cette année", "no-deadline": "Sans échéance" },
+  "coachingTone": {
+    "friendly": "Amical", "friendlySub": "Comme un copain",
+    "expert": "Expert", "expertSub": "Comme un clinicien",
+    "direct": "Direct", "directSub": "Sans fioritures",
+    "gentle": "Doux", "gentleSub": "Doux et soutenant"
+  },
+  "coachingDetail": { "brief": "Bref", "balanced": "Équilibré", "thorough": "Détaillé" },
+  "coachingPace": { "slow": "Lent et régulier", "fast": "Rapide et concentré" },
+  "coachingStyleOpt": { "routines": "Routines", "variety": "Variété" },
+  "accountability": { "solo": "Seul·e", "track": "Tout suivre", "coach": "Coache-moi", "compete": "Compétition" },
+  "ethnicity": {
+    "white": "Blanc / Européen", "black": "Noir / Africain",
+    "east-asian": "Asie de l'Est", "south-asian": "Asie du Sud",
+    "hispanic": "Hispanique / Latino", "middle-eastern": "Moyen-Orient",
+    "indigenous": "Autochtone", "mixed": "Métisse", "other": "Autre",
+    "prefer-not-to-say": "Je préfère ne pas dire"
+  },
+  "allergy": {
+    "peanuts": "Cacahuètes", "tree-nuts": "Fruits à coque",
+    "dairy": "Produits laitiers", "eggs": "Œufs", "gluten": "Gluten",
+    "shellfish": "Crustacés", "soy": "Soja", "sesame": "Sésame",
+    "fish": "Poisson", "none": "Aucune"
+  },
+  "intolerance": {
+    "lactose": "Lactose", "fructose": "Fructose",
+    "fodmap": "Sensible aux FODMAP", "gluten-non-coeliac": "Gluten (non-cœliaque)",
+    "histamine": "Histamine", "caffeine": "Caféine", "none": "Aucune"
+  },
+  "condition": {
+    "t2d": "Diabète type 2", "t1d": "Diabète type 1",
+    "prediabetes": "Prédiabète", "hbp": "Hypertension",
+    "hcl": "Cholestérol élevé", "heart": "Maladie cardiaque",
+    "asthma": "Asthme", "ibs": "SCI / MICI", "autoimmune": "Auto-immune",
+    "anxiety": "Anxiété", "depression": "Dépression",
+    "adhd": "TDAH", "thyroid": "Thyroïde",
+    "endometriosis": "Endométriose", "pcos": "SOPK"
+  },
+  "familyHistory": {
+    "heart": "Maladie cardiaque", "t2d": "Diabète type 2",
+    "cancer": "Cancer", "dementia": "Démence", "stroke": "AVC",
+    "mental": "Santé mentale", "none": "Aucune"
+  },
+  "injury": {
+    "lower-back": "Bas du dos", "knee": "Genou",
+    "shoulder": "Épaule", "hip": "Hanche", "neck": "Cou",
+    "ankle": "Cheville", "wrist": "Poignet", "none": "Aucune"
+  },
+  "mentalHealth": {
+    "anxiety": "Anxiété", "depression": "Dépression",
+    "adhd": "TDAH", "eating-disorder": "Trouble alimentaire",
+    "ocd": "TOC", "prefer-not-to-say": "Je préfère ne pas dire"
+  },
+  "chat": {
+    "messagePlaceholder": "Message…",
+    "listening": "Écoute… touchez le micro pour terminer",
+    "transcribing": "Transcription…", "uploading": "Téléversement…",
+    "speakingPill": "{{name}} parle · touchez pour arrêter",
+    "newChat": "Démarrer une nouvelle conversation ?",
+    "newChatBody": "On garde la conversation actuelle avec {{name}} dans votre historique et on en ouvre une nouvelle.",
+    "newChatCta": "Nouvelle conversation",
+    "couldNotLoad": "Impossible de charger les messages",
+    "tapRetry": "Touchez pour réessayer",
+    "speakBtn": "Lire", "stopBtn": "Stop",
+    "couldNotPlay": "Impossible de lire la voix"
+  },
+  "voiceMode": {
+    "title": "{{name}} - mode vocal",
+    "phaseIdle": "Touchez pour démarrer",
+    "phaseListening": "Écoute…", "phaseThinking": "Réflexion…",
+    "phaseSpeaking": "Parle…", "phasePaused": "Touchez pour reprendre",
+    "phaseError": "Touchez pour réessayer",
+    "helperListening": "Parlez naturellement — je m'arrête quand vous vous arrêtez.",
+    "helperSpeaking": "{{name}} parle. Touchez pour interrompre.",
+    "helperThinking": "Un instant…",
+    "helperIdle": "Touchez le micro et parlez. Je vous réponds par la voix.",
+    "permissionRequired": "Accès au micro requis",
+    "permissionBody": "Activez l'accès au micro dans les Réglages pour utiliser le mode vocal.",
+    "openSettings": "Ouvrir les Réglages"
+  },
+  "settings": {
+    "account": "Compte", "subscription": "Abonnement",
+    "support": "Support", "about": "À propos",
+    "editProfile": "Modifier le profil", "language": "Langue",
+    "manageSubscription": "Gérer l'abonnement",
+    "upgradePremium": "Passer à Premium", "premiumBadge": "PREMIUM",
+    "messagesLeft": "{{remaining}} sur {{limit}} messages aujourd'hui",
+    "premiumPerks": "Messages illimités, toutes les fonctions",
+    "privacyPolicy": "Politique de confidentialité",
+    "termsOfService": "Conditions d'utilisation", "version": "Version",
+    "disclaimer": "Hexalife propose uniquement de l'éducation au bien-être. Il ne remplace pas un avis médical, un diagnostic ou un traitement professionnel. Consultez toujours un clinicien qualifié pour toute question médicale.",
+    "couldNotOpenLink": "Impossible d'ouvrir le lien",
+    "couldNotOpenSubscription": "Impossible d'ouvrir l'abonnement"
+  },
+  "paywall": {
+    "title": "Hexalife Premium",
+    "subtitle": "Six avatars experts, sourcés, sans limite quotidienne.",
+    "trialNote": "5 jours gratuits · annulez à tout moment",
+    "annualSave": "Économisez 20%",
+    "monthly": "Mensuel", "annual": "Annuel",
+    "ctaSubscribe": "Démarrer l'essai gratuit",
+    "ctaRestore": "Restaurer les achats",
+    "purchaseFailed": "Achat échoué",
+    "restoreFailed": "Restauration échouée"
+  },
+  "tabs": { "home": "Accueil", "library": "Bibliothèque", "history": "Historique", "settings": "Réglages" }
+}

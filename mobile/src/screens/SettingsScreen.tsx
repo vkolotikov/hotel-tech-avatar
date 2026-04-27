@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Alert,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -10,9 +11,12 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { AuthUser, logout } from '../api';
+import { updateProfile } from '../api/profile';
 import { PaywallScreen } from './PaywallScreen';
 import { ProfileSetupScreen } from './ProfileSetupScreen';
+import { setLanguage, SUPPORTED_LANGUAGES, type LanguageCode } from '../i18n';
 import { colors, spacing, radius, fontSize } from '../theme';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../package.json') as { version?: string };
@@ -24,8 +28,33 @@ type Props = {
 
 export function SettingsScreen({ user, onRefreshUser }: Props) {
   const version = pkg.version ?? 'dev';
+  const { t, i18n } = useTranslation();
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
+  const [langPickerOpen, setLangPickerOpen] = useState(false);
+
+  const currentLang = i18n.language as LanguageCode;
+  const currentLangNative =
+    SUPPORTED_LANGUAGES.find((l) => l.code === currentLang)?.native ?? 'English';
+
+  /**
+   * Apply the new language locally (instant UI re-render via i18next),
+   * persist to SecureStore, AND push the choice to the backend so the
+   * next AI reply / Whisper STT call uses the same language. Failure
+   * to reach the backend is non-fatal — the local change still works.
+   */
+  const handleLangChange = async (code: LanguageCode) => {
+    setLangPickerOpen(false);
+    if (code === currentLang) return;
+    await setLanguage(code);
+    try {
+      await updateProfile({ preferred_language: code });
+      void onRefreshUser();
+    } catch {
+      /* server unreachable — try again on next save */
+    }
+  };
+
   const plan = user?.subscription?.plan ?? 'free';
   const planName = user?.subscription?.plan_name ?? 'Free';
   const isPremium = plan === 'premium';
@@ -85,7 +114,21 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
           style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         >
           <Ionicons name="fitness-outline" size={18} color={colors.textMuted} />
-          <Text style={styles.rowLink}>Edit profile</Text>
+          <Text style={styles.rowLink}>{t('settings.editProfile')}</Text>
+          <Ionicons
+            name="chevron-forward"
+            size={14}
+            color={colors.textMuted}
+            style={styles.rowChevron}
+          />
+        </Pressable>
+        <Pressable
+          onPress={() => setLangPickerOpen(true)}
+          style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        >
+          <Ionicons name="language-outline" size={18} color={colors.textMuted} />
+          <Text style={styles.rowLink}>{t('settings.language')}</Text>
+          <Text style={styles.rowValue}>{currentLangNative}</Text>
           <Ionicons
             name="chevron-forward"
             size={14}
@@ -223,9 +266,102 @@ export function SettingsScreen({ user, onRefreshUser }: Props) {
           void onRefreshUser();
         }}
       />
+
+      <Modal
+        visible={langPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLangPickerOpen(false)}
+      >
+        <Pressable
+          style={langPickerStyles.backdrop}
+          onPress={() => setLangPickerOpen(false)}
+        >
+          <Pressable style={langPickerStyles.sheet} onPress={(e) => e.stopPropagation?.()}>
+            <View style={langPickerStyles.head}>
+              <Ionicons name="language-outline" size={20} color={colors.primary} />
+              <Text style={langPickerStyles.title}>{t('settings.language')}</Text>
+              <Pressable onPress={() => setLangPickerOpen(false)} hitSlop={8}>
+                <Ionicons name="close" size={20} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            {SUPPORTED_LANGUAGES.map((lang) => {
+              const selected = currentLang === lang.code;
+              return (
+                <Pressable
+                  key={lang.code}
+                  onPress={() => void handleLangChange(lang.code as LanguageCode)}
+                  style={({ pressed }) => [
+                    langPickerStyles.row,
+                    selected && langPickerStyles.rowSelected,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={langPickerStyles.native}>{lang.native}</Text>
+                    <Text style={langPickerStyles.english}>{lang.name}</Text>
+                  </View>
+                  {selected && (
+                    <Ionicons name="checkmark" size={18} color={colors.primary} />
+                  )}
+                </Pressable>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
+
+const langPickerStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.md,
+    paddingBottom: spacing.xl,
+    gap: spacing.xs,
+  },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  title: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    marginBottom: 4,
+  },
+  rowSelected: {
+    backgroundColor: 'rgba(124,92,255,0.18)',
+  },
+  native: {
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: '600',
+  },
+  english: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+  },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
