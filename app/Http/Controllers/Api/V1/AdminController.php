@@ -695,26 +695,87 @@ class AdminController extends Controller
 
         $page = $query->paginate($perPage);
 
-        // Pull plan slug + token usage in batch so the table can show
-        // them in the row without N+1 queries.
-        $userIds = collect($page->items())->pluck('id');
-        $entitlements = SubscriptionEntitlement::with('plan:id,slug,name')
+        $userIds = collect($page->items())->pluck('id')->all();
+        if (empty($userIds)) {
+            return response()->json([
+                'data'         => [],
+                'current_page' => $page->currentPage(),
+                'last_page'    => $page->lastPage(),
+                'per_page'     => $page->perPage(),
+                'total'        => $page->total(),
+            ]);
+        }
+
+        $entitlements = SubscriptionEntitlement::with('plan:id,slug,name,price_usd_cents_monthly,monthly_token_limit')
             ->whereIn('user_id', $userIds)
             ->get()
             ->keyBy('user_id');
 
-        $rows = collect($page->items())->map(function (User $u) use ($entitlements) {
+        // Batched per-user metrics — done in three queries instead of
+        // 5 × N to keep this efficient when listing 100+ users at a time.
+        $since = now()->subDays(30);
+
+        $tokenAndCostByUser = DB::table('llm_calls')
+            ->join('messages', 'llm_calls.message_id', '=', 'messages.id')
+            ->join('conversations', 'messages.conversation_id', '=', 'conversations.id')
+            ->whereIn('conversations.user_id', $userIds)
+            ->where('llm_calls.created_at', '>=', $since)
+            ->select('conversations.user_id')
+            ->selectRaw('SUM(COALESCE(llm_calls.prompt_tokens, 0) + COALESCE(llm_calls.completion_tokens, 0)) as tokens')
+            ->selectRaw('SUM(COALESCE(llm_calls.cost_usd_cents, 0)) as cost_cents')
+            ->groupBy('conversations.user_id')
+            ->get()
+            ->keyBy('user_id');
+
+        $messageStatsByUser = DB::table('messages')
+            ->join('conversations', 'messages.conversation_id', '=', 'conversations.id')
+            ->whereIn('conversations.user_id', $userIds)
+            ->where('messages.role', 'user')
+            ->select('conversations.user_id')
+            ->selectRaw('COUNT(*) as messages_30d')
+            ->selectRaw('SUM(CASE WHEN messages.created_at >= ? THEN 1 ELSE 0 END) as recent', [$since])
+            ->selectRaw('MAX(messages.created_at) as last_active_at')
+            ->groupBy('conversations.user_id')
+            ->get()
+            ->keyBy('user_id');
+
+        $conversationCounts = DB::table('conversations')
+            ->whereIn('user_id', $userIds)
+            ->select('user_id')
+            ->selectRaw('COUNT(*) as conversations_count')
+            ->groupBy('user_id')
+            ->get()
+            ->keyBy('user_id');
+
+        $rows = collect($page->items())->map(function (User $u) use ($entitlements, $tokenAndCostByUser, $messageStatsByUser, $conversationCounts) {
             $ent = $entitlements->get($u->id);
             $plan = $ent?->plan;
+            $tc = $tokenAndCostByUser->get($u->id);
+            $ms = $messageStatsByUser->get($u->id);
+            $cv = $conversationCounts->get($u->id);
+
+            $cost30d = (int) ($tc->cost_cents ?? 0);
+            // Revenue 30d = plan price if active+paid. Free plans = 0.
+            $revenue30d = ($ent && in_array($ent->status, ['active', 'in_grace_period', 'trialing'], true))
+                ? (int) ($plan?->price_usd_cents_monthly ?? 0)
+                : 0;
+
             return [
-                'id'          => $u->id,
-                'name'        => $u->name,
-                'email'       => $u->email,
-                'created_at'  => $u->created_at?->toIso8601String(),
-                'plan'        => $plan?->slug ?? 'free',
-                'plan_name'   => $plan?->name ?? 'Free',
-                'status'      => $ent?->status ?? 'none',
-                'tokens_used_period' => $u->tokensUsedThisPeriod(),
+                'id'                  => $u->id,
+                'name'                => $u->name,
+                'email'               => $u->email,
+                'created_at'          => $u->created_at?->toIso8601String(),
+                'plan'                => $plan?->slug ?? 'free',
+                'plan_name'           => $plan?->name ?? 'Free',
+                'status'              => $ent?->status ?? 'none',
+                'tokens_30d'          => (int) ($tc->tokens ?? 0),
+                'cost_cents_30d'      => $cost30d,
+                'revenue_cents_30d'   => $revenue30d,
+                'margin_cents_30d'    => $revenue30d - $cost30d,
+                'messages_30d'        => (int) ($ms->recent ?? 0),
+                'messages_total'      => (int) ($ms->messages_30d ?? 0), // unfiltered count
+                'last_active_at'      => $ms->last_active_at ?? null,
+                'conversations_count' => (int) ($cv->conversations_count ?? 0),
             ];
         });
 
@@ -725,6 +786,142 @@ class AdminController extends Controller
             'per_page'     => $page->perPage(),
             'total'        => $page->total(),
         ]);
+    }
+
+    /**
+     * Daily time-series of tokens, messages, and OpenAI cost over the
+     * requested window. Used by the Usage tab's line + cost charts.
+     * Resolution is per-day; for sub-daily granularity we'd back this
+     * with token_usage_daily aggregates, but per-day from llm_calls is
+     * cheap enough at our scale and gives accurate live numbers.
+     */
+    public function usageTimeseries(Request $request): JsonResponse
+    {
+        $days = max(1, min(365, (int) $request->query('days', 30)));
+        $since = now()->subDays($days)->startOfDay();
+
+        $rows = DB::table('llm_calls')
+            ->where('created_at', '>=', $since)
+            ->selectRaw('DATE(created_at) as day')
+            ->selectRaw('SUM(COALESCE(prompt_tokens, 0)) as tokens_in')
+            ->selectRaw('SUM(COALESCE(completion_tokens, 0)) as tokens_out')
+            ->selectRaw('SUM(COALESCE(cost_usd_cents, 0)) as cost_cents')
+            ->selectRaw('COUNT(*) as call_count')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get();
+
+        $messages = DB::table('messages')
+            ->where('created_at', '>=', $since)
+            ->where('role', 'user')
+            ->selectRaw('DATE(created_at) as day')
+            ->selectRaw('COUNT(*) as messages_count')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->keyBy('day');
+
+        // Fill in days with no activity so the chart has a continuous
+        // x-axis (zeros render as flat at the bottom rather than gaps).
+        $series = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $day = now()->subDays($i)->toDateString();
+            $row = $rows->firstWhere('day', $day);
+            $msg = $messages->get($day);
+            $series[] = [
+                'day'         => $day,
+                'tokens_in'   => (int) ($row->tokens_in ?? 0),
+                'tokens_out'  => (int) ($row->tokens_out ?? 0),
+                'cost_cents'  => (int) ($row->cost_cents ?? 0),
+                'calls'       => (int) ($row->call_count ?? 0),
+                'messages'    => (int) ($msg->messages_count ?? 0),
+            ];
+        }
+
+        return response()->json(['days' => $days, 'series' => $series]);
+    }
+
+    /**
+     * Per-avatar usage breakdown — message + token counts per agent
+     * over the window. Powers the avatar-mix bar chart.
+     */
+    public function usageByAvatar(Request $request): JsonResponse
+    {
+        $days = max(1, min(365, (int) $request->query('days', 30)));
+        $since = now()->subDays($days)->startOfDay();
+
+        $rows = DB::table('messages')
+            ->join('conversations', 'messages.conversation_id', '=', 'conversations.id')
+            ->join('agents', 'conversations.agent_id', '=', 'agents.id')
+            ->leftJoin('llm_calls', 'llm_calls.message_id', '=', 'messages.id')
+            ->where('messages.created_at', '>=', $since)
+            ->where('messages.role', 'user')
+            ->select('agents.id', 'agents.slug', 'agents.name')
+            ->selectRaw('COUNT(DISTINCT messages.id) as messages')
+            ->selectRaw('SUM(COALESCE(llm_calls.prompt_tokens, 0) + COALESCE(llm_calls.completion_tokens, 0)) as tokens')
+            ->selectRaw('SUM(COALESCE(llm_calls.cost_usd_cents, 0)) as cost_cents')
+            ->groupBy('agents.id', 'agents.slug', 'agents.name')
+            ->orderByDesc('messages')
+            ->get();
+
+        return response()->json(['days' => $days, 'rows' => $rows]);
+    }
+
+    /**
+     * Model usage mix — which OpenAI/Anthropic models the fleet is
+     * actually hitting, and how much each costs. Powers the model
+     * doughnut + helps spot drift toward expensive models.
+     */
+    public function usageByModel(Request $request): JsonResponse
+    {
+        $days = max(1, min(365, (int) $request->query('days', 30)));
+        $since = now()->subDays($days)->startOfDay();
+
+        $rows = DB::table('llm_calls')
+            ->where('created_at', '>=', $since)
+            ->select('model')
+            ->selectRaw('COUNT(*) as calls')
+            ->selectRaw('SUM(COALESCE(prompt_tokens, 0) + COALESCE(completion_tokens, 0)) as tokens')
+            ->selectRaw('SUM(COALESCE(cost_usd_cents, 0)) as cost_cents')
+            ->groupBy('model')
+            ->orderByDesc('tokens')
+            ->get();
+
+        return response()->json(['days' => $days, 'rows' => $rows]);
+    }
+
+    /**
+     * Top consumers by tokens (descending). For the "who's costing us
+     * the most" table on the Usage tab. Joins through conversations
+     * → users to attribute back, then enriches with plan info so the
+     * panel can flag cases like "free user spending pro-tier tokens".
+     */
+    public function usageTopUsers(Request $request): JsonResponse
+    {
+        $days = max(1, min(365, (int) $request->query('days', 30)));
+        $limit = max(5, min(200, (int) $request->query('limit', 50)));
+        $since = now()->subDays($days)->startOfDay();
+
+        $rows = DB::table('llm_calls')
+            ->join('messages', 'llm_calls.message_id', '=', 'messages.id')
+            ->join('conversations', 'messages.conversation_id', '=', 'conversations.id')
+            ->join('users', 'conversations.user_id', '=', 'users.id')
+            ->leftJoin('subscription_entitlements', 'subscription_entitlements.user_id', '=', 'users.id')
+            ->leftJoin('subscription_plans', 'subscription_entitlements.plan_id', '=', 'subscription_plans.id')
+            ->where('llm_calls.created_at', '>=', $since)
+            ->select('users.id', 'users.name', 'users.email')
+            ->selectRaw('COALESCE(subscription_plans.slug, ?) as plan_slug', ['free'])
+            ->selectRaw('COALESCE(subscription_plans.name, ?) as plan_name', ['Free'])
+            ->selectRaw('COALESCE(subscription_plans.price_usd_cents_monthly, 0) as price_monthly')
+            ->selectRaw('SUM(COALESCE(llm_calls.prompt_tokens, 0) + COALESCE(llm_calls.completion_tokens, 0)) as tokens')
+            ->selectRaw('SUM(COALESCE(llm_calls.cost_usd_cents, 0)) as cost_cents')
+            ->selectRaw('COUNT(DISTINCT messages.id) as messages')
+            ->groupBy('users.id', 'users.name', 'users.email', 'subscription_plans.slug', 'subscription_plans.name', 'subscription_plans.price_usd_cents_monthly')
+            ->orderByDesc('tokens')
+            ->limit($limit)
+            ->get();
+
+        return response()->json(['days' => $days, 'limit' => $limit, 'rows' => $rows]);
     }
 
     /**

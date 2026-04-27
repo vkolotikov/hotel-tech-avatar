@@ -106,5 +106,9 @@ Route::prefix('v1')->group(function () {
         Route::get('users/{user}',                     [AdminController::class, 'showUser']);
         Route::post('users/{user}/subscription',       [AdminController::class, 'updateUserSubscription']);
         Route::get('usage-overview',                   [AdminController::class, 'usageOverview']);
+        Route::get('usage-timeseries',                 [AdminController::class, 'usageTimeseries']);
+        Route::get('usage-by-avatar',                  [AdminController::class, 'usageByAvatar']);
+        Route::get('usage-by-model',                   [AdminController::class, 'usageByModel']);
+        Route::get('usage-top-users',                  [AdminController::class, 'usageTopUsers']);
     });
 });

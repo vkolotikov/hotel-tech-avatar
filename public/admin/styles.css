@@ -212,11 +212,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Side-scroll on narrow viewports rather than wrapping cells —
+     keeps each row aligned with its header. */
+  overflow-x: auto;
 }
 .users-row {
   display: grid;
-  grid-template-columns: 60px 1.4fr 1.4fr 110px 110px 90px;
-  gap: 12px;
+  /* id | name | email | plan | tokens | cost | margin | msgs | last active */
+  grid-template-columns: 50px 1.4fr 1.6fr 95px 80px 80px 90px 70px 110px;
+  gap: 10px;
   align-items: center;
   padding: 10px 14px;
   background: rgba(15, 23, 42, 0.55);
@@ -224,6 +228,7 @@ body {
   border-radius: 10px;
   cursor: pointer;
   font-size: 13px;
+  min-width: 1100px;
 }
 .users-row:hover {
   border-color: rgba(96, 165, 250, 0.65);
@@ -267,6 +272,17 @@ body {
 .users-row__id {
   color: rgba(148, 163, 184, 0.6);
   font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.users-row__num {
+  color: #cbd5e1;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+.users-row__num--positive { color: #4ade80; }
+.users-row__num--negative { color: #f87171; }
+.users-row__last {
+  color: rgba(148, 163, 184, 0.85);
   font-size: 12px;
 }
 .users-pager {
@@ -391,7 +407,70 @@ body {
   background: rgba(30, 64, 175, 0.7);
 }
 
-/* ─── Usage overview ──────────────────────────────────────────────── */
+/* ─── Usage range filter (7d / 30d / 90d / 1y) ──────────────────────── */
+.usage-range {
+  display: inline-flex;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.6);
+}
+.usage-range button {
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.7);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.usage-range button:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.04);
+}
+.usage-range button.usage-range--active {
+  background: rgba(96, 165, 250, 0.2);
+  color: #e2e8f0;
+}
+
+/* ─── Charts grid ─────────────────────────────────────────────────── */
+.usage-charts {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+.usage-chart {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  padding: 14px;
+  /* Bound the canvas so Chart.js's responsive sizing doesn't run away
+     on first paint. With this, the canvas always fits the card. */
+  min-height: 280px;
+  position: relative;
+}
+.usage-chart > canvas {
+  max-height: 280px;
+}
+.usage-chart__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: rgba(148, 163, 184, 0.85);
+  font-weight: 700;
+}
+@media (max-width: 1100px) {
+  .usage-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Usage overview KPI cards ────────────────────────────────────── */
 .usage-overview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

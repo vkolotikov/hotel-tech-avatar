@@ -1789,6 +1789,27 @@ async function loadUsers() {
   }
 }
 
+function centsToUsd(c) {
+  if (c == null) return '—';
+  const v = (Number(c) || 0) / 100;
+  return '$' + v.toFixed(v < 10 ? 2 : 0);
+}
+
+function relativeTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const diffMs = Date.now() - d.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return minutes + 'm ago';
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours + 'h ago';
+  const days = Math.floor(hours / 24);
+  if (days < 30) return days + 'd ago';
+  return d.toISOString().slice(0, 10);
+}
+
 function renderUsersList(rows) {
   if (!rows || rows.length === 0) {
     usersListEl.innerHTML = '<p style="color:#94a3b8;padding:14px">No users match this search.</p>';
@@ -1801,19 +1822,28 @@ function renderUsersList(rows) {
       <span>Email</span>
       <span>Plan</span>
       <span>Tokens 30d</span>
-      <span>Joined</span>
+      <span>Cost 30d</span>
+      <span>Margin 30d</span>
+      <span>Msgs 30d</span>
+      <span>Last active</span>
     </div>`;
   const body = rows.map((u) => {
     const planClass = u.plan === 'free' ? 'users-row__plan--free' : '';
-    const joined = u.created_at ? new Date(u.created_at).toISOString().slice(0, 10) : '—';
+    const margin = (u.margin_cents_30d ?? 0);
+    const marginClass = margin > 0 ? 'users-row__num--positive'
+                       : margin < 0 ? 'users-row__num--negative'
+                       : '';
     return `
       <div class="users-row" data-user-id="${u.id}">
         <span class="users-row__id">#${u.id}</span>
         <span class="users-row__name">${escapeHtml(u.name || '—')}</span>
         <span class="users-row__email">${escapeHtml(u.email || '—')}</span>
         <span><span class="users-row__plan ${planClass}">${escapeHtml(u.plan_name || u.plan || 'Free')}</span></span>
-        <span class="users-row__tokens">${tokensCompact(u.tokens_used_period)}</span>
-        <span class="users-row__id">${joined}</span>
+        <span class="users-row__num">${tokensCompact(u.tokens_30d)}</span>
+        <span class="users-row__num">${centsToUsd(u.cost_cents_30d)}</span>
+        <span class="users-row__num ${marginClass}">${centsToUsd(margin)}</span>
+        <span class="users-row__num">${(u.messages_30d || 0).toLocaleString()}</span>
+        <span class="users-row__last">${relativeTime(u.last_active_at)}</span>
       </div>`;
   }).join('');
   usersListEl.innerHTML = head + body;
@@ -1985,55 +2015,289 @@ async function grantSubscription(userId, planSlug, status, note) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-//  USAGE OVERVIEW
+//  USAGE ANALYTICS
+//  KPI cards + 4 Chart.js charts (timeseries, cost, avatar mix, model
+//  mix) + top consumers table, all filtered by a date-range toggle
+//  (7d / 30d / 90d / 1y).
 // ─────────────────────────────────────────────────────────────────────
 
 const usageOverviewEl = document.getElementById('usage-overview');
 const usageOverviewRefreshEl = document.getElementById('usage-overview-refresh');
+const usageRangeEl = document.getElementById('usage-range');
+const usageTopUsersEl = document.getElementById('usage-top-users');
+
+let usageRangeDays = 30;
+const usageCharts = { timeseries: null, cost: null, avatar: null, model: null };
 
 if (usageOverviewRefreshEl) {
   usageOverviewRefreshEl.addEventListener('click', () => { void loadUsageOverview(); });
 }
+if (usageRangeEl) {
+  usageRangeEl.querySelectorAll('button[data-days]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const d = Number(btn.dataset.days);
+      if (!d || d === usageRangeDays) return;
+      usageRangeDays = d;
+      usageRangeEl.querySelectorAll('button').forEach((b) => b.classList.remove('usage-range--active'));
+      btn.classList.add('usage-range--active');
+      void loadUsageOverview();
+    });
+  });
+}
+
+const CHART_DEFAULTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { color: '#cbd5e1', font: { size: 11 } } },
+    tooltip: {
+      backgroundColor: 'rgba(15,23,42,0.95)',
+      titleColor: '#e2e8f0',
+      bodyColor: '#cbd5e1',
+      borderColor: 'rgba(148,163,184,0.3)',
+      borderWidth: 1,
+    },
+  },
+  scales: {
+    x: { ticks: { color: 'rgba(148,163,184,0.85)', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+    y: { ticks: { color: 'rgba(148,163,184,0.85)', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+  },
+};
+
+const COLORS = {
+  primary: '#7c5cff',
+  secondary: '#60a5fa',
+  good: '#4ade80',
+  warn: '#f59e0b',
+  bad: '#ef4444',
+  doughnutPalette: ['#7c5cff', '#60a5fa', '#4ade80', '#f59e0b', '#ef4444', '#22d3ee', '#f472b6', '#fbbf24'],
+};
 
 async function loadUsageOverview() {
   if (!usageOverviewEl) return;
   usageOverviewEl.innerHTML = '<p style="color:#94a3b8;padding:14px">Loading...</p>';
-  try {
-    const d = await api('/api/v1/admin/usage-overview');
-    const costUsd = ((d.cost_usd_cents_30d ?? 0) / 100).toFixed(2);
-    const tokensTotal = (d.tokens_in_30d ?? 0) + (d.tokens_out_30d ?? 0);
-    const planMix = (d.plan_mix || []).map((m) => `
-      <span class="usage-card__planpill">${escapeHtml(m.name || m.slug)}: ${m.user_count}</span>
-    `).join('');
 
-    usageOverviewEl.innerHTML = `
-      <div class="usage-card">
-        <div class="usage-card__label">Total users</div>
-        <div class="usage-card__value">${d.total_users.toLocaleString()}</div>
-        <div class="usage-card__sub">${d.active_users_30d} active in 30d</div>
-      </div>
-      <div class="usage-card">
-        <div class="usage-card__label">Messages sent · 30d</div>
-        <div class="usage-card__value">${(d.messages_sent_30d || 0).toLocaleString()}</div>
-        <div class="usage-card__sub">${d.llm_calls_30d.toLocaleString()} model calls</div>
-      </div>
-      <div class="usage-card">
-        <div class="usage-card__label">Tokens · 30d</div>
-        <div class="usage-card__value">${tokensCompact(tokensTotal)}</div>
-        <div class="usage-card__sub">${tokensCompact(d.tokens_in_30d)} in · ${tokensCompact(d.tokens_out_30d)} out</div>
-      </div>
-      <div class="usage-card">
-        <div class="usage-card__label">OpenAI cost · 30d</div>
-        <div class="usage-card__value">$${costUsd}</div>
-        <div class="usage-card__sub">All purposes (chat + verification + TTS + STT)</div>
-      </div>
-      ${planMix ? `
-        <div class="usage-card usage-card--full">
-          <div class="usage-card__label">Active plan mix</div>
-          <div class="usage-card__planmix">${planMix}</div>
-        </div>` : ''}
-    `;
-  } catch (err) {
-    usageOverviewEl.innerHTML = `<p style="color:#ef4444;padding:14px">${escapeHtml(err.message || 'Failed')}</p>`;
+  // Pull all panels in parallel — they're independent reads. Failure
+  // of one shouldn't blank the rest, hence the per-block try/catch.
+  const tasks = [
+    api(`/api/v1/admin/usage-overview`).catch((e) => ({ _err: e })),
+    api(`/api/v1/admin/usage-timeseries?days=${usageRangeDays}`).catch((e) => ({ _err: e })),
+    api(`/api/v1/admin/usage-by-avatar?days=${usageRangeDays}`).catch((e) => ({ _err: e })),
+    api(`/api/v1/admin/usage-by-model?days=${usageRangeDays}`).catch((e) => ({ _err: e })),
+    api(`/api/v1/admin/usage-top-users?days=${usageRangeDays}&limit=50`).catch((e) => ({ _err: e })),
+  ];
+  const [overview, timeseries, byAvatar, byModel, topUsers] = await Promise.all(tasks);
+
+  if (overview && !overview._err) renderUsageKpis(overview);
+  if (timeseries && !timeseries._err) renderTimeseriesChart(timeseries.series);
+  if (timeseries && !timeseries._err) renderCostChart(timeseries.series);
+  if (byAvatar && !byAvatar._err) renderAvatarChart(byAvatar.rows);
+  if (byModel && !byModel._err) renderModelChart(byModel.rows);
+  if (topUsers && !topUsers._err) renderTopUsers(topUsers.rows);
+}
+
+function renderUsageKpis(d) {
+  const costUsd = ((d.cost_usd_cents_30d ?? 0) / 100).toFixed(2);
+  const tokensTotal = (d.tokens_in_30d ?? 0) + (d.tokens_out_30d ?? 0);
+  const planMix = (d.plan_mix || []).map((m) => `
+    <span class="usage-card__planpill">${escapeHtml(m.name || m.slug)}: ${m.user_count}</span>
+  `).join('');
+
+  usageOverviewEl.innerHTML = `
+    <div class="usage-card">
+      <div class="usage-card__label">Total users</div>
+      <div class="usage-card__value">${(d.total_users || 0).toLocaleString()}</div>
+      <div class="usage-card__sub">${d.active_users_30d || 0} active in 30d</div>
+    </div>
+    <div class="usage-card">
+      <div class="usage-card__label">Messages sent · 30d</div>
+      <div class="usage-card__value">${(d.messages_sent_30d || 0).toLocaleString()}</div>
+      <div class="usage-card__sub">${(d.llm_calls_30d || 0).toLocaleString()} model calls</div>
+    </div>
+    <div class="usage-card">
+      <div class="usage-card__label">Tokens · 30d</div>
+      <div class="usage-card__value">${tokensCompact(tokensTotal)}</div>
+      <div class="usage-card__sub">${tokensCompact(d.tokens_in_30d || 0)} in · ${tokensCompact(d.tokens_out_30d || 0)} out</div>
+    </div>
+    <div class="usage-card">
+      <div class="usage-card__label">OpenAI cost · 30d</div>
+      <div class="usage-card__value">$${costUsd}</div>
+      <div class="usage-card__sub">All purposes (chat + verification + TTS + STT)</div>
+    </div>
+    ${planMix ? `
+      <div class="usage-card usage-card--full">
+        <div class="usage-card__label">Active plan mix</div>
+        <div class="usage-card__planmix">${planMix}</div>
+      </div>` : ''}
+  `;
+}
+
+function renderTimeseriesChart(series) {
+  const ctx = document.getElementById('chart-timeseries');
+  if (!ctx || typeof Chart === 'undefined') return;
+  if (usageCharts.timeseries) usageCharts.timeseries.destroy();
+
+  const labels = series.map((s) => s.day.slice(5));  // MM-DD
+  const tokens = series.map((s) => (s.tokens_in || 0) + (s.tokens_out || 0));
+  const messages = series.map((s) => s.messages || 0);
+
+  usageCharts.timeseries = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Tokens',
+          data: tokens,
+          borderColor: COLORS.primary,
+          backgroundColor: COLORS.primary + '33',
+          tension: 0.3,
+          yAxisID: 'y',
+          fill: true,
+        },
+        {
+          label: 'Messages',
+          data: messages,
+          borderColor: COLORS.good,
+          backgroundColor: 'transparent',
+          tension: 0.3,
+          yAxisID: 'y2',
+        },
+      ],
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: CHART_DEFAULTS.scales.x,
+        y: { ...CHART_DEFAULTS.scales.y, position: 'left', title: { display: false } },
+        y2: {
+          position: 'right',
+          ticks: { color: 'rgba(74,222,128,0.85)', font: { size: 10 } },
+          grid: { drawOnChartArea: false },
+        },
+      },
+    },
+  });
+}
+
+function renderCostChart(series) {
+  const ctx = document.getElementById('chart-cost');
+  if (!ctx || typeof Chart === 'undefined') return;
+  if (usageCharts.cost) usageCharts.cost.destroy();
+
+  const labels = series.map((s) => s.day.slice(5));
+  const cost = series.map((s) => (s.cost_cents || 0) / 100);
+
+  usageCharts.cost = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Cost ($)',
+        data: cost,
+        backgroundColor: cost.map((v) => v > (Math.max(...cost) || 1) * 0.8 ? COLORS.warn : COLORS.secondary),
+      }],
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: {
+        ...CHART_DEFAULTS.plugins,
+        tooltip: {
+          ...CHART_DEFAULTS.plugins.tooltip,
+          callbacks: { label: (ctx) => '$' + (ctx.parsed.y || 0).toFixed(2) },
+        },
+      },
+    },
+  });
+}
+
+function renderAvatarChart(rows) {
+  const ctx = document.getElementById('chart-avatar');
+  if (!ctx || typeof Chart === 'undefined') return;
+  if (usageCharts.avatar) usageCharts.avatar.destroy();
+
+  const labels = rows.map((r) => r.name || r.slug);
+  const messages = rows.map((r) => Number(r.messages || 0));
+  const colors = labels.map((_, i) => COLORS.doughnutPalette[i % COLORS.doughnutPalette.length]);
+
+  usageCharts.avatar = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data: messages, backgroundColor: colors, borderRadius: 6 }] },
+    options: {
+      ...CHART_DEFAULTS,
+      indexAxis: 'y',
+      plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } },
+    },
+  });
+}
+
+function renderModelChart(rows) {
+  const ctx = document.getElementById('chart-model');
+  if (!ctx || typeof Chart === 'undefined') return;
+  if (usageCharts.model) usageCharts.model.destroy();
+
+  const labels = rows.map((r) => r.model || 'unknown');
+  const tokens = rows.map((r) => Number(r.tokens || 0));
+  const colors = labels.map((_, i) => COLORS.doughnutPalette[i % COLORS.doughnutPalette.length]);
+
+  usageCharts.model = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: tokens, backgroundColor: colors, borderColor: 'rgba(15,23,42,0.95)', borderWidth: 2 }] },
+    options: {
+      ...CHART_DEFAULTS,
+      scales: {},
+      plugins: {
+        ...CHART_DEFAULTS.plugins,
+        legend: { ...CHART_DEFAULTS.plugins.legend, position: 'right' },
+      },
+    },
+  });
+}
+
+function renderTopUsers(rows) {
+  if (!usageTopUsersEl) return;
+  if (!rows || rows.length === 0) {
+    usageTopUsersEl.innerHTML = '<p style="color:#94a3b8;padding:14px">No usage in this window yet.</p>';
+    return;
   }
+  const head = `
+    <div class="users-row users-row--head">
+      <span>ID</span>
+      <span>Name</span>
+      <span>Email</span>
+      <span>Plan</span>
+      <span>Tokens</span>
+      <span>Cost</span>
+      <span>Margin</span>
+      <span>Msgs</span>
+      <span>Cost/msg</span>
+    </div>`;
+  const body = rows.map((u) => {
+    const planClass = u.plan_slug === 'free' ? 'users-row__plan--free' : '';
+    const cost = Number(u.cost_cents || 0);
+    const revenue = Number(u.price_monthly || 0);
+    const margin = revenue - cost;
+    const marginClass = margin > 0 ? 'users-row__num--positive'
+                       : margin < 0 ? 'users-row__num--negative'
+                       : '';
+    const msgs = Number(u.messages || 0);
+    const costPerMsg = msgs > 0 ? (cost / msgs / 100).toFixed(3) : '—';
+    return `
+      <div class="users-row" data-user-id="${u.id}">
+        <span class="users-row__id">#${u.id}</span>
+        <span class="users-row__name">${escapeHtml(u.name || '—')}</span>
+        <span class="users-row__email">${escapeHtml(u.email || '—')}</span>
+        <span><span class="users-row__plan ${planClass}">${escapeHtml(u.plan_name || u.plan_slug || 'Free')}</span></span>
+        <span class="users-row__num">${tokensCompact(u.tokens)}</span>
+        <span class="users-row__num">${centsToUsd(cost)}</span>
+        <span class="users-row__num ${marginClass}">${centsToUsd(margin)}</span>
+        <span class="users-row__num">${msgs.toLocaleString()}</span>
+        <span class="users-row__num">${costPerMsg !== '—' ? '$' + costPerMsg : '—'}</span>
+      </div>`;
+  }).join('');
+  usageTopUsersEl.innerHTML = head + body;
+  usageTopUsersEl.querySelectorAll('.users-row[data-user-id]').forEach((row) => {
+    row.addEventListener('click', () => openUserDetail(Number(row.dataset.userId)));
+  });
 }

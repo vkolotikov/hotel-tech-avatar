@@ -6,6 +6,9 @@
   <title>AvatarHub Admin</title>
   <link rel="stylesheet" href="./styles.css">
   <script>window.SAAS_PLATFORM_URL = 'https://saas.hotel-tech.ai';</script>
+  <!-- Chart.js for the Usage tab. Pinned to v4 so we don't get
+       silently broken by a major-version bump in upstream CDN. -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <nav class="admin-tabs" id="admin-tabs">
@@ -256,12 +259,57 @@
   <!-- ─── Usage view ──────────────────────────────────────────────── -->
   <section class="admin-page" id="view-usage" hidden>
     <header class="admin-page__head">
-      <h2>Usage overview · last 30 days</h2>
+      <h2>Usage analytics</h2>
       <div class="admin-page__tools">
+        <div class="usage-range" id="usage-range">
+          <button type="button" data-days="7">7d</button>
+          <button type="button" data-days="30" class="usage-range--active">30d</button>
+          <button type="button" data-days="90">90d</button>
+          <button type="button" data-days="365">1y</button>
+        </div>
         <button id="usage-overview-refresh" type="button">Refresh</button>
       </div>
     </header>
+
+    <!-- KPI cards -->
     <div id="usage-overview" class="usage-overview">Loading...</div>
+
+    <!-- Charts grid -->
+    <div class="usage-charts">
+      <div class="usage-chart">
+        <div class="usage-chart__head">
+          <span>Tokens & messages over time</span>
+        </div>
+        <canvas id="chart-timeseries"></canvas>
+      </div>
+      <div class="usage-chart">
+        <div class="usage-chart__head">
+          <span>OpenAI cost per day</span>
+        </div>
+        <canvas id="chart-cost"></canvas>
+      </div>
+      <div class="usage-chart">
+        <div class="usage-chart__head">
+          <span>Avatar mix · messages</span>
+        </div>
+        <canvas id="chart-avatar"></canvas>
+      </div>
+      <div class="usage-chart">
+        <div class="usage-chart__head">
+          <span>Model mix · tokens</span>
+        </div>
+        <canvas id="chart-model"></canvas>
+      </div>
+    </div>
+
+    <!-- Top consumers -->
+    <section class="admin-page__section">
+      <header class="admin-page__head" style="margin-top:24px">
+        <h3 style="font-size:18px;margin:0;color:#e2e8f0">Top consumers</h3>
+        <span style="color:rgba(226,232,240,0.6);font-size:13px">Highest token spend over the selected window</span>
+      </header>
+      <div id="usage-top-users" class="users-list">Loading...</div>
+    </section>
   </section>
 
   <div id="usage-modal" class="usage-modal" hidden>
