@@ -293,10 +293,23 @@ final class SystemPromptBuilder
         }
 
         if ($profile) {
+            // ─── Identity / demographics ─────────────────────────────────
             if (!empty($profile->pronouns)) {
                 $lines[] = "- Pronouns: {$profile->pronouns}.";
             }
+            if (!empty($profile->age_band) || !empty($profile->birth_year)) {
+                $age = $profile->birth_year
+                    ? (((int) date('Y')) - (int) $profile->birth_year) . " years old"
+                    : "in the {$profile->age_band} age band";
+                $lines[] = "- Age: {$age}.";
+            }
+            if (is_array($profile->ethnicity) && !empty($profile->ethnicity)) {
+                $eth = implode(', ', array_map('strval', $profile->ethnicity));
+                // Used silently — never echo back; informs evidence selection.
+                $lines[] = "- Background (used silently for genetic-risk-aware framing, never named back): {$eth}.";
+            }
 
+            // ─── Body baseline ───────────────────────────────────────────
             $bodyParts = [];
             if (!empty($profile->sex_at_birth)) {
                 $bodyParts[] = match ($profile->sex_at_birth) {
@@ -308,25 +321,141 @@ final class SystemPromptBuilder
             }
             if (!empty($profile->height_cm)) $bodyParts[] = "{$profile->height_cm} cm tall";
             if (!empty($profile->weight_kg)) $bodyParts[] = "{$profile->weight_kg} kg";
+            if (!empty($profile->waist_cm))  $bodyParts[] = "{$profile->waist_cm} cm waist";
             if (!empty($profile->activity_level)) $bodyParts[] = "{$profile->activity_level} activity level";
             $bodyParts = array_filter($bodyParts);
             if (!empty($bodyParts)) {
                 $lines[] = '- Body baseline: ' . implode(', ', $bodyParts) . '.';
             }
 
-            if (!empty($profile->sleep_hours_target)) {
-                $lines[] = "- Sleep target: {$profile->sleep_hours_target} hours per night.";
+            // ─── Day shape ───────────────────────────────────────────────
+            $dayParts = [];
+            if (!empty($profile->job_type)) {
+                $dayParts[] = match ($profile->job_type) {
+                    'desk' => 'desk job (sitting most of the day)',
+                    'mixed' => 'mixed sitting/standing work',
+                    'feet' => 'on-feet work',
+                    'physical' => 'physical / manual labour',
+                    'shift' => 'shift work',
+                    'none' => 'not currently working',
+                    default => $profile->job_type,
+                };
+            }
+            if (!empty($profile->outdoor_minutes_band)) {
+                $dayParts[] = "outdoors {$profile->outdoor_minutes_band} min/day";
+            }
+            if (!empty($profile->wellness_time_band)) {
+                $dayParts[] = "{$profile->wellness_time_band} min/day available for wellness";
+            }
+            if (!empty($dayParts)) {
+                $lines[] = '- Daily shape: ' . implode(', ', $dayParts) . '. Tailor recommendations to fit.';
             }
 
-            if (is_array($profile->goals) && !empty($profile->goals)) {
-                $lines[] = '- Stated goals: ' . implode(', ', array_map('strval', $profile->goals)) . '.';
+            // ─── Sleep ───────────────────────────────────────────────────
+            $sleepParts = [];
+            if (!empty($profile->sleep_hours_target)) $sleepParts[] = "{$profile->sleep_hours_target}h target";
+            if (!empty($profile->sleep_quality)) $sleepParts[] = "current quality: {$profile->sleep_quality}";
+            if (!empty($profile->chronotype)) $sleepParts[] = "chronotype: {$profile->chronotype}";
+            if (!empty($sleepParts)) {
+                $lines[] = '- Sleep: ' . implode(', ', $sleepParts) . '.';
             }
 
+            // ─── Habits ──────────────────────────────────────────────────
+            $habitParts = [];
+            if (!empty($profile->smoking_status))   $habitParts[] = "smoking: {$profile->smoking_status}";
+            if (!empty($profile->alcohol_freq))     $habitParts[] = "alcohol: {$profile->alcohol_freq}";
+            if (!empty($profile->caffeine_freq))    $habitParts[] = "caffeine: {$profile->caffeine_freq}";
+            if (!empty($profile->stress_level))     $habitParts[] = "stress: {$profile->stress_level}";
+            if (!empty($habitParts)) {
+                $lines[] = '- Habits: ' . implode(', ', $habitParts) . '.';
+            }
+
+            // ─── Eating context ──────────────────────────────────────────
+            $eatParts = [];
+            if (!empty($profile->eating_pattern))    $eatParts[] = $profile->eating_pattern;
+            if (!empty($profile->eating_schedule))   $eatParts[] = "schedule: {$profile->eating_schedule}";
+            if (!empty($profile->cooking_skill))     $eatParts[] = "cooks at {$profile->cooking_skill} level";
+            if (!empty($profile->cooking_time_band)) $eatParts[] = "{$profile->cooking_time_band} min available to cook";
+            if (!empty($eatParts)) {
+                $lines[] = '- Eating context: ' . implode(', ', $eatParts) . '.';
+            }
             if (is_array($profile->dietary_flags) && !empty($profile->dietary_flags)) {
                 $lines[] = '- Dietary preferences: ' . implode(', ', array_map('strval', $profile->dietary_flags)) . '. Respect these in any food suggestions.';
             }
+            if (is_array($profile->intolerances) && !empty($profile->intolerances)) {
+                $lines[] = '- Food intolerances (not allergies but cause symptoms): ' . implode(', ', array_map('strval', $profile->intolerances)) . '. Avoid recommending these.';
+            }
 
-            // Safety — must be explicit, not buried.
+            // ─── Goals + motivation ──────────────────────────────────────
+            if (is_array($profile->goals) && !empty($profile->goals)) {
+                $lines[] = '- Stated goals: ' . implode(', ', array_map('strval', $profile->goals)) . '.';
+            }
+            $motiParts = [];
+            if (!empty($profile->motivation_trigger)) $motiParts[] = "started by: {$profile->motivation_trigger}";
+            if (!empty($profile->motivation_text))    $motiParts[] = "in their words: \"" . trim($profile->motivation_text) . "\"";
+            if (!empty($profile->goal_timeline))      $motiParts[] = "timeline: {$profile->goal_timeline}";
+            if (!empty($profile->goal_confidence))    $motiParts[] = "self-rated confidence to hit goals: {$profile->goal_confidence}/10";
+            if (!empty($motiParts)) {
+                $lines[] = '- Motivation: ' . implode('; ', $motiParts) . '. Reference this naturally — never quote it back verbatim.';
+            }
+
+            // ─── Life context ────────────────────────────────────────────
+            $lifeParts = [];
+            if (!empty($profile->living_situation)) $lifeParts[] = match ($profile->living_situation) {
+                'alone' => 'lives alone',
+                'partner' => 'lives with partner',
+                'family-kids' => 'lives with family including kids',
+                'parents' => 'lives with parents',
+                'roommates' => 'lives with roommates',
+                default => $profile->living_situation,
+            };
+            if (!empty($profile->travel_frequency) && $profile->travel_frequency !== 'rarely') {
+                $lifeParts[] = "travels {$profile->travel_frequency}";
+            }
+            if ($profile->budget_conscious === true) {
+                $lifeParts[] = 'asked for budget-friendly suggestions';
+            }
+            if (!empty($lifeParts)) {
+                $lines[] = '- Life context: ' . implode(', ', $lifeParts) . '.';
+            }
+
+            // ─── Female health (only when relevant) ──────────────────────
+            if (!empty($profile->female_status) && $profile->female_status !== 'prefer-not-to-say') {
+                $femParts = [match ($profile->female_status) {
+                    'regular' => 'regular menstrual cycle',
+                    'irregular' => 'irregular menstrual cycle',
+                    'trying' => 'trying to conceive',
+                    'pregnant' => 'pregnant',
+                    'breastfeeding' => 'breastfeeding',
+                    'perimenopause' => 'perimenopause',
+                    'menopause' => 'in menopause',
+                    'post-menopause' => 'post-menopause',
+                    default => $profile->female_status,
+                }];
+                if ($profile->pregnancy_weeks)      $femParts[] = "{$profile->pregnancy_weeks} weeks pregnant";
+                if ($profile->breastfeeding_months) $femParts[] = "breastfeeding for {$profile->breastfeeding_months} months";
+                if ($profile->cycle_length_days)    $femParts[] = "cycle ~{$profile->cycle_length_days} days";
+                if (!empty($profile->contraception) && $profile->contraception !== 'prefer-not-to-say') {
+                    $femParts[] = "contraception: {$profile->contraception}";
+                }
+                $lines[] = '- Reproductive health: ' . implode(', ', $femParts) . '.';
+            }
+
+            // ─── Coaching style (shapes EVERY reply's voice) ─────────────
+            $coachParts = [];
+            if (!empty($profile->coaching_tone))    $coachParts[] = "tone: {$profile->coaching_tone}";
+            if (!empty($profile->coaching_detail))  $coachParts[] = "detail: {$profile->coaching_detail}";
+            if (!empty($profile->coaching_pace))    $coachParts[] = "pace: {$profile->coaching_pace}";
+            if (!empty($profile->coaching_style))   $coachParts[] = "structure: {$profile->coaching_style}";
+            if (!empty($profile->accountability_style)) $coachParts[] = "accountability: {$profile->accountability_style}";
+            if (!empty($coachParts)) {
+                $lines[] = '';
+                $lines[] = '## Coaching preferences (apply on EVERY reply):';
+                $lines[] = '- ' . implode(', ', $coachParts) . '.';
+                $lines[] = '- Match this voice — gentle for "gentle", direct + concise for "direct", thorough markdown structure for "thorough", short and punchy for "brief".';
+            }
+
+            // ─── Safety — must be explicit, not buried. ──────────────────
             $safetyLines = [];
             if (is_array($profile->conditions) && !empty($profile->conditions)) {
                 $cond = implode(', ', array_map('strval', $profile->conditions));
@@ -339,6 +468,27 @@ final class SystemPromptBuilder
             if (is_array($profile->allergies) && !empty($profile->allergies)) {
                 $aller = implode(', ', array_map('strval', $profile->allergies));
                 $safetyLines[] = "- Allergies: {$aller}. NEVER recommend foods or supplements containing these, regardless of how good the fit otherwise.";
+            }
+            if (is_array($profile->past_injuries) && !empty($profile->past_injuries)) {
+                $inj = implode(', ', array_map('strval', $profile->past_injuries));
+                $safetyLines[] = "- Past major injuries: {$inj}. Default to safer movement modifications (Axel especially) and ask before suggesting high-impact exercise that loads these areas.";
+            }
+            if (is_array($profile->mental_health) && !empty($profile->mental_health)) {
+                $mh = array_map('strval', $profile->mental_health);
+                if (in_array('eating-disorder', $mh, true)) {
+                    $safetyLines[] = "- Eating disorder history: NEVER recommend caloric restriction, fasting, weight-loss-focused framing, or appearance-focused goals. Frame all nutrition as energy, performance, and joy. Defer to clinician for any concerning pattern.";
+                }
+                $other = array_diff($mh, ['eating-disorder']);
+                if (!empty($other)) {
+                    $safetyLines[] = "- Mental health context: " . implode(', ', $other) . ". Never minimise or armchair-diagnose; use language that respects the lived experience and refers to the user's clinician on anything clinical.";
+                }
+            }
+            if (is_array($profile->family_history) && !empty($profile->family_history)) {
+                $fh = implode(', ', array_map('strval', $profile->family_history));
+                $safetyLines[] = "- Family history (first-degree relatives): {$fh}. Inform Dr. Integra's risk framing; do NOT volunteer scary statistics unprompted.";
+            }
+            if ($profile->female_status === 'pregnant' || $profile->female_status === 'breastfeeding') {
+                $safetyLines[] = "- PREGNANCY/BREASTFEEDING SAFE MODE: avoid intermittent fasting, caloric restriction, high-dose supplements, untested herbs, hot saunas, contraindicated medications. When in doubt, defer to OB/midwife.";
             }
             if (!empty($safetyLines)) {
                 $lines[] = '';

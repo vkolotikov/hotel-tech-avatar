@@ -118,8 +118,10 @@ class AuthController extends Controller
     /**
      * Heuristic for "this user has filled in enough to skip onboarding".
      * Mobile triggers profile-setup when this is false. Tuned to be
-     * reasonable but not annoying — name + age signal + body baseline
-     * is enough to stop nagging.
+     * reasonable but not annoying — name + age signal + sex + body
+     * baseline is enough to stop nagging. Everything else (habits,
+     * coaching style, female health, etc) is optional and degrades
+     * gracefully in the system prompt.
      */
     private function isProfileComplete(?\App\Models\UserProfile $profile): bool
     {
@@ -127,7 +129,8 @@ class AuthController extends Controller
         return !empty($profile->display_name)
             && !empty($profile->sex_at_birth)
             && !empty($profile->height_cm)
-            && !empty($profile->weight_kg);
+            && !empty($profile->weight_kg)
+            && !empty($profile->age_band);
     }
 
     public function logout(Request $request): JsonResponse

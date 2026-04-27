@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -14,7 +15,36 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { fetchProfile, updateProfile, type UserProfile } from '../api/profile';
+import {
+  fetchProfile,
+  updateProfile,
+  type UserProfile,
+  type AgeBand,
+  type SexAtBirth,
+  type ActivityLevel,
+  type JobType,
+  type TimeBand,
+  type SleepQuality,
+  type Chronotype,
+  type SmokingStatus,
+  type AlcoholFreq,
+  type CaffeineFreq,
+  type StressLevel,
+  type EatingPattern,
+  type EatingSchedule,
+  type CookingSkill,
+  type LivingSituation,
+  type TravelFrequency,
+  type FemaleStatus,
+  type Contraception,
+  type MotivationTrigger,
+  type GoalTimeline,
+  type CoachingTone,
+  type CoachingDetail,
+  type CoachingPace,
+  type CoachingStyle,
+  type AccountabilityStyle,
+} from '../api/profile';
 import { colors, spacing, radius, fontSize } from '../theme';
 
 type Mode = 'setup' | 'edit';
@@ -29,727 +59,421 @@ type Props = {
 type StepKey =
   | 'welcome'
   | 'about'
+  | 'heritage'
   | 'body'
-  | 'activity'
+  | 'day'
   | 'sleep'
+  | 'habits'
+  | 'eating'
+  | 'health'
+  | 'life'
+  | 'female'
   | 'goals'
-  | 'diet'
-  | 'medical'
+  | 'coaching'
   | 'review';
 
-const STEP_ORDER_SETUP: StepKey[] = [
+const ALL_STEPS_SETUP: StepKey[] = [
   'welcome',
   'about',
+  'heritage',
   'body',
-  'activity',
+  'day',
   'sleep',
+  'habits',
+  'eating',
+  'health',
+  'life',
+  'female',
   'goals',
-  'diet',
-  'medical',
+  'coaching',
   'review',
 ];
 
-// Edit mode skips the welcome screen (returning user, no need for sales)
-// and the review screen (each save commits immediately).
-const STEP_ORDER_EDIT: StepKey[] = [
+const ALL_STEPS_EDIT: StepKey[] = [
   'about',
+  'heritage',
   'body',
-  'activity',
+  'day',
   'sleep',
+  'habits',
+  'eating',
+  'health',
+  'life',
+  'female',
   'goals',
-  'diet',
-  'medical',
+  'coaching',
 ];
 
-type DraftProfile = Partial<UserProfile>;
+// ─── Option catalogues — single source of truth ──────────────────────────
+// Defined at module scope so re-renders don't allocate fresh arrays.
 
-type IconName = keyof typeof Ionicons.glyphMap;
+type IoniconName = keyof typeof Ionicons.glyphMap;
 
-type ChipOpt = { value: string; label: string; icon?: IconName };
+type Option<T> = { value: T; label: string; icon?: IoniconName; emoji?: string; sub?: string };
 
-const ACTIVITY_OPTIONS: Array<{
-  value: NonNullable<UserProfile['activity_level']>;
-  label: string;
-  subtitle: string;
-  icon: IconName;
-}> = [
-  { value: 'sedentary', label: 'Sedentary', subtitle: 'Mostly sitting, little walking',  icon: 'cafe-outline' },
-  { value: 'light',     label: 'Light',     subtitle: 'A few short walks each week',     icon: 'walk-outline' },
-  { value: 'moderate',  label: 'Moderate',  subtitle: 'Exercise 3–4 days a week',        icon: 'bicycle-outline' },
-  { value: 'active',    label: 'Active',    subtitle: 'Hard training 5–6 days a week',   icon: 'barbell-outline' },
-  { value: 'athlete',   label: 'Athlete',   subtitle: 'Competitive / elite training',    icon: 'trophy-outline' },
-];
-
-const SEX_OPTIONS: Array<{
-  value: NonNullable<UserProfile['sex_at_birth']>;
-  label: string;
-  icon: IconName;
-}> = [
-  { value: 'F', label: 'Female',   icon: 'female-outline' },
-  { value: 'M', label: 'Male',     icon: 'male-outline' },
+const SEX_OPTIONS: Option<NonNullable<SexAtBirth>>[] = [
+  { value: 'F', label: 'Female', icon: 'female-outline' },
+  { value: 'M', label: 'Male', icon: 'male-outline' },
   { value: 'I', label: 'Intersex', icon: 'transgender-outline' },
 ];
 
-const GOAL_OPTIONS: ChipOpt[] = [
-  { value: 'better_sleep',      label: 'Sleep better',       icon: 'moon-outline' },
-  { value: 'more_energy',       label: 'More energy',        icon: 'flash-outline' },
-  { value: 'weight_loss',       label: 'Lose weight',        icon: 'trending-down-outline' },
-  { value: 'muscle_gain',       label: 'Build muscle',       icon: 'barbell-outline' },
-  { value: 'gut_health',        label: 'Gut health',         icon: 'leaf-outline' },
-  { value: 'stress_management', label: 'Manage stress',      icon: 'heart-outline' },
-  { value: 'longevity',         label: 'Longevity',          icon: 'hourglass-outline' },
-  { value: 'general_wellbeing', label: 'General wellbeing',  icon: 'sparkles-outline' },
+const PRONOUN_OPTIONS = ['she/her', 'he/him', 'they/them', 'ze/zir', 'other'];
+
+const AGE_OPTIONS: Option<NonNullable<AgeBand>>[] = [
+  { value: 'under-18', label: 'Under 18' },
+  { value: '18-24', label: '18-24' },
+  { value: '25-34', label: '25-34' },
+  { value: '35-44', label: '35-44' },
+  { value: '45-54', label: '45-54' },
+  { value: '55-64', label: '55-64' },
+  { value: '65+', label: '65+' },
 ];
 
-const DIETARY_OPTIONS: ChipOpt[] = [
-  { value: 'vegetarian',    label: 'Vegetarian',    icon: 'leaf-outline' },
-  { value: 'vegan',         label: 'Vegan',         icon: 'flower-outline' },
-  { value: 'pescatarian',   label: 'Pescatarian',   icon: 'fish-outline' },
-  { value: 'gluten_free',   label: 'Gluten-free',   icon: 'ban-outline' },
-  { value: 'dairy_free',    label: 'Dairy-free',    icon: 'water-outline' },
-  { value: 'low_carb',      label: 'Low-carb',      icon: 'remove-circle-outline' },
-  { value: 'keto',          label: 'Keto',          icon: 'flame-outline' },
-  { value: 'mediterranean', label: 'Mediterranean', icon: 'sunny-outline' },
-  { value: 'halal',         label: 'Halal',         icon: 'star-outline' },
-  { value: 'kosher',        label: 'Kosher',        icon: 'star-outline' },
+const ETHNICITY_OPTIONS = [
+  'White / European',
+  'Black / African',
+  'East Asian',
+  'South Asian',
+  'Hispanic / Latino',
+  'Middle Eastern',
+  'Indigenous',
+  'Mixed',
+  'Other',
+  'Prefer not to say',
 ];
 
-const ALLERGY_OPTIONS: ChipOpt[] = [
-  { value: 'peanuts',   label: 'Peanuts',    icon: 'nutrition-outline' },
-  { value: 'tree_nuts', label: 'Tree nuts',  icon: 'nutrition-outline' },
-  { value: 'dairy',     label: 'Dairy',      icon: 'water-outline' },
-  { value: 'eggs',      label: 'Eggs',       icon: 'egg-outline' },
-  { value: 'shellfish', label: 'Shellfish',  icon: 'fish-outline' },
-  { value: 'fish',      label: 'Fish',       icon: 'fish-outline' },
-  { value: 'soy',       label: 'Soy',        icon: 'leaf-outline' },
-  { value: 'gluten',    label: 'Gluten',     icon: 'ban-outline' },
-  { value: 'sesame',    label: 'Sesame',     icon: 'ellipse-outline' },
+const ACTIVITY_OPTIONS: Option<NonNullable<ActivityLevel>>[] = [
+  { value: 'sedentary', label: 'Sedentary', icon: 'bed-outline', sub: 'Mostly sitting' },
+  { value: 'light',     label: 'Light',     icon: 'walk-outline', sub: 'A few walks' },
+  { value: 'moderate',  label: 'Moderate',  icon: 'bicycle-outline', sub: '3-4 sessions/wk' },
+  { value: 'active',    label: 'Active',    icon: 'barbell-outline', sub: '5+ sessions/wk' },
+  { value: 'athlete',   label: 'Athlete',   icon: 'trophy-outline', sub: 'Compete or train daily' },
 ];
 
-const CONDITION_OPTIONS: ChipOpt[] = [
-  { value: 'hypertension',     label: 'Hypertension',     icon: 'heart-outline' },
-  { value: 'high_cholesterol', label: 'High cholesterol', icon: 'pulse-outline' },
-  { value: 'type_2_diabetes',  label: 'Type 2 diabetes',  icon: 'medkit-outline' },
-  { value: 'pre_diabetes',     label: 'Pre-diabetes',     icon: 'medkit-outline' },
-  { value: 'thyroid_issue',    label: 'Thyroid issue',    icon: 'pulse-outline' },
-  { value: 'IBS',              label: 'IBS',              icon: 'leaf-outline' },
-  { value: 'PCOS',             label: 'PCOS',             icon: 'female-outline' },
-  { value: 'pregnancy',        label: 'Pregnancy',        icon: 'heart-outline' },
+const JOB_OPTIONS: Option<NonNullable<JobType>>[] = [
+  { value: 'desk',     label: 'Desk all day', icon: 'laptop-outline' },
+  { value: 'mixed',    label: 'Mixed',         icon: 'shuffle' },
+  { value: 'feet',     label: 'On my feet',    icon: 'walk' },
+  { value: 'physical', label: 'Physical work', icon: 'construct-outline' },
+  { value: 'shift',    label: 'Shift work',    icon: 'moon-outline' },
+  { value: 'none',     label: 'Not working',   icon: 'home-outline' },
 ];
 
-const COMMON_MEDS: ChipOpt[] = [
-  { value: 'lisinopril',     label: 'Lisinopril' },
-  { value: 'metformin',      label: 'Metformin' },
-  { value: 'atorvastatin',   label: 'Atorvastatin' },
-  { value: 'omeprazole',     label: 'Omeprazole' },
-  { value: 'levothyroxine',  label: 'Levothyroxine' },
-  { value: 'sertraline',     label: 'Sertraline' },
-  { value: 'birth_control',  label: 'Birth control' },
-  { value: 'multivitamin',   label: 'Multivitamin' },
-  { value: 'vitamin_d',      label: 'Vitamin D' },
-  { value: 'omega_3',        label: 'Omega-3' },
+const TIME_BAND_OUTDOOR: Option<NonNullable<TimeBand>>[] = [
+  { value: 'under-15', label: '<15 min', icon: 'cloud-outline' },
+  { value: '15-60',    label: '15-60 min', icon: 'partly-sunny-outline' },
+  { value: '60-120',   label: '1-2 hours', icon: 'sunny-outline' },
+  { value: '120+',     label: '2 hours+', icon: 'sunny' },
 ];
 
-const PRONOUN_OPTIONS: ChipOpt[] = [
-  { value: 'she/her',   label: 'she/her' },
-  { value: 'he/him',    label: 'he/him' },
-  { value: 'they/them', label: 'they/them' },
+const TIME_BAND_WELLNESS: Option<NonNullable<TimeBand>>[] = [
+  { value: 'under-15', label: '<15 min', icon: 'time-outline' },
+  { value: '15-30',    label: '15-30 min', icon: 'time-outline' },
+  { value: '30-60',    label: '30-60 min', icon: 'timer-outline' },
+  { value: '60+',      label: '1 hour+', icon: 'timer' },
 ];
 
-export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) {
-  const insets = useSafeAreaInsets();
-  const stepOrder = mode === 'setup' ? STEP_ORDER_SETUP : STEP_ORDER_EDIT;
-  const [stepIndex, setStepIndex] = useState(0);
-  const [draft, setDraft] = useState<DraftProfile>({});
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+const TIME_BAND_COOKING: Option<NonNullable<TimeBand>>[] = [
+  { value: 'under-15', label: '<15 min', icon: 'flash-outline' },
+  { value: '15-30',    label: '15-30 min', icon: 'time-outline' },
+  { value: '30-60',    label: '30-60 min', icon: 'timer-outline' },
+  { value: '60+',      label: '1 hour+', icon: 'restaurant-outline' },
+];
 
-  // Pre-load existing profile on open so edit mode (and a returning
-  // setup user) sees their last saved values.
-  useEffect(() => {
-    if (!visible) return;
-    let cancelled = false;
-    setLoading(true);
-    fetchProfile()
-      .then((p) => {
-        if (cancelled) return;
-        setDraft(p);
-      })
-      .catch(() => {
-        // No profile yet — start blank
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    setStepIndex(0);
-    return () => {
-      cancelled = true;
-    };
-  }, [visible]);
+const SLEEP_QUALITY_OPTIONS: Option<NonNullable<SleepQuality>>[] = [
+  { value: 'great', label: 'Great', emoji: '😴' },
+  { value: 'okay',  label: 'Okay',  emoji: '😐' },
+  { value: 'poor',  label: 'Poor',  emoji: '😩' },
+];
 
-  const step = stepOrder[stepIndex];
-  const totalSteps = stepOrder.length;
-  const isLast = stepIndex === totalSteps - 1;
-  const progress = (stepIndex + 1) / totalSteps;
+const CHRONOTYPE_OPTIONS: Option<NonNullable<Chronotype>>[] = [
+  { value: 'morning', label: 'Morning lark', icon: 'sunny-outline', sub: 'Up early, wired before noon' },
+  { value: 'night',   label: 'Night owl',    icon: 'moon-outline', sub: 'Late riser, peak in the evening' },
+  { value: 'shift',   label: 'Shift / mixed', icon: 'sync-outline', sub: 'Schedule changes' },
+];
 
-  // Booleans for the render guards so react-native/no-raw-text stops
-  // flagging string literals that sit inside `step === '...'` /
-  // `mode === '...'` JS comparisons as bare JSX text.
-  const isSetupMode = mode === 'setup';
-  const isEditMode = mode === 'edit';
-  const showSkip = isSetupMode && !isLast && step !== 'welcome';
-  const onWelcome = step === 'welcome';
-  const onAbout = step === 'about';
-  const onBody = step === 'body';
-  const onActivity = step === 'activity';
-  const onSleep = step === 'sleep';
-  const onGoals = step === 'goals';
-  const onDiet = step === 'diet';
-  const onMedical = step === 'medical';
-  const onReview = step === 'review';
+const SMOKING_OPTIONS: Option<NonNullable<SmokingStatus>>[] = [
+  { value: 'never',      label: 'Never',      icon: 'close-circle-outline' },
+  { value: 'quit',       label: 'Quit',       icon: 'checkmark-done-circle-outline' },
+  { value: 'occasional', label: 'Occasional', icon: 'time-outline' },
+  { value: 'daily',      label: 'Daily',      icon: 'flame-outline' },
+];
 
-  const persistAndContinue = async (
-    advance: boolean,
-    extra?: DraftProfile,
-  ) => {
-    setSaving(true);
-    try {
-      const merged = extra ? { ...draft, ...extra } : draft;
-      const next = await updateProfile(merged);
-      setDraft(next);
-      if (advance) {
-        if (isLast) {
-          onFinish();
-        } else {
-          setStepIndex((i) => Math.min(i + 1, totalSteps - 1));
-        }
-      } else if (mode === 'edit') {
-        onClose?.();
-      }
-    } catch (err) {
-      Alert.alert('Could not save', (err as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  };
+const ALCOHOL_OPTIONS: Option<NonNullable<AlcoholFreq>>[] = [
+  { value: 'none',     label: 'None',         icon: 'close-circle-outline' },
+  { value: 'light',    label: '1-3 drinks/wk', icon: 'wine-outline' },
+  { value: 'moderate', label: '4-7 drinks/wk', icon: 'wine' },
+  { value: 'heavy',    label: '8+ drinks/wk',  icon: 'beer-outline' },
+];
 
-  const skip = () => {
-    if (isLast) {
-      onFinish();
-      return;
-    }
-    setStepIndex((i) => i + 1);
-  };
+const CAFFEINE_OPTIONS: Option<NonNullable<CaffeineFreq>>[] = [
+  { value: 'none', label: 'None',     icon: 'close-circle-outline' },
+  { value: '1-2',  label: '1-2 cups', icon: 'cafe-outline' },
+  { value: '3-4',  label: '3-4 cups', icon: 'cafe' },
+  { value: '5+',   label: '5+ cups',  icon: 'flash' },
+];
 
-  const back = () => {
-    if (stepIndex === 0) {
-      onClose?.();
-      return;
-    }
-    setStepIndex((i) => i - 1);
-  };
+const STRESS_OPTIONS: Option<NonNullable<StressLevel>>[] = [
+  { value: 'low',    label: 'Low',    icon: 'happy-outline' },
+  { value: 'medium', label: 'Medium', icon: 'remove-circle-outline' },
+  { value: 'high',   label: 'High',   icon: 'alert-circle' },
+];
 
-  const updateDraft = (patch: DraftProfile) => {
-    setDraft((d) => ({ ...d, ...patch }));
-  };
+const EATING_PATTERN_OPTIONS: Option<NonNullable<EatingPattern>>[] = [
+  { value: 'omnivore',      label: 'Omnivore',       icon: 'restaurant-outline' },
+  { value: 'pescatarian',   label: 'Pescatarian',    icon: 'fish-outline' },
+  { value: 'vegetarian',    label: 'Vegetarian',     icon: 'leaf-outline' },
+  { value: 'vegan',         label: 'Vegan',          icon: 'leaf' },
+  { value: 'mediterranean', label: 'Mediterranean',  icon: 'sunny-outline' },
+  { value: 'keto',          label: 'Keto',           icon: 'flame-outline' },
+  { value: 'paleo',         label: 'Paleo',          icon: 'pizza-outline' },
+  { value: 'no-specific',   label: 'No specific',    icon: 'help-outline' },
+];
 
-  const toggleArrayValue = (field: keyof DraftProfile, value: string) => {
-    setDraft((d) => {
-      const list = (d[field] as string[] | undefined) ?? [];
-      return {
-        ...d,
-        [field]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value],
-      };
-    });
-  };
+const EATING_SCHEDULE_OPTIONS: Option<NonNullable<EatingSchedule>>[] = [
+  { value: '3-meals',        label: '3 meals/day',     icon: 'list-outline' },
+  { value: '2-meals',        label: '2 meals/day',     icon: 'remove-outline' },
+  { value: 'if',             label: 'Intermittent fasting', icon: 'time-outline' },
+  { value: 'snacky',         label: 'Snacky / grazing', icon: 'apps-outline' },
+  { value: 'skip-breakfast', label: 'Skip breakfast',   icon: 'cafe-outline' },
+];
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
-      style={[styles.container, { paddingTop: insets.top, display: visible ? 'flex' : 'none' }]}
-    >
-      <View style={styles.headerRow}>
-        <Pressable
-          onPress={back}
-          accessibilityLabel={stepIndex === 0 ? 'Close' : 'Back'}
-          hitSlop={8}
-          style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
-        >
-          <Ionicons
-            name={stepIndex === 0 ? (isEditMode ? 'close' : 'arrow-back') : 'chevron-back'}
-            size={22}
-            color={colors.textPrimary}
-          />
-        </Pressable>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
-        </View>
-        {showSkip ? (
-          <Pressable onPress={skip} hitSlop={8} style={styles.skipBtn}>
-            <Text style={styles.skipText}>Skip</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.skipBtn} />
-        )}
-      </View>
+const COOKING_SKILL_OPTIONS: Option<NonNullable<CookingSkill>>[] = [
+  { value: 'none',         label: "Don't cook",  icon: 'close-circle-outline' },
+  { value: 'basic',        label: 'Basic',        icon: 'thumbs-up-outline' },
+  { value: 'intermediate', label: 'Intermediate', icon: 'restaurant-outline' },
+  { value: 'advanced',     label: 'Advanced',     icon: 'star-outline' },
+];
 
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={colors.primary} size="large" />
-        </View>
-      ) : (
-        <ScrollView
-          style={styles.body}
-          contentContainerStyle={styles.bodyContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {onWelcome && <WelcomeStep />}
-          {onAbout && <AboutStep draft={draft} update={updateDraft} />}
-          {onBody && <BodyStep draft={draft} update={updateDraft} />}
-          {onActivity && <ActivityStep draft={draft} update={updateDraft} />}
-          {onSleep && <SleepStep draft={draft} update={updateDraft} />}
-          {onGoals && <GoalsStep draft={draft} toggle={toggleArrayValue} />}
-          {onDiet && <DietStep draft={draft} toggle={toggleArrayValue} />}
-          {onMedical && <MedicalStep draft={draft} toggle={toggleArrayValue} />}
-          {onReview && <ReviewStep draft={draft} />}
-        </ScrollView>
-      )}
+const ALLERGY_OPTIONS = [
+  'Peanuts', 'Tree nuts', 'Dairy', 'Eggs', 'Gluten',
+  'Shellfish', 'Soy', 'Sesame', 'Fish', 'None',
+];
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-        <Pressable
-          onPress={() => persistAndContinue(true)}
-          disabled={saving}
-          style={({ pressed }) => [
-            styles.primaryBtn,
-            (pressed || saving) && { opacity: 0.85 },
-          ]}
-        >
-          {saving ? (
-            <ActivityIndicator color={colors.textPrimary} />
-          ) : (
-            <Text style={styles.primaryBtnText}>
-              {isEditMode
-                ? 'Save'
-                : isLast
-                  ? 'All set'
-                  : onWelcome
-                    ? "Let's go"
-                    : 'Continue'}
-            </Text>
-          )}
-        </Pressable>
-      </View>
-      <StatusBar style="light" />
-    </KeyboardAvoidingView>
-  );
-}
+const INTOLERANCE_OPTIONS = [
+  'Lactose', 'Fructose', 'FODMAP-sensitive', 'Gluten (non-coeliac)',
+  'Histamine', 'Caffeine', 'None',
+];
 
-function AboutStep({ draft, update }: { draft: DraftProfile; update: (patch: DraftProfile) => void }) {
-  return (
-    <View>
-      <Text style={styles.heading}>What should we call you?</Text>
-      <Text style={styles.lead}>
-        The name your wellness team uses when greeting you and tailoring advice.
-      </Text>
+const CONDITION_OPTIONS = [
+  'Type 2 diabetes', 'Type 1 diabetes', 'Prediabetes',
+  'High blood pressure', 'High cholesterol', 'Heart disease',
+  'Asthma', 'IBS / IBD', 'Autoimmune', 'Anxiety', 'Depression',
+  'ADHD', 'Thyroid', 'Endometriosis', 'PCOS',
+];
 
-      <FieldLabel label="Name" icon="person-outline" />
-      <View style={styles.textInputRow}>
-        <Ionicons name="person-outline" size={18} color={colors.textMuted} />
-        <TextInput
-          style={styles.textInputInline}
-          value={draft.display_name ?? ''}
-          onChangeText={(v) => update({ display_name: v })}
-          placeholder="First name or full name"
-          placeholderTextColor={colors.textMuted}
-          autoCapitalize="words"
-          returnKeyType="done"
-        />
-      </View>
+const COMMON_MEDS = [
+  'Statin', 'Metformin', 'SSRI', 'Beta-blocker',
+  'Birth control', 'Levothyroxine', 'PPI / acid reducer',
+];
 
-      <FieldLabel label="Pronouns" sublabel="Optional" icon="chatbubble-ellipses-outline" />
-      <ChipRow
-        options={PRONOUN_OPTIONS}
-        selected={draft.pronouns ? [draft.pronouns] : []}
-        onToggle={(v) => update({ pronouns: draft.pronouns === v ? null : v })}
-      />
-    </View>
-  );
-}
+const FAMILY_HISTORY_OPTIONS = [
+  'Heart disease', 'Type 2 diabetes', 'Cancer',
+  'Dementia', 'Stroke', 'Mental health', 'None',
+];
 
-function BodyStep({ draft, update }: { draft: DraftProfile; update: (patch: DraftProfile) => void }) {
-  return (
-    <View>
-      <Text style={styles.heading}>Your body baseline</Text>
-      <Text style={styles.lead}>
-        Helps your team scale advice — calorie ranges, recovery, lab references.
-      </Text>
+const INJURY_OPTIONS = [
+  'Lower back', 'Knee', 'Shoulder', 'Hip',
+  'Neck', 'Ankle', 'Wrist', 'None',
+];
 
-      <FieldLabel label="Sex at birth" icon="body-outline" />
-      <ChipRow
-        options={SEX_OPTIONS.map((o) => ({ value: o.value, label: o.label, icon: o.icon }))}
-        selected={draft.sex_at_birth ? [draft.sex_at_birth] : []}
-        onToggle={(v) =>
-          update({ sex_at_birth: draft.sex_at_birth === v ? null : (v as 'F' | 'M' | 'I') })
-        }
-      />
+const MENTAL_HEALTH_OPTIONS = [
+  'Anxiety', 'Depression', 'ADHD',
+  'Eating disorder', 'OCD', 'Prefer not to say',
+];
 
-      <FieldLabel label="Height" icon="resize-outline" />
-      <Stepper
-        value={draft.height_cm ?? null}
-        defaultValue={170}
-        onChange={(n) => update({ height_cm: n })}
-        min={120}
-        max={230}
-        smallStep={1}
-        largeStep={5}
-        unit="cm"
-        icon="resize-outline"
-      />
+const LIVING_OPTIONS: Option<NonNullable<LivingSituation>>[] = [
+  { value: 'alone',       label: 'Alone',                    icon: 'person-outline' },
+  { value: 'partner',     label: 'With partner',             icon: 'heart-outline' },
+  { value: 'family-kids', label: 'Family with kids',         icon: 'people-outline' },
+  { value: 'parents',     label: 'With parents',             icon: 'home-outline' },
+  { value: 'roommates',   label: 'With roommates',           icon: 'people-circle-outline' },
+];
 
-      <FieldLabel label="Weight" icon="speedometer-outline" />
-      <Stepper
-        value={draft.weight_kg ?? null}
-        defaultValue={70}
-        onChange={(n) => update({ weight_kg: n })}
-        min={30}
-        max={250}
-        smallStep={1}
-        largeStep={5}
-        unit="kg"
-        icon="speedometer-outline"
-      />
-    </View>
-  );
-}
+const TRAVEL_OPTIONS: Option<NonNullable<TravelFrequency>>[] = [
+  { value: 'rarely',  label: 'Rarely',  icon: 'home-outline' },
+  { value: 'monthly', label: 'Monthly', icon: 'airplane-outline' },
+  { value: 'weekly',  label: 'Weekly+', icon: 'airplane' },
+];
 
-function WelcomeStep() {
-  return (
-    <View>
-      <StepHero icon="sparkles" tint={colors.primary} />
-      <Text style={styles.heading}>Let's personalise your team</Text>
-      <Text style={styles.lead}>
-        Your name, body, goals and any conditions help every avatar give better,
-        safer advice. Quick setup — under two minutes. Skip anything you'd rather
-        not share.
-      </Text>
-      <View style={styles.privacyCard}>
-        <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} />
-        <Text style={styles.privacyText}>
-          Stored privately on your account. Used only to tailor your wellness team's
-          replies — never sold, never shared.
-        </Text>
-      </View>
-    </View>
-  );
-}
+const FEMALE_STATUS_OPTIONS: Option<NonNullable<FemaleStatus>>[] = [
+  { value: 'regular',          label: 'Regular cycle',     icon: 'refresh-circle-outline' },
+  { value: 'irregular',        label: 'Irregular cycle',   icon: 'pulse-outline' },
+  { value: 'trying',           label: 'Trying to conceive', icon: 'heart-circle-outline' },
+  { value: 'pregnant',         label: 'Pregnant',           icon: 'female' },
+  { value: 'breastfeeding',    label: 'Breastfeeding',      icon: 'water-outline' },
+  { value: 'perimenopause',    label: 'Perimenopause',      icon: 'thermometer-outline' },
+  { value: 'menopause',        label: 'Menopause',          icon: 'sunny-outline' },
+  { value: 'post-menopause',   label: 'Post-menopause',     icon: 'sparkles-outline' },
+  { value: 'prefer-not-to-say', label: 'Prefer not to say', icon: 'eye-off-outline' },
+];
 
-function ActivityStep({
-  draft,
-  update,
-}: {
-  draft: DraftProfile;
-  update: (patch: DraftProfile) => void;
-}) {
-  return (
-    <View>
-      <StepHero icon="bicycle-outline" tint={colors.primary} />
-      <Text style={styles.heading}>How active is your week?</Text>
-      <Text style={styles.lead}>
-        Pick the row that best matches a typical week. Influences calorie and
-        recovery suggestions.
-      </Text>
+const CONTRACEPTION_OPTIONS: Option<NonNullable<Contraception>>[] = [
+  { value: 'none',              label: 'None' },
+  { value: 'pill',              label: 'Pill' },
+  { value: 'iud-hormonal',      label: 'IUD (hormonal)' },
+  { value: 'iud-copper',        label: 'IUD (copper)' },
+  { value: 'implant',           label: 'Implant' },
+  { value: 'patch',             label: 'Patch' },
+  { value: 'ring',              label: 'Ring' },
+  { value: 'injection',         label: 'Injection' },
+  { value: 'natural',           label: 'Natural / tracking' },
+  { value: 'prefer-not-to-say', label: 'Prefer not to say' },
+];
 
-      <View style={styles.activityList}>
-        {ACTIVITY_OPTIONS.map((opt) => {
-          const selected = draft.activity_level === opt.value;
-          return (
-            <Pressable
-              key={opt.value}
-              onPress={() =>
-                update({ activity_level: selected ? null : opt.value })
-              }
-              style={({ pressed }) => [
-                styles.activityCard,
-                selected && styles.activityCardSelected,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <View style={[
-                styles.activityIcon,
-                selected && styles.activityIconSelected,
-              ]}>
-                <Ionicons
-                  name={opt.icon}
-                  size={20}
-                  color={selected ? colors.primary : colors.textSecondary}
-                />
-              </View>
-              <View style={styles.activityText}>
-                <Text style={[styles.activityLabel, selected && styles.activityLabelSelected]}>
-                  {opt.label}
-                </Text>
-                <Text style={styles.activitySubtitle}>{opt.subtitle}</Text>
-              </View>
-              {selected && (
-                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-              )}
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
+type GoalKey =
+  | 'fitness' | 'weight' | 'energy' | 'sleep' | 'stress'
+  | 'nutrition' | 'gut' | 'skin' | 'longevity' | 'labs';
 
-function SleepStep({
-  draft,
-  update,
-}: {
-  draft: DraftProfile;
-  update: (patch: DraftProfile) => void;
-}) {
-  return (
-    <View>
-      <StepHero icon="moon-outline" tint="#818cf8" />
-      <Text style={styles.heading}>Sleep target</Text>
-      <Text style={styles.lead}>
-        Most adults thrive on seven to nine hours. We'll calibrate Luna's
-        suggestions and Axel's recovery advice to your target.
-      </Text>
-
-      <FieldLabel label="Hours per night" icon="moon-outline" />
-      <Stepper
-        value={draft.sleep_hours_target ?? null}
-        defaultValue={8}
-        onChange={(n) => update({ sleep_hours_target: n })}
-        min={4}
-        max={12}
-        smallStep={1}
-        largeStep={1}
-        unit="h"
-        icon="moon-outline"
-      />
-    </View>
-  );
-}
-
-function GoalsStep({
-  draft,
-  toggle,
-}: {
-  draft: DraftProfile;
-  toggle: (field: keyof DraftProfile, value: string) => void;
-}) {
-  return (
-    <View>
-      <StepHero icon="rocket-outline" tint="#4ade80" />
-      <Text style={styles.heading}>What are you here for?</Text>
-      <Text style={styles.lead}>Pick any that apply — your team will weave these into every reply.</Text>
-
-      <ChipRow
-        options={GOAL_OPTIONS}
-        selected={draft.goals ?? []}
-        onToggle={(v) => toggle('goals', v)}
-        wrap
-      />
-    </View>
-  );
-}
-
-function DietStep({
-  draft,
-  toggle,
-}: {
-  draft: DraftProfile;
-  toggle: (field: keyof DraftProfile, value: string) => void;
-}) {
-  return (
-    <View>
-      <StepHero icon="restaurant-outline" tint="#f59e0b" />
-      <Text style={styles.heading}>How do you eat?</Text>
-      <Text style={styles.lead}>
-        Helps Nora suggest food that actually fits — and never recommend
-        anything you can't have.
-      </Text>
-
-      <FieldLabel
-        label="Dietary preferences"
-        sublabel="Optional"
-        icon="restaurant-outline"
-      />
-      <ChipRow
-        options={DIETARY_OPTIONS}
-        selected={draft.dietary_flags ?? []}
-        onToggle={(v) => toggle('dietary_flags', v)}
-        wrap
-      />
-
-      <FieldLabel
-        label="Allergies"
-        sublabel="We'll never recommend these"
-        icon="alert-circle-outline"
-      />
-      <ChipRow
-        options={ALLERGY_OPTIONS}
-        selected={draft.allergies ?? []}
-        onToggle={(v) => toggle('allergies', v)}
-        wrap
-      />
-    </View>
-  );
-}
-
-function MedicalStep({
-  draft,
-  toggle,
-}: {
-  draft: DraftProfile;
-  toggle: (field: keyof DraftProfile, value: string) => void;
-}) {
-  return (
-    <View>
-      <StepHero icon="medkit-outline" tint="#3b82f6" />
-      <Text style={styles.heading}>Anything we should know?</Text>
-      <Text style={styles.lead}>
-        Conditions and medications help your team avoid risky suggestions.
-        Skip what you'd rather not share — you can edit any of this later.
-      </Text>
-
-      <FieldLabel label="Conditions" sublabel="Optional" icon="medkit-outline" />
-      <ChipRow
-        options={CONDITION_OPTIONS}
-        selected={draft.conditions ?? []}
-        onToggle={(v) => toggle('conditions', v)}
-        wrap
-      />
-
-      <FieldLabel
-        label="Medications"
-        sublabel="Tap any you take regularly"
-        icon="medical-outline"
-      />
-      <ChipRow
-        options={COMMON_MEDS}
-        selected={draft.medications ?? []}
-        onToggle={(v) => toggle('medications', v)}
-        wrap
-      />
-    </View>
-  );
-}
-
-/** Shared hero icon that anchors each step visually. */
-function StepHero({ icon, tint }: { icon: IconName; tint: string }) {
-  return (
-    <View style={[styles.stepHero, { backgroundColor: tint + '22', borderColor: tint + '55' }]}>
-      <Ionicons name={icon} size={32} color={tint} />
-    </View>
-  );
-}
-
-function ReviewStep({ draft }: { draft: DraftProfile }) {
-  const summary = useMemo(() => buildSummary(draft), [draft]);
-  return (
-    <View>
-      <Text style={styles.heading}>Looking good</Text>
-      <Text style={styles.lead}>
-        Here's what we'll share with your wellness team. Edit any of this in Settings any time.
-      </Text>
-      <View style={styles.summaryCard}>
-        {summary.length === 0 ? (
-          <Text style={styles.summaryEmpty}>No details added yet — that's OK.</Text>
-        ) : (
-          summary.map((row, i) => (
-            <View key={i} style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>{row.label}</Text>
-              <Text style={styles.summaryValue}>{row.value}</Text>
-            </View>
-          ))
-        )}
-      </View>
-    </View>
-  );
-}
-
-function buildSummary(draft: DraftProfile): Array<{ label: string; value: string }> {
-  const out: Array<{ label: string; value: string }> = [];
-  if (draft.display_name) out.push({ label: 'Name', value: draft.display_name });
-  if (draft.pronouns) out.push({ label: 'Pronouns', value: draft.pronouns });
-  if (draft.sex_at_birth) {
-    out.push({
-      label: 'Sex at birth',
-      value: draft.sex_at_birth === 'F' ? 'Female' : draft.sex_at_birth === 'M' ? 'Male' : 'Intersex',
-    });
-  }
-  if (draft.height_cm) out.push({ label: 'Height', value: `${draft.height_cm} cm` });
-  if (draft.weight_kg) out.push({ label: 'Weight', value: `${draft.weight_kg} kg` });
-  if (draft.activity_level) out.push({ label: 'Activity', value: draft.activity_level });
-  if (draft.sleep_hours_target) out.push({ label: 'Sleep target', value: `${draft.sleep_hours_target} h` });
-  if (draft.goals?.length) out.push({ label: 'Goals', value: draft.goals.join(', ') });
-  if (draft.dietary_flags?.length) out.push({ label: 'Diet', value: draft.dietary_flags.join(', ') });
-  if (draft.allergies?.length) out.push({ label: 'Allergies', value: draft.allergies.join(', ') });
-  if (draft.conditions?.length) out.push({ label: 'Conditions', value: draft.conditions.join(', ') });
-  if (draft.medications?.length) out.push({ label: 'Medications', value: draft.medications.join(', ') });
-  return out;
-}
-
-function FieldLabel({
-  label,
-  sublabel,
-  icon,
-}: {
+type GoalDef = {
+  key: GoalKey;
   label: string;
-  sublabel?: string;
-  icon?: IconName;
+  icon: IoniconName;
+  avatars: string[]; // names shown when selected
+};
+
+const GOAL_OPTIONS: GoalDef[] = [
+  { key: 'fitness',   label: 'Build fitness',   icon: 'barbell-outline',   avatars: ['Axel'] },
+  { key: 'weight',    label: 'Manage weight',   icon: 'fitness-outline',   avatars: ['Nora', 'Axel'] },
+  { key: 'energy',    label: 'More energy',     icon: 'flash-outline',     avatars: ['Nora', 'Luna'] },
+  { key: 'sleep',     label: 'Better sleep',    icon: 'moon-outline',      avatars: ['Luna'] },
+  { key: 'stress',    label: 'Reduce stress',   icon: 'leaf-outline',      avatars: ['Zen'] },
+  { key: 'nutrition', label: 'Better nutrition', icon: 'restaurant-outline', avatars: ['Nora'] },
+  { key: 'gut',       label: 'Gut health',      icon: 'medkit-outline',    avatars: ['Nora'] },
+  { key: 'skin',      label: 'Skin & beauty',   icon: 'sparkles-outline',  avatars: ['Aura'] },
+  { key: 'longevity', label: 'Longevity',       icon: 'infinite-outline',  avatars: ['Dr. Integra', 'Axel'] },
+  { key: 'labs',      label: 'Understand labs', icon: 'flask-outline',     avatars: ['Dr. Integra'] },
+];
+
+const MOTIVATION_OPTIONS: Option<NonNullable<MotivationTrigger>>[] = [
+  { value: 'health-scare',  label: 'Health scare',     icon: 'medkit-outline' },
+  { value: 'event',         label: 'Event coming up',  icon: 'gift-outline' },
+  { value: 'birthday',      label: 'Big birthday',     icon: 'sparkles-outline' },
+  { value: 'doctor',        label: 'Doctor said so',   icon: 'medical-outline' },
+  { value: 'energy',        label: 'Want more energy', icon: 'flash-outline' },
+  { value: 'specific-goal', label: 'Specific goal',    icon: 'flag-outline' },
+  { value: 'ready',         label: 'Just ready',       icon: 'checkmark-circle-outline' },
+  { value: 'other',         label: 'Something else',   icon: 'ellipsis-horizontal' },
+];
+
+const TIMELINE_OPTIONS: Option<NonNullable<GoalTimeline>>[] = [
+  { value: 'weeks',       label: 'In weeks',     icon: 'flash-outline' },
+  { value: 'months',      label: 'In months',    icon: 'calendar-outline' },
+  { value: 'year',        label: 'This year',    icon: 'calendar' },
+  { value: 'no-deadline', label: 'No deadline',  icon: 'infinite-outline' },
+];
+
+const COACHING_TONE_OPTIONS: Option<NonNullable<CoachingTone>>[] = [
+  { value: 'friendly', label: 'Friendly', icon: 'happy-outline', sub: 'Like a buddy' },
+  { value: 'expert',   label: 'Expert',   icon: 'school-outline', sub: 'Like a clinician' },
+  { value: 'direct',   label: 'Direct',   icon: 'megaphone-outline', sub: 'No filler' },
+  { value: 'gentle',   label: 'Gentle',   icon: 'heart-outline', sub: 'Soft + supportive' },
+];
+
+const COACHING_DETAIL_OPTIONS: Option<NonNullable<CoachingDetail>>[] = [
+  { value: 'brief',    label: 'Brief',    icon: 'remove-outline' },
+  { value: 'balanced', label: 'Balanced', icon: 'list-outline' },
+  { value: 'thorough', label: 'Thorough', icon: 'library-outline' },
+];
+
+const COACHING_PACE_OPTIONS: Option<NonNullable<CoachingPace>>[] = [
+  { value: 'slow', label: 'Slow & steady', icon: 'walk-outline' },
+  { value: 'fast', label: 'Fast & focused', icon: 'rocket-outline' },
+];
+
+const COACHING_STYLE_OPTIONS: Option<NonNullable<CoachingStyle>>[] = [
+  { value: 'routines', label: 'Routines',  icon: 'refresh-circle-outline' },
+  { value: 'variety',  label: 'Variety',   icon: 'shuffle' },
+];
+
+const ACCOUNTABILITY_OPTIONS: Option<NonNullable<AccountabilityStyle>>[] = [
+  { value: 'solo',    label: 'Solo',          icon: 'person-outline' },
+  { value: 'track',   label: 'Track it all',  icon: 'analytics-outline' },
+  { value: 'coach',   label: 'Coach me',      icon: 'megaphone-outline' },
+  { value: 'compete', label: 'Compete',       icon: 'trophy-outline' },
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+// Female slide is conditional — only shown when sex_at_birth=F AND age 12-55.
+function femaleSlideRelevant(profile: Partial<UserProfile>): boolean {
+  if (profile.sex_at_birth !== 'F') return false;
+  const band = profile.age_band ?? null;
+  if (!band) return true; // unknown — show, user can skip
+  if (band === 'under-18') return true;
+  if (band === '18-24' || band === '25-34' || band === '35-44' || band === '45-54') return true;
+  return false;
+}
+
+// ─── Reusable UI primitives ──────────────────────────────────────────────
+
+function StepHero({ icon, tint, title, subtitle }: {
+  icon: IoniconName;
+  tint: string;
+  title: string;
+  subtitle?: string;
 }) {
   return (
-    <View style={styles.fieldLabelRow}>
-      <View style={styles.fieldLabelLeft}>
-        {icon && <Ionicons name={icon} size={14} color={colors.textMuted} />}
-        <Text style={styles.fieldLabel}>{label}</Text>
+    <View style={heroStyles.wrap}>
+      <View style={[heroStyles.iconCircle, { backgroundColor: tint + '22', borderColor: tint }]}>
+        <Ionicons name={icon} size={30} color={tint} />
       </View>
-      {sublabel && <Text style={styles.fieldSublabel}>{sublabel}</Text>}
+      <Text style={heroStyles.title}>{title}</Text>
+      {subtitle ? <Text style={heroStyles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
 }
 
-function ChipRow({
-  options,
-  selected,
-  onToggle,
-  wrap,
+function FieldLabel({ children, optional }: { children: string; optional?: boolean }) {
+  return (
+    <Text style={fieldStyles.label}>
+      {children}
+      {optional ? <Text style={fieldStyles.optional}>  Optional</Text> : null}
+    </Text>
+  );
+}
+
+/**
+ * Single-select chips. Each chip can have an icon + label + optional
+ * sub-line. Auto-flows in a 2-column grid; long-label chips break to
+ * full width with the wrap parameter set to 'auto'.
+ */
+function ChipChoice<T extends string>({
+  options, value, onChange, columns = 2,
 }: {
-  options: ChipOpt[];
-  selected: string[];
-  onToggle: (value: string) => void;
-  wrap?: boolean;
+  options: Option<T>[];
+  value: T | null | undefined;
+  onChange: (next: T) => void;
+  columns?: 1 | 2 | 3;
 }) {
   return (
-    <View style={[styles.chipRow, wrap && styles.chipRowWrap]}>
+    <View style={[chipStyles.grid, columns === 1 && { flexDirection: 'column' }]}>
       {options.map((opt) => {
-        const isSelected = selected.includes(opt.value);
+        const selected = value === opt.value;
         return (
           <Pressable
-            key={opt.value}
-            onPress={() => onToggle(opt.value)}
+            key={String(opt.value)}
+            onPress={() => onChange(opt.value)}
             style={({ pressed }) => [
-              styles.chip,
-              isSelected && styles.chipSelected,
+              chipStyles.card,
+              columns === 2 && chipStyles.cardHalf,
+              columns === 3 && chipStyles.cardThird,
+              columns === 1 && chipStyles.cardFull,
+              selected && chipStyles.cardSelected,
               pressed && { opacity: 0.85 },
             ]}
           >
-            {opt.icon && (
-              <Ionicons
-                name={opt.icon}
-                size={14}
-                color={isSelected ? colors.textPrimary : colors.textMuted}
-              />
-            )}
-            <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-              {opt.label}
-            </Text>
+            {opt.emoji ? (
+              <Text style={chipStyles.emoji}>{opt.emoji}</Text>
+            ) : opt.icon ? (
+              <Ionicons name={opt.icon} size={22} color={selected ? colors.primary : colors.textPrimary} />
+            ) : null}
+            <Text style={[chipStyles.label, selected && chipStyles.labelSelected]}>{opt.label}</Text>
+            {opt.sub ? <Text style={chipStyles.sub}>{opt.sub}</Text> : null}
           </Pressable>
         );
       })}
@@ -758,431 +482,1181 @@ function ChipRow({
 }
 
 /**
- * Tap-only numeric stepper — replaces the old TextInput so the
- * keyboard doesn't pop up and overlap the form. Five touch targets:
- *   [-large] [-small] [VALUE + icon] [+small] [+large]
- *
- * Empty state: a "Tap to set" pill, taps to commit defaultValue and
- * switches to the stepper UI. Skip button on the page header lets
- * users still bypass the field entirely.
+ * Multi-select chip strip. Used for chips without strong icons (allergies,
+ * conditions, family history). Wraps into rows automatically.
  */
-function Stepper({
-  value,
-  defaultValue,
-  onChange,
-  min,
-  max,
-  smallStep,
-  largeStep,
-  unit,
-  icon,
-}: {
-  value: number | null;
-  defaultValue: number;
+function MultiChip({ options, values, onChange }: {
+  options: string[];
+  values: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const toggle = (option: string) => {
+    if (values.includes(option)) {
+      onChange(values.filter((v) => v !== option));
+    } else {
+      // "None" is exclusive — selecting it clears the others.
+      if (option === 'None') {
+        onChange(['None']);
+      } else {
+        onChange([...values.filter((v) => v !== 'None'), option]);
+      }
+    }
+  };
+  return (
+    <View style={multiStyles.wrap}>
+      {options.map((option) => {
+        const selected = values.includes(option);
+        return (
+          <Pressable
+            key={option}
+            onPress={() => toggle(option)}
+            style={({ pressed }) => [
+              multiStyles.chip,
+              selected && multiStyles.chipSelected,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            {selected ? (
+              <Ionicons name="checkmark" size={14} color={colors.primary} />
+            ) : null}
+            <Text style={[multiStyles.chipText, selected && multiStyles.chipTextSelected]}>
+              {option}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function Stepper({ value, onChange, min, max, step = 1, unit, icon, tint }: {
+  value: number | null | undefined;
   onChange: (n: number) => void;
   min: number;
   max: number;
-  smallStep: number;
-  largeStep: number;
+  step?: number;
   unit: string;
-  icon?: IconName;
+  icon: IoniconName;
+  tint: string;
 }) {
-  const clamp = (n: number) => Math.max(min, Math.min(max, n));
-
+  const safeStep = step;
+  const display = value ?? Math.round((min + max) / 2);
+  const change = (delta: number) => onChange(clamp(display + delta, min, max));
   if (value == null) {
     return (
       <Pressable
-        onPress={() => onChange(defaultValue)}
-        style={({ pressed }) => [
-          styles.stepperEmpty,
-          pressed && { opacity: 0.85 },
-        ]}
+        style={[stepperStyles.empty, { borderColor: tint }]}
+        onPress={() => onChange(display)}
       >
-        {icon && <Ionicons name={icon} size={18} color={colors.primary} />}
-        <Text style={styles.stepperEmptyText}>Tap to set</Text>
+        <Ionicons name={icon} size={18} color={tint} />
+        <Text style={[stepperStyles.emptyText, { color: tint }]}>Tap to set ({display} {unit})</Text>
       </Pressable>
     );
   }
-
   return (
-    <View style={styles.stepperRow}>
-      <Pressable
-        onPress={() => onChange(clamp(value - largeStep))}
-        hitSlop={6}
-        style={({ pressed }) => [
-          styles.stepperBtnSm,
-          pressed && { opacity: 0.7 },
-        ]}
-      >
-        <Text style={styles.stepperBtnTextSm}>−{largeStep}</Text>
-      </Pressable>
-      <Pressable
-        onPress={() => onChange(clamp(value - smallStep))}
-        hitSlop={6}
-        style={({ pressed }) => [
-          styles.stepperBtn,
-          pressed && { opacity: 0.7 },
-        ]}
-      >
+    <View style={stepperStyles.row}>
+      <Pressable onPress={() => change(-safeStep * 5)} style={stepperStyles.btnLg}>
         <Ionicons name="remove" size={20} color={colors.textPrimary} />
       </Pressable>
-      <View style={styles.stepperValue}>
-        {icon && <Ionicons name={icon} size={18} color={colors.primary} />}
-        <Text style={styles.stepperValueText}>{value}</Text>
-        <Text style={styles.stepperUnitText}>{unit}</Text>
-      </View>
-      <Pressable
-        onPress={() => onChange(clamp(value + smallStep))}
-        hitSlop={6}
-        style={({ pressed }) => [
-          styles.stepperBtn,
-          pressed && { opacity: 0.7 },
-        ]}
-      >
-        <Ionicons name="add" size={20} color={colors.textPrimary} />
+      <Pressable onPress={() => change(-safeStep)} style={stepperStyles.btn}>
+        <Ionicons name="remove-outline" size={18} color={colors.textPrimary} />
       </Pressable>
-      <Pressable
-        onPress={() => onChange(clamp(value + largeStep))}
-        hitSlop={6}
-        style={({ pressed }) => [
-          styles.stepperBtnSm,
-          pressed && { opacity: 0.7 },
-        ]}
-      >
-        <Text style={styles.stepperBtnTextSm}>+{largeStep}</Text>
+      <View style={[stepperStyles.value, { borderColor: tint }]}>
+        <Ionicons name={icon} size={16} color={tint} />
+        <Text style={stepperStyles.valueText}>{value}</Text>
+        <Text style={stepperStyles.unitText}>{unit}</Text>
+      </View>
+      <Pressable onPress={() => change(safeStep)} style={stepperStyles.btn}>
+        <Ionicons name="add-outline" size={18} color={colors.textPrimary} />
+      </Pressable>
+      <Pressable onPress={() => change(safeStep * 5)} style={stepperStyles.btnLg}>
+        <Ionicons name="add" size={20} color={colors.textPrimary} />
       </Pressable>
     </View>
   );
 }
 
+function ConfidenceSlider({ value, onChange, tint }: {
+  value: number | null | undefined;
+  onChange: (n: number) => void;
+  tint: string;
+}) {
+  const v = value ?? 7;
+  return (
+    <View style={confStyles.wrap}>
+      <View style={confStyles.bar}>
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+          <Pressable
+            key={n}
+            onPress={() => onChange(n)}
+            style={[
+              confStyles.dot,
+              { backgroundColor: n <= v ? tint : 'rgba(255,255,255,0.12)' },
+            ]}
+          />
+        ))}
+      </View>
+      <Text style={confStyles.value}>{v}/10</Text>
+    </View>
+  );
+}
+
+// ─── Main component ──────────────────────────────────────────────────────
+
+const ACCENT = colors.primary;
+
+export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) {
+  const insets = useSafeAreaInsets();
+  const isEdit = mode === 'edit';
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<Partial<UserProfile>>({});
+  const [stepIdx, setStepIdx] = useState(0);
+
+  const baseSteps = isEdit ? ALL_STEPS_EDIT : ALL_STEPS_SETUP;
+  const visibleSteps = useMemo(
+    () => baseSteps.filter((s) => s !== 'female' || femaleSlideRelevant(profile)),
+    [baseSteps, profile.sex_at_birth, profile.age_band], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const step = visibleSteps[Math.min(stepIdx, visibleSteps.length - 1)] ?? 'review';
+  const isFirst = stepIdx === 0;
+  const isLast = stepIdx >= visibleSteps.length - 1;
+
+  // Pre-compute step flags into locals so the JSX below doesn't have
+  // `step === 'foo'` comparisons inline — the react-native/no-raw-text
+  // linter flags string literals inside JSX expressions even when they
+  // are pure JS booleans.
+  const onWelcome  = step === 'welcome';
+  const onAbout    = step === 'about';
+  const onHeritage = step === 'heritage';
+  const onBody     = step === 'body';
+  const onDay      = step === 'day';
+  const onSleep    = step === 'sleep';
+  const onHabits   = step === 'habits';
+  const onEating   = step === 'eating';
+  const onHealth   = step === 'health';
+  const onLife     = step === 'life';
+  const onFemale   = step === 'female';
+  const onGoals    = step === 'goals';
+  const onCoaching = step === 'coaching';
+  const onReview   = step === 'review';
+
+  useEffect(() => {
+    if (!visible) return;
+    setLoading(true);
+    fetchProfile()
+      .then((p) => setProfile(p))
+      .catch((e) => Alert.alert("Couldn't load profile", (e as Error).message))
+      .finally(() => setLoading(false));
+    setStepIdx(0);
+  }, [visible]);
+
+  const set = <K extends keyof UserProfile>(key: K, value: UserProfile[K]) => {
+    setProfile((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const goNext = () => setStepIdx((i) => Math.min(i + 1, visibleSteps.length - 1));
+  const goBack = () => setStepIdx((i) => Math.max(i - 1, 0));
+
+  const handleFinish = async () => {
+    setSaving(true);
+    try {
+      await updateProfile(profile);
+      onFinish();
+    } catch (e) {
+      Alert.alert("Couldn't save", (e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const canAdvanceFromAbout =
+    !!profile.display_name?.trim() && !!profile.sex_at_birth && !!profile.age_band;
+  const canAdvance = onAbout ? canAdvanceFromAbout : true;
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <StatusBar style="light" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+      >
+        {/* Top bar */}
+        <View style={styles.topBar}>
+          {!isFirst ? (
+            <Pressable onPress={goBack} hitSlop={8} style={styles.backBtn}>
+              <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+            </Pressable>
+          ) : <View style={styles.backBtn} />}
+          <View style={styles.dots}>
+            {visibleSteps.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  i === stepIdx && styles.dotActive,
+                  i < stepIdx && styles.dotDone,
+                ]}
+              />
+            ))}
+          </View>
+          {isEdit && onClose ? (
+            <Pressable onPress={onClose} hitSlop={8} style={styles.backBtn}>
+              <Ionicons name="close" size={22} color={colors.textPrimary} />
+            </Pressable>
+          ) : <View style={styles.backBtn} />}
+        </View>
+
+        {loading ? (
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {onWelcome && <WelcomeStep />}
+            {onAbout && <AboutStep profile={profile} set={set} />}
+            {onHeritage && <HeritageStep profile={profile} set={set} />}
+            {onBody && <BodyStep profile={profile} set={set} />}
+            {onDay && <DayStep profile={profile} set={set} />}
+            {onSleep && <SleepStep profile={profile} set={set} />}
+            {onHabits && <HabitsStep profile={profile} set={set} />}
+            {onEating && <EatingStep profile={profile} set={set} />}
+            {onHealth && <HealthStep profile={profile} set={set} />}
+            {onLife && <LifeStep profile={profile} set={set} />}
+            {onFemale && <FemaleStep profile={profile} set={set} />}
+            {onGoals && <GoalsStep profile={profile} set={set} />}
+            {onCoaching && <CoachingStep profile={profile} set={set} />}
+            {onReview && <ReviewStep profile={profile} jumpTo={setStepIdx} steps={visibleSteps} />}
+          </ScrollView>
+        )}
+
+        {/* Bottom CTA */}
+        <View style={styles.cta}>
+          {onWelcome ? (
+            <Pressable onPress={goNext} style={[styles.primary, { backgroundColor: ACCENT }]}>
+              <Text style={styles.primaryText}>Let's go</Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.textPrimary} />
+            </Pressable>
+          ) : isLast ? (
+            <Pressable
+              onPress={handleFinish}
+              disabled={saving}
+              style={[styles.primary, { backgroundColor: ACCENT }, saving && { opacity: 0.6 }]}
+            >
+              {saving ? <ActivityIndicator color={colors.textPrimary} /> : (
+                <>
+                  <Ionicons name="checkmark" size={18} color={colors.textPrimary} />
+                  <Text style={styles.primaryText}>Save & start</Text>
+                </>
+              )}
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={goNext}
+              disabled={!canAdvance}
+              style={[
+                styles.primary,
+                { backgroundColor: ACCENT },
+                !canAdvance && { opacity: 0.5 },
+              ]}
+            >
+              <Text style={styles.primaryText}>Next</Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.textPrimary} />
+            </Pressable>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ─── Step components ─────────────────────────────────────────────────────
+
+type StepProps = {
+  profile: Partial<UserProfile>;
+  set: <K extends keyof UserProfile>(key: K, value: UserProfile[K]) => void;
+};
+
+function WelcomeStep() {
+  return (
+    <>
+      <StepHero
+        icon="sparkles-outline"
+        tint={ACCENT}
+        title="Welcome to Hexalife"
+        subtitle="Let's tailor your six wellness avatars to who you are. Takes about 3 minutes."
+      />
+      <View style={privacyStyles.card}>
+        <Ionicons name="shield-checkmark-outline" size={20} color={ACCENT} />
+        <Text style={privacyStyles.text}>
+          Your data stays yours. We never sell health data and you can edit or delete it anytime in Settings.
+        </Text>
+      </View>
+    </>
+  );
+}
+
+function AboutStep({ profile, set }: StepProps) {
+  return (
+    <>
+      <StepHero icon="person-outline" tint={ACCENT} title="About you" />
+
+      <FieldLabel>Your name</FieldLabel>
+      <TextInput
+        style={styles.text}
+        placeholder="What should we call you?"
+        placeholderTextColor={colors.textMuted}
+        value={profile.display_name ?? ''}
+        onChangeText={(v) => set('display_name', v)}
+        autoFocus
+      />
+
+      <FieldLabel>Age</FieldLabel>
+      <ChipChoice
+        options={AGE_OPTIONS}
+        value={profile.age_band ?? null}
+        onChange={(v) => set('age_band', v)}
+        columns={3}
+      />
+
+      <FieldLabel>Sex assigned at birth</FieldLabel>
+      <ChipChoice
+        options={SEX_OPTIONS}
+        value={profile.sex_at_birth ?? null}
+        onChange={(v) => set('sex_at_birth', v)}
+        columns={3}
+      />
+
+      <FieldLabel optional>Pronouns</FieldLabel>
+      <View style={multiStyles.wrap}>
+        {PRONOUN_OPTIONS.map((p) => (
+          <Pressable
+            key={p}
+            onPress={() => set('pronouns', p)}
+            style={[multiStyles.chip, profile.pronouns === p && multiStyles.chipSelected]}
+          >
+            <Text style={[multiStyles.chipText, profile.pronouns === p && multiStyles.chipTextSelected]}>
+              {p}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </>
+  );
+}
+
+function HeritageStep({ profile, set }: StepProps) {
+  return (
+    <>
+      <StepHero icon="globe-outline" tint={ACCENT} title="Heritage" subtitle="Used silently to match advice to genetic-risk patterns. Optional, never displayed." />
+      <FieldLabel optional>Select all that apply</FieldLabel>
+      <MultiChip
+        options={ETHNICITY_OPTIONS}
+        values={profile.ethnicity ?? []}
+        onChange={(vs) => set('ethnicity', vs)}
+      />
+    </>
+  );
+}
+
+function BodyStep({ profile, set }: StepProps) {
+  return (
+    <>
+      <StepHero icon="resize-outline" tint={ACCENT} title="Body baseline" />
+
+      <FieldLabel>Height</FieldLabel>
+      <Stepper
+        value={profile.height_cm}
+        onChange={(n) => set('height_cm', n)}
+        min={120} max={220} unit="cm" icon="resize-outline" tint={ACCENT}
+      />
+
+      <FieldLabel>Weight</FieldLabel>
+      <Stepper
+        value={profile.weight_kg}
+        onChange={(n) => set('weight_kg', n)}
+        min={30} max={250} unit="kg" icon="barbell-outline" tint={ACCENT}
+      />
+
+      <FieldLabel optional>Waist (better metabolic risk signal than weight)</FieldLabel>
+      <Stepper
+        value={profile.waist_cm}
+        onChange={(n) => set('waist_cm', n)}
+        min={50} max={160} unit="cm" icon="ellipse-outline" tint={ACCENT}
+      />
+    </>
+  );
+}
+
+function DayStep({ profile, set }: StepProps) {
+  return (
+    <>
+      <StepHero icon="sunny-outline" tint={ACCENT} title="Your day" />
+
+      <FieldLabel>Daily activity</FieldLabel>
+      <ChipChoice
+        options={ACTIVITY_OPTIONS}
+        value={profile.activity_level ?? null}
+        onChange={(v) => set('activity_level', v)}
+      />
+
+      <FieldLabel>Job type</FieldLabel>
+      <ChipChoice
+        options={JOB_OPTIONS}
+        value={profile.job_type ?? null}
+        onChange={(v) => set('job_type', v)}
+        columns={3}
+      />
+
+      <FieldLabel>Time outdoors per day</FieldLabel>
+      <ChipChoice
+        options={TIME_BAND_OUTDOOR}
+        value={profile.outdoor_minutes_band ?? null}
+        onChange={(v) => set('outdoor_minutes_band', v)}
+        columns={2}
+      />
+
+      <FieldLabel>Time per day for wellness</FieldLabel>
+      <ChipChoice
+        options={TIME_BAND_WELLNESS}
+        value={profile.wellness_time_band ?? null}
+        onChange={(v) => set('wellness_time_band', v)}
+        columns={2}
+      />
+    </>
+  );
+}
+
+function SleepStep({ profile, set }: StepProps) {
+  return (
+    <>
+      <StepHero icon="moon-outline" tint={ACCENT} title="Sleep" />
+
+      <FieldLabel>Hours per night you aim for</FieldLabel>
+      <Stepper
+        value={profile.sleep_hours_target}
+        onChange={(n) => set('sleep_hours_target', n)}
+        min={3} max={14} unit="h" icon="moon-outline" tint={ACCENT}
+      />
+
+      <FieldLabel>Sleep quality lately</FieldLabel>
+      <ChipChoice
+        options={SLEEP_QUALITY_OPTIONS}
+        value={profile.sleep_quality ?? null}
+        onChange={(v) => set('sleep_quality', v)}
+        columns={3}
+      />
+
+      <FieldLabel>Chronotype</FieldLabel>
+      <ChipChoice
+        options={CHRONOTYPE_OPTIONS}
+        value={profile.chronotype ?? null}
+        onChange={(v) => set('chronotype', v)}
+        columns={1}
+      />
+    </>
+  );
+}
+
+function HabitsStep({ profile, set }: StepProps) {
+  return (
+    <>
+      <StepHero icon="cafe-outline" tint={ACCENT} title="Habits" />
+
+      <FieldLabel>Smoking</FieldLabel>
+      <ChipChoice options={SMOKING_OPTIONS} value={profile.smoking_status ?? null} onChange={(v) => set('smoking_status', v)} columns={2} />
+
+      <FieldLabel>Alcohol</FieldLabel>
+      <ChipChoice options={ALCOHOL_OPTIONS} value={profile.alcohol_freq ?? null} onChange={(v) => set('alcohol_freq', v)} columns={2} />
+
+      <FieldLabel>Caffeine</FieldLabel>
+      <ChipChoice options={CAFFEINE_OPTIONS} value={profile.caffeine_freq ?? null} onChange={(v) => set('caffeine_freq', v)} columns={2} />
+
+      <FieldLabel>Stress level</FieldLabel>
+      <ChipChoice options={STRESS_OPTIONS} value={profile.stress_level ?? null} onChange={(v) => set('stress_level', v)} columns={3} />
+    </>
+  );
+}
+
+function EatingStep({ profile, set }: StepProps) {
+  return (
+    <>
+      <StepHero icon="restaurant-outline" tint={ACCENT} title="Eating" />
+
+      <FieldLabel>Eating pattern</FieldLabel>
+      <ChipChoice
+        options={EATING_PATTERN_OPTIONS}
+        value={profile.eating_pattern ?? null}
+        onChange={(v) => set('eating_pattern', v)}
+        columns={2}
+      />
+
+      <FieldLabel>Eating schedule</FieldLabel>
+      <ChipChoice
+        options={EATING_SCHEDULE_OPTIONS}
+        value={profile.eating_schedule ?? null}
+        onChange={(v) => set('eating_schedule', v)}
+        columns={2}
+      />
+
+      <FieldLabel>Cooking skill</FieldLabel>
+      <ChipChoice
+        options={COOKING_SKILL_OPTIONS}
+        value={profile.cooking_skill ?? null}
+        onChange={(v) => set('cooking_skill', v)}
+        columns={2}
+      />
+
+      <FieldLabel>Time available to cook</FieldLabel>
+      <ChipChoice
+        options={TIME_BAND_COOKING}
+        value={profile.cooking_time_band ?? null}
+        onChange={(v) => set('cooking_time_band', v)}
+        columns={2}
+      />
+
+      <FieldLabel optional>Allergies</FieldLabel>
+      <MultiChip
+        options={ALLERGY_OPTIONS}
+        values={profile.allergies ?? []}
+        onChange={(vs) => set('allergies', vs)}
+      />
+
+      <FieldLabel optional>Intolerances (cause symptoms but aren't allergies)</FieldLabel>
+      <MultiChip
+        options={INTOLERANCE_OPTIONS}
+        values={profile.intolerances ?? []}
+        onChange={(vs) => set('intolerances', vs)}
+      />
+    </>
+  );
+}
+
+function HealthStep({ profile, set }: StepProps) {
+  const [medsInput, setMedsInput] = useState('');
+  const meds = profile.medications ?? [];
+  const addMed = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || meds.includes(trimmed)) return;
+    set('medications', [...meds, trimmed]);
+    setMedsInput('');
+  };
+  const removeMed = (name: string) => {
+    set('medications', meds.filter((m) => m !== name));
+  };
+
+  return (
+    <>
+      <StepHero icon="medical-outline" tint={ACCENT} title="Health" subtitle="So we never recommend something that's wrong for you." />
+
+      <FieldLabel optional>Diagnosed conditions</FieldLabel>
+      <MultiChip
+        options={CONDITION_OPTIONS}
+        values={profile.conditions ?? []}
+        onChange={(vs) => set('conditions', vs)}
+      />
+
+      <FieldLabel optional>Current medications</FieldLabel>
+      <View style={medsStyles.row}>
+        <TextInput
+          style={medsStyles.input}
+          placeholder="Type and add"
+          placeholderTextColor={colors.textMuted}
+          value={medsInput}
+          onChangeText={setMedsInput}
+          onSubmitEditing={() => addMed(medsInput)}
+          returnKeyType="done"
+        />
+        <Pressable onPress={() => addMed(medsInput)} style={medsStyles.add}>
+          <Ionicons name="add" size={18} color={colors.textPrimary} />
+        </Pressable>
+      </View>
+      <View style={multiStyles.wrap}>
+        {COMMON_MEDS.map((m) => (
+          <Pressable
+            key={m}
+            onPress={() => addMed(m)}
+            style={[multiStyles.chip, meds.includes(m) && multiStyles.chipSelected]}
+          >
+            <Text style={[multiStyles.chipText, meds.includes(m) && multiStyles.chipTextSelected]}>
+              + {m}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      {meds.length > 0 ? (
+        <View style={[multiStyles.wrap, { marginTop: spacing.sm }]}>
+          {meds.map((m) => (
+            <Pressable key={m} onPress={() => removeMed(m)} style={[multiStyles.chip, multiStyles.chipSelected]}>
+              <Ionicons name="close" size={12} color={colors.primary} />
+              <Text style={[multiStyles.chipText, multiStyles.chipTextSelected]}>{m}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      <FieldLabel optional>Family history (first-degree relatives)</FieldLabel>
+      <MultiChip
+        options={FAMILY_HISTORY_OPTIONS}
+        values={profile.family_history ?? []}
+        onChange={(vs) => set('family_history', vs)}
+      />
+
+      <FieldLabel optional>Past major injuries</FieldLabel>
+      <MultiChip
+        options={INJURY_OPTIONS}
+        values={profile.past_injuries ?? []}
+        onChange={(vs) => set('past_injuries', vs)}
+      />
+
+      <FieldLabel optional>Mental health context</FieldLabel>
+      <MultiChip
+        options={MENTAL_HEALTH_OPTIONS}
+        values={profile.mental_health ?? []}
+        onChange={(vs) => set('mental_health', vs)}
+      />
+    </>
+  );
+}
+
+function LifeStep({ profile, set }: StepProps) {
+  return (
+    <>
+      <StepHero icon="home-outline" tint={ACCENT} title="Life context" />
+
+      <FieldLabel>Living situation</FieldLabel>
+      <ChipChoice
+        options={LIVING_OPTIONS}
+        value={profile.living_situation ?? null}
+        onChange={(v) => set('living_situation', v)}
+        columns={2}
+      />
+
+      <FieldLabel>Travel frequency</FieldLabel>
+      <ChipChoice
+        options={TRAVEL_OPTIONS}
+        value={profile.travel_frequency ?? null}
+        onChange={(v) => set('travel_frequency', v)}
+        columns={3}
+      />
+
+      <FieldLabel>Should we focus on budget-friendly options?</FieldLabel>
+      <View style={multiStyles.wrap}>
+        <Pressable
+          onPress={() => set('budget_conscious', true)}
+          style={[multiStyles.chip, profile.budget_conscious === true && multiStyles.chipSelected]}
+        >
+          <Ionicons
+            name="wallet-outline"
+            size={14}
+            color={profile.budget_conscious === true ? colors.primary : colors.textMuted}
+          />
+          <Text style={[multiStyles.chipText, profile.budget_conscious === true && multiStyles.chipTextSelected]}>
+            Yes, budget-friendly
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => set('budget_conscious', false)}
+          style={[multiStyles.chip, profile.budget_conscious === false && multiStyles.chipSelected]}
+        >
+          <Text style={[multiStyles.chipText, profile.budget_conscious === false && multiStyles.chipTextSelected]}>
+            No constraint
+          </Text>
+        </Pressable>
+      </View>
+    </>
+  );
+}
+
+function FemaleStep({ profile, set }: StepProps) {
+  const status = profile.female_status ?? null;
+  return (
+    <>
+      <StepHero icon="female-outline" tint={ACCENT} title="Reproductive health" subtitle="Used to keep advice safe and relevant." />
+
+      <FieldLabel>Current status</FieldLabel>
+      <ChipChoice
+        options={FEMALE_STATUS_OPTIONS}
+        value={status}
+        onChange={(v) => set('female_status', v)}
+        columns={2}
+      />
+
+      {status === 'pregnant' ? (
+        <>
+          <FieldLabel>Weeks pregnant</FieldLabel>
+          <Stepper
+            value={profile.pregnancy_weeks}
+            onChange={(n) => set('pregnancy_weeks', n)}
+            min={1} max={42} unit="wk" icon="female-outline" tint={ACCENT}
+          />
+        </>
+      ) : null}
+
+      {status === 'breastfeeding' ? (
+        <>
+          <FieldLabel>Months breastfeeding</FieldLabel>
+          <Stepper
+            value={profile.breastfeeding_months}
+            onChange={(n) => set('breastfeeding_months', n)}
+            min={0} max={36} unit="mo" icon="water-outline" tint={ACCENT}
+          />
+        </>
+      ) : null}
+
+      {(status === 'regular' || status === 'irregular') ? (
+        <>
+          <FieldLabel>Average cycle length</FieldLabel>
+          <Stepper
+            value={profile.cycle_length_days}
+            onChange={(n) => set('cycle_length_days', n)}
+            min={14} max={60} unit="days" icon="refresh-circle-outline" tint={ACCENT}
+          />
+        </>
+      ) : null}
+
+      <FieldLabel optional>Contraception</FieldLabel>
+      <ChipChoice
+        options={CONTRACEPTION_OPTIONS}
+        value={profile.contraception ?? null}
+        onChange={(v) => set('contraception', v)}
+        columns={2}
+      />
+    </>
+  );
+}
+
+function GoalsStep({ profile, set }: StepProps) {
+  const selected = (profile.goals ?? []) as string[];
+  const toggle = (key: string) => {
+    if (selected.includes(key)) {
+      set('goals', selected.filter((g) => g !== key));
+    } else if (selected.length < 3) {
+      set('goals', [...selected, key]);
+    }
+  };
+  const teamMembers = useMemo(() => {
+    const names = new Set<string>();
+    GOAL_OPTIONS.forEach((g) => {
+      if (selected.includes(g.key)) g.avatars.forEach((n) => names.add(n));
+    });
+    return Array.from(names);
+  }, [selected]);
+
+  return (
+    <>
+      <StepHero icon="flag-outline" tint={ACCENT} title="Your goals" subtitle="Pick up to 3 — your team is built around them." />
+
+      <View style={chipStyles.grid}>
+        {GOAL_OPTIONS.map((g) => {
+          const isSelected = selected.includes(g.key);
+          const disabled = !isSelected && selected.length >= 3;
+          return (
+            <Pressable
+              key={g.key}
+              onPress={() => toggle(g.key)}
+              disabled={disabled}
+              style={({ pressed }) => [
+                chipStyles.card, chipStyles.cardHalf,
+                isSelected && chipStyles.cardSelected,
+                disabled && { opacity: 0.4 },
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Ionicons name={g.icon} size={22} color={isSelected ? colors.primary : colors.textPrimary} />
+              <Text style={[chipStyles.label, isSelected && chipStyles.labelSelected]}>{g.label}</Text>
+              {isSelected ? <Text style={chipStyles.sub}>{g.avatars.join(' + ')}</Text> : null}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {teamMembers.length > 0 ? (
+        <View style={teamStyles.card}>
+          <Ionicons name="people-circle-outline" size={20} color={ACCENT} />
+          <Text style={teamStyles.text}>
+            Your team will include {teamMembers.join(', ')}.
+          </Text>
+        </View>
+      ) : null}
+
+      <FieldLabel optional>What started this for you?</FieldLabel>
+      <ChipChoice
+        options={MOTIVATION_OPTIONS}
+        value={profile.motivation_trigger ?? null}
+        onChange={(v) => set('motivation_trigger', v)}
+        columns={2}
+      />
+
+      <FieldLabel optional>In your own words</FieldLabel>
+      <TextInput
+        style={[styles.text, { minHeight: 70 }]}
+        placeholder="Anything you've tried before, or a specific reason now?"
+        placeholderTextColor={colors.textMuted}
+        value={profile.motivation_text ?? ''}
+        onChangeText={(v) => set('motivation_text', v)}
+        multiline
+      />
+
+      <FieldLabel>Timeline</FieldLabel>
+      <ChipChoice
+        options={TIMELINE_OPTIONS}
+        value={profile.goal_timeline ?? null}
+        onChange={(v) => set('goal_timeline', v)}
+        columns={2}
+      />
+
+      <FieldLabel>How confident do you feel about hitting these goals?</FieldLabel>
+      <ConfidenceSlider
+        value={profile.goal_confidence}
+        onChange={(n) => set('goal_confidence', n)}
+        tint={ACCENT}
+      />
+    </>
+  );
+}
+
+function CoachingStep({ profile, set }: StepProps) {
+  return (
+    <>
+      <StepHero icon="sparkles-outline" tint={ACCENT} title="Coaching style" subtitle="Shapes how every avatar talks to you." />
+
+      <FieldLabel>Tone</FieldLabel>
+      <ChipChoice options={COACHING_TONE_OPTIONS} value={profile.coaching_tone ?? null} onChange={(v) => set('coaching_tone', v)} columns={2} />
+
+      <FieldLabel>Detail level</FieldLabel>
+      <ChipChoice options={COACHING_DETAIL_OPTIONS} value={profile.coaching_detail ?? null} onChange={(v) => set('coaching_detail', v)} columns={3} />
+
+      <FieldLabel>Pace</FieldLabel>
+      <ChipChoice options={COACHING_PACE_OPTIONS} value={profile.coaching_pace ?? null} onChange={(v) => set('coaching_pace', v)} columns={2} />
+
+      <FieldLabel>Routines or variety?</FieldLabel>
+      <ChipChoice options={COACHING_STYLE_OPTIONS} value={profile.coaching_style ?? null} onChange={(v) => set('coaching_style', v)} columns={2} />
+
+      <FieldLabel>Accountability</FieldLabel>
+      <ChipChoice options={ACCOUNTABILITY_OPTIONS} value={profile.accountability_style ?? null} onChange={(v) => set('accountability_style', v)} columns={2} />
+    </>
+  );
+}
+
+function ReviewStep({ profile, jumpTo, steps }: { profile: Partial<UserProfile>; jumpTo: (i: number) => void; steps: StepKey[] }) {
+  const summary = useMemo(() => buildSummary(profile), [profile]);
+  return (
+    <>
+      <StepHero icon="checkmark-done-outline" tint={ACCENT} title="You're set" subtitle="Your starting team is ready. Edit any section before saving." />
+      {summary.map((sec) => {
+        const idx = steps.indexOf(sec.step);
+        return (
+          <Pressable
+            key={sec.step}
+            onPress={() => idx >= 0 && jumpTo(idx)}
+            style={reviewStyles.card}
+          >
+            <View style={reviewStyles.head}>
+              <Ionicons name={sec.icon} size={18} color={ACCENT} />
+              <Text style={reviewStyles.title}>{sec.title}</Text>
+              <Ionicons name="pencil" size={14} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+            </View>
+            <Text style={reviewStyles.body}>{sec.body || 'Tap to fill'}</Text>
+          </Pressable>
+        );
+      })}
+    </>
+  );
+}
+
+function buildSummary(p: Partial<UserProfile>): { step: StepKey; icon: IoniconName; title: string; body: string }[] {
+  const arr = (a?: string[]) => (a && a.length ? a.join(', ') : '');
+  return [
+    { step: 'about',    icon: 'person-outline',    title: 'About',     body: [p.display_name, p.age_band, p.sex_at_birth].filter(Boolean).join(' · ') },
+    { step: 'body',     icon: 'resize-outline',    title: 'Body',      body: [p.height_cm && `${p.height_cm} cm`, p.weight_kg && `${p.weight_kg} kg`].filter(Boolean).join(' · ') },
+    { step: 'day',      icon: 'sunny-outline',     title: 'Day',       body: [p.activity_level, p.job_type].filter(Boolean).join(' · ') },
+    { step: 'sleep',    icon: 'moon-outline',      title: 'Sleep',     body: [p.sleep_hours_target && `${p.sleep_hours_target}h`, p.sleep_quality, p.chronotype].filter(Boolean).join(' · ') },
+    { step: 'habits',   icon: 'cafe-outline',      title: 'Habits',    body: [p.smoking_status, p.alcohol_freq, p.caffeine_freq, p.stress_level].filter(Boolean).join(' · ') },
+    { step: 'eating',   icon: 'restaurant-outline', title: 'Eating',   body: [p.eating_pattern, p.eating_schedule, arr(p.allergies)].filter(Boolean).join(' · ') },
+    { step: 'health',   icon: 'medical-outline',   title: 'Health',    body: [arr(p.conditions), arr(p.medications), arr(p.family_history)].filter(Boolean).join(' · ') },
+    { step: 'life',     icon: 'home-outline',      title: 'Life',      body: [p.living_situation, p.travel_frequency].filter(Boolean).join(' · ') },
+    { step: 'goals',    icon: 'flag-outline',      title: 'Goals',     body: [arr(p.goals), p.goal_timeline].filter(Boolean).join(' · ') },
+    { step: 'coaching', icon: 'sparkles-outline',  title: 'Style',     body: [p.coaching_tone, p.coaching_detail, p.coaching_pace].filter(Boolean).join(' · ') },
+  ];
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  headerRow: {
+  container: { flex: 1, backgroundColor: colors.background },
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
   },
-  iconBtn: {
-    width: 36,
-    height: 36,
+  backBtn: {
+    width: 36, height: 36,
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  skipBtn: {
-    minWidth: 44,
-    height: 36,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-  skipText: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-  progressTrack: {
+  dots: {
     flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.surface,
-    overflow: 'hidden',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 4,
   },
-  progressFill: {
-    height: 4,
-    backgroundColor: colors.primary,
-    borderRadius: 2,
+  dot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.18)',
   },
+  dotActive: { width: 18, backgroundColor: colors.primary },
+  dotDone: { backgroundColor: 'rgba(124,92,255,0.6)' },
   body: { flex: 1 },
-  bodyContent: {
-    padding: spacing.lg,
-    // Generous bottom padding so a focused text input can always
-    // scroll above the on-screen keyboard on Android, where
-    // KeyboardAvoidingView's "height" mode resizes the wrapper.
-    paddingBottom: spacing.xxl + spacing.xl,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepHero: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  heading: {
-    color: colors.textPrimary,
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    marginBottom: spacing.sm,
-  },
-  privacyCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    marginTop: spacing.lg,
-  },
-  privacyText: {
-    flex: 1,
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
-  },
-  lead: {
-    color: colors.textSecondary,
-    fontSize: fontSize.md,
-    lineHeight: 22,
-    marginBottom: spacing.lg,
-  },
-  fieldLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.md,
-    marginBottom: spacing.xs + 2,
-  },
-  fieldLabelLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs + 2,
-  },
-  fieldLabel: {
-    color: colors.textPrimary,
-    fontSize: fontSize.sm,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  fieldSublabel: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-  },
-  textInput: {
-    backgroundColor: colors.surface,
-    color: colors.textPrimary,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 4,
-    fontSize: fontSize.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  textInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  textInputInline: {
-    flex: 1,
-    color: colors.textPrimary,
-    paddingVertical: spacing.sm + 4,
-    fontSize: fontSize.md,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: spacing.xs + 2,
-    flexWrap: 'wrap',
-  },
-  chipRowWrap: {},
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  bodyContent: { padding: spacing.md, paddingBottom: spacing.xl },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  cta: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-  chipTextSelected: {
-    color: colors.textPrimary,
-  },
-  stepperEmpty: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md - 2,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: 'rgba(124,92,255,0.4)',
-    borderStyle: 'dashed',
-  },
-  stepperEmptyText: {
-    color: colors.primary,
-    fontSize: fontSize.md,
-    fontWeight: '700',
-  },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: spacing.xs + 2,
-  },
-  stepperBtnSm: {
-    minWidth: 48,
-    height: 56,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-  stepperBtnTextSm: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: '700',
-  },
-  stepperBtn: {
-    width: 48,
-    height: 56,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperValue: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 56,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(124,92,255,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(124,92,255,0.3)',
-  },
-  stepperValueText: {
-    color: colors.textPrimary,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  stepperUnitText: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-  activityList: {
-    gap: spacing.sm,
-  },
-  activityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  activityCardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(124,92,255,0.12)',
-  },
-  activityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  activityIconSelected: {
-    backgroundColor: 'rgba(124,92,255,0.2)',
-  },
-  activityText: { flex: 1 },
-  activityLabel: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  activityLabelSelected: {
-    color: colors.primary,
-  },
-  activitySubtitle: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-  },
-  summaryCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  summaryLabel: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-  summaryValue: {
-    color: colors.textPrimary,
-    fontSize: fontSize.sm,
-    flex: 1,
-    textAlign: 'right',
-    marginLeft: spacing.md,
-  },
-  summaryEmpty: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    textAlign: 'center',
-  },
-  footer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(255,255,255,0.08)',
   },
-  primaryBtn: {
-    backgroundColor: colors.primary,
+  primary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.md,
     borderRadius: radius.pill,
-    alignItems: 'center',
   },
-  primaryBtnText: {
+  primaryText: {
     color: colors.textPrimary,
     fontSize: fontSize.md,
     fontWeight: '700',
-    letterSpacing: 0.3,
+  },
+  text: {
+    backgroundColor: 'rgba(31,41,55,0.7)',
+    color: colors.textPrimary,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    fontSize: fontSize.md,
+    marginBottom: spacing.md,
+  },
+});
+
+const heroStyles = StyleSheet.create({
+  wrap: { alignItems: 'center', marginBottom: spacing.lg, gap: spacing.sm },
+  iconCircle: {
+    width: 64, height: 64, borderRadius: 32,
+    borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  title: {
+    color: colors.textPrimary,
+    fontSize: fontSize.xl,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  subtitle: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
+  },
+});
+
+const fieldStyles = StyleSheet.create({
+  label: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  optional: {
+    color: 'rgba(255,255,255,0.35)',
+    fontWeight: '500',
+    textTransform: 'none',
+    letterSpacing: 0,
+  },
+});
+
+const chipStyles = StyleSheet.create({
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  card: {
+    backgroundColor: 'rgba(31,41,55,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: radius.md,
+    padding: spacing.sm + 2,
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 70,
+  },
+  cardHalf: { flexBasis: '48%', flexGrow: 1 },
+  cardThird: { flexBasis: '31%', flexGrow: 1 },
+  cardFull: { flexBasis: '100%' },
+  cardSelected: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(124,92,255,0.18)',
+  },
+  emoji: { fontSize: 28, lineHeight: 32 },
+  label: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  labelSelected: { color: colors.primary },
+  sub: {
+    color: colors.textMuted,
+    fontSize: 11,
+    textAlign: 'center',
+  },
+});
+
+const multiStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(31,41,55,0.5)',
+  },
+  chipSelected: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(124,92,255,0.18)',
+  },
+  chipText: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: '500',
+  },
+  chipTextSelected: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+});
+
+const stepperStyles = StyleSheet.create({
+  empty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.md,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    borderStyle: 'dashed',
+  },
+  emptyText: { fontSize: fontSize.sm, fontWeight: '600' },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 },
+  btn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  btnLg: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  value: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 2,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: 'rgba(31,41,55,0.6)',
+  },
+  valueText: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: '800' },
+  unitText: { color: colors.textMuted, fontSize: fontSize.sm },
+});
+
+const confStyles = StyleSheet.create({
+  wrap: { gap: spacing.sm },
+  bar: { flexDirection: 'row', justifyContent: 'space-between', gap: 4 },
+  dot: { flex: 1, height: 14, borderRadius: 7 },
+  value: { textAlign: 'center', color: colors.textPrimary, fontSize: fontSize.md, fontWeight: '700' },
+});
+
+const privacyStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(124,92,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(124,92,255,0.22)',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.lg,
+  },
+  text: { flex: 1, color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20 },
+});
+
+const teamStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(124,92,255,0.10)',
+    borderRadius: radius.md,
+    padding: spacing.sm + 2,
+    marginVertical: spacing.sm,
+  },
+  text: { flex: 1, color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: '600' },
+});
+
+const reviewStyles = StyleSheet.create({
+  card: {
+    backgroundColor: 'rgba(31,41,55,0.6)',
+    borderRadius: radius.md,
+    padding: spacing.sm + 2,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  title: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: '700' },
+  body: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 4 },
+});
+
+const medsStyles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 6, marginBottom: spacing.sm },
+  input: {
+    flex: 1,
+    backgroundColor: 'rgba(31,41,55,0.7)',
+    color: colors.textPrimary,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSize.sm,
+  },
+  add: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center',
   },
 });
