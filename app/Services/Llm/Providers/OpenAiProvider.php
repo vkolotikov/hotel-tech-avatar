@@ -7,6 +7,7 @@ namespace App\Services\Llm\Providers;
 use App\Services\Llm\LlmRequest;
 use App\Services\Llm\LlmResponse;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 final class OpenAiProvider implements ProviderInterface
 {
@@ -53,13 +54,24 @@ final class OpenAiProvider implements ProviderInterface
         $latencyMs = (int) round((microtime(true) - $start) * 1000);
 
         if (!$response->successful()) {
-            // Include the response body so upstream catch blocks and logs
-            // surface the actual OpenAI reason (model not available, rate
-            // limit, invalid param, etc.) rather than a bare HTTP code.
-            $body = (string) $response->body();
-            $snippet = mb_strlen($body) > 500 ? mb_substr($body, 0, 500) . '…' : $body;
+            // Log the full response body to Laravel logs so we can
+            // diagnose remotely without needing the on-device alert
+            // text. Sentry separately captures the exception. The
+            // exception message we throw includes a 500-char snippet
+            // for the immediate caller's catch path; the full body
+            // only goes to logs.
+            $rawBody = (string) $response->body();
+            Log::error('OpenAI chat failed', [
+                'status'      => $response->status(),
+                'model'       => $request->model,
+                'purpose'     => $request->purpose,
+                'temperature' => $request->temperature,
+                'max_tokens'  => $request->maxTokens,
+                'body'        => $rawBody,
+            ]);
+            $snippet = mb_strlen($rawBody) > 500 ? mb_substr($rawBody, 0, 500) . '…' : $rawBody;
             throw new \RuntimeException(
-                "OpenAI chat failed (HTTP {$response->status()}): {$snippet}"
+                "OpenAI chat failed (HTTP {$response->status()}, model={$request->model}): {$snippet}"
             );
         }
 
