@@ -79,6 +79,12 @@ return [
         'max_knowledge_chars'  => env('OPENAI_MAX_KNOWLEDGE_CHARS', 12000),
         'tts_model'            => env('OPENAI_TTS_MODEL', 'gpt-4o-mini-tts'),
         'transcribe_model'     => env('OPENAI_TRANSCRIBE_MODEL', 'gpt-4o-transcribe'),
+        // Voice-mode clips run up to 45 s, and Whisper's processing
+        // adds another 5–10 s on long clips. The shared chat timeout
+        // (45 s) is too tight for transcription specifically — set
+        // a separate 90 s budget so a slow clip never times out at
+        // the network layer before Whisper gets a chance to reply.
+        'transcribe_timeout'   => env('OPENAI_TRANSCRIBE_TIMEOUT_SECONDS', 90),
         // Responses API tuning (gpt-5/o-series only — the provider
         // gates on model id so sending these to gpt-4o is a no-op).
         // 'low' is the official recommendation for chat-style turns;

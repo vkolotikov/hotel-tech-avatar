@@ -336,7 +336,10 @@ class ConversationController extends Controller
     public function transcribe(Request $request, Conversation $conversation): JsonResponse
     {
         $this->ensureOwnership($request, $conversation);
-        $request->validate(['file' => 'required|file|max:6144']);
+        $request->validate([
+            'file'     => 'required|file|max:6144',
+            'language' => 'nullable|string|size:2',
+        ]);
 
         $file    = $request->file('file');
         $tmpPath = $file->getRealPath();
@@ -361,14 +364,85 @@ class ConversationController extends Controller
         $openai   = app(OpenAiService::class);
         $filename = 'voice-input.' . $ext;
 
-        // Pass the user's preferred language to Whisper so transcription
-        // doesn't drift into a different language (especially common
-        // when the user speaks softly or the device mic picks up
-        // ambient noise). Falls back to auto-detect when not set.
-        $language = $request->user()?->profile?->preferred_language;
-        $text     = $openai->transcribe($tmpPath, null, $filename, $language);
+        // Resolve the language hint through a fallback chain so Whisper
+        // never has to auto-detect when we already know what the user
+        // is speaking. Auto-detect was the source of voice-mode
+        // language drift — bilingual users would get one turn in
+        // English, the next in Russian, and the avatar's reply would
+        // try to honour both inconsistently.
+        //
+        //   1. Form field — sent by the mobile client with the active
+        //      i18n locale (covers anonymous users + profile drift).
+        //   2. Authenticated user's profile.preferred_language — what
+        //      the user picked in onboarding/settings.
+        //   3. Accept-Language header — last-ditch hint from the HTTP
+        //      stack for old clients that haven't been upgraded.
+        //   4. null — let Whisper auto-detect (legacy behaviour).
+        $language = $this->resolveLanguageHint($request);
 
-        return response()->json(['text' => $text]);
+        // Domain context dramatically improves accuracy on terms
+        // Whisper otherwise garbles ("Nora" → "Nara", "ferritin" →
+        // "ferret in", PMID → "P MID"). The avatar name + a short
+        // wellness scope statement is enough; we don't need to dump
+        // the full system prompt in here.
+        $promptHint = $this->buildTranscribePrompt($conversation);
+
+        $text = $openai->transcribe($tmpPath, null, $filename, $language, $promptHint);
+
+        return response()->json(['text' => $text, 'language' => $language]);
+    }
+
+    /**
+     * Walk the fallback chain to find the best language hint for
+     * Whisper. Returns a 2-letter ISO 639-1 code or null.
+     */
+    private function resolveLanguageHint(Request $request): ?string
+    {
+        // Form field beats everything — the mobile client knows the
+        // UI locale even when the user is anonymous.
+        $fromForm = $request->input('language');
+        if (is_string($fromForm) && strlen($fromForm) === 2) {
+            return strtolower($fromForm);
+        }
+
+        // Authenticated user's saved preference.
+        $fromProfile = $request->user()?->profile?->preferred_language;
+        if (is_string($fromProfile) && strlen($fromProfile) === 2) {
+            return strtolower($fromProfile);
+        }
+
+        // Accept-Language header. Take the first 2-letter code.
+        $header = (string) $request->header('Accept-Language', '');
+        if ($header !== '') {
+            $first = strtolower(substr(trim(explode(',', $header)[0]), 0, 2));
+            if (preg_match('/^[a-z]{2}$/', $first)) {
+                return $first;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Short prompt that biases Whisper toward our wellness vocabulary
+     * + the active avatar's name. Per OpenAI's transcription guide,
+     * this is most useful for proper nouns, acronyms, and domain
+     * jargon — exactly where we were seeing transcription drift.
+     */
+    private function buildTranscribePrompt(Conversation $conversation): string
+    {
+        $agentName = $conversation->agent?->name ?? 'wellness coach';
+        $vertical  = $conversation->agent?->vertical?->slug ?? 'wellness';
+
+        if ($vertical === 'wellness') {
+            return "Wellness conversation with {$agentName}. "
+                . 'Topics may include nutrition, sleep, fitness, mindfulness, skin care, '
+                . 'functional medicine, vitamins (B12, vitamin D), labs (CBC, ferritin, TSH, HbA1c), '
+                . 'and supplements. Avatar names: Nora, Luna, Zen, Axel, Aura, Dr. Integra. '
+                . 'Citations like PMID:12345678 may be spoken.';
+        }
+
+        return "Conversation with {$agentName}.";
     }
 
     /** Text-to-speech. */

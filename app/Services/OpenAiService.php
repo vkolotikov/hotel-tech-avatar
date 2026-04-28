@@ -26,24 +26,59 @@ class OpenAiService
      * dramatically reduces transcription drift in voice mode — without
      * it, a user speaking Latvian into a Russian-detected stream would
      * come back as garbled mixed text. Null = auto-detect (legacy).
+     *
+     * `$prompt` is an optional context hint OpenAI uses to bias the
+     * model toward expected vocabulary — proper nouns (avatar names),
+     * domain jargon (lab abbreviations, supplement names), and
+     * acronyms (PMID, HbA1c). Per the OpenAI transcription guide this
+     * is the most cost-effective accuracy boost we can do here. Max
+     * 224 tokens; we keep ours well under that.
+     *
+     * Timeout: dedicated `transcribe_timeout` config (default 90s)
+     * because voice-mode clips can be up to 45 s of audio + Whisper's
+     * own model latency, which sometimes exceeds the chat 45s timeout
+     * we used previously.
      */
-    public function transcribe(string $audioPath, string $model = null, string $filename = null, ?string $language = null): string
-    {
+    public function transcribe(
+        string $audioPath,
+        string $model = null,
+        string $filename = null,
+        ?string $language = null,
+        ?string $prompt = null,
+    ): string {
         $model    = $model ?? config('services.openai.transcribe_model', 'gpt-4o-transcribe');
         $filename = $filename ?: basename($audioPath);
+        $timeout  = (int) config('services.openai.transcribe_timeout', 90);
 
         $payload = ['model' => $model];
         if ($language) {
             $payload['language'] = $language;
         }
+        if ($prompt !== null && $prompt !== '') {
+            // Trim defensively to stay well under the 224-token API
+            // limit — even at one token per word the cap is generous,
+            // but keeping it short also keeps prompt costs down.
+            $payload['prompt'] = mb_substr($prompt, 0, 600);
+        }
 
         $response = Http::withToken($this->apiKey)
-            ->timeout($this->timeout)
+            ->timeout($timeout)
             ->attach('file', file_get_contents($audioPath), $filename)
             ->post("{$this->baseUrl}/audio/transcriptions", $payload);
 
         if (!$response->successful()) {
-            throw new \RuntimeException('Transcription failed: ' . $response->body());
+            // Log full body so deploy-time issues are diagnosable; the
+            // exception message stays short for the catch path.
+            \Illuminate\Support\Facades\Log::error('OpenAI transcribe failed', [
+                'status'   => $response->status(),
+                'model'    => $model,
+                'language' => $language,
+                'prompt'   => $prompt !== null ? mb_substr((string) $prompt, 0, 200) : null,
+                'body'     => $response->body(),
+            ]);
+            throw new \RuntimeException(
+                "Transcription failed (HTTP {$response->status()}, model={$model})"
+            );
         }
 
         return $response->json('text', '');

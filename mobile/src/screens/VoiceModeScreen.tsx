@@ -36,10 +36,21 @@ type Props = {
   onClose: () => void;
 };
 
-const SILENCE_THRESHOLD_DB = -40;
-const SILENCE_HOLD_MS = 1200;
-const MIN_RECORDING_MS = 600;
-const MAX_RECORDING_MS = 30_000;
+// Endpoint-detection tuning. Previous values (-40 dB, 1200 ms) cut
+// users off mid-sentence: natural speech routinely pauses 1.5–2 s for
+// breath/thinking, and soft voices dip below -40 dB even mid-word. The
+// values below were validated by re-running real users from the
+// 2026-04-28 voice-mode bug report.
+//   - threshold -50 dB: catches quiet voices without picking up
+//     keyboard typing or distant conversations
+//   - hold 1800 ms: lets a complete thought finish ("a high-protein
+//     lunch ... [breath] ... that's filling") without losing it
+//   - min 800 ms: a quick "yes" or "no" still ends the turn
+//   - max 45 s: long enough to dictate a full health concern
+const SILENCE_THRESHOLD_DB = -50;
+const SILENCE_HOLD_MS = 1800;
+const MIN_RECORDING_MS = 800;
+const MAX_RECORDING_MS = 45_000;
 const METERING_INTERVAL_MS = 120;
 
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking' | 'paused' | 'error';
