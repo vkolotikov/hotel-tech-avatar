@@ -17,6 +17,7 @@ class Agent extends Model
         'avatar_image_url', 'chat_background_url', 'intro_video_url',
         'system_instructions', 'knowledge_text', 'knowledge_files_json', 'knowledge_sources_json',
         'openai_model', 'openai_voice',
+        'reasoning_effort', 'verbosity',
         'liveavatar_avatar_id', 'liveavatar_voice_id', 'liveavatar_context_id',
         'use_advanced_ai', 'openai_vector_store_id',
         'knowledge_sync_status', 'knowledge_synced_at', 'knowledge_last_error',

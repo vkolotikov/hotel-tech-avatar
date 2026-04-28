@@ -45,6 +45,8 @@ const elements = {
   knowledgeFiles: document.getElementById('knowledge_files'),
   openAiModel: document.getElementById('openai_model'),
   openAiVoice: document.getElementById('openai_voice'),
+  reasoningEffort: document.getElementById('reasoning_effort'),
+  verbosity: document.getElementById('verbosity'),
   useAdvancedAi: document.getElementById('use_advanced_ai'),
   deleteAgent: document.getElementById('delete-agent'),
   knowledgeDropzone: document.getElementById('knowledge-dropzone'),
@@ -663,6 +665,8 @@ function fillForm(agent) {
   elements.knowledgeText.value = agent.knowledge_text || '';
   setModelValue(agent.openai_model || getDefaultModel());
   setVoiceValue(agent.openai_voice || getDefaultVoice());
+  if (elements.reasoningEffort) elements.reasoningEffort.value = agent.reasoning_effort || '';
+  if (elements.verbosity) elements.verbosity.value = agent.verbosity || '';
   elements.knowledgeFiles.value = Array.isArray(agent.knowledge_files)
     ? agent.knowledge_files.join('\n')
     : '';
@@ -889,6 +893,8 @@ function buildPayload() {
     handoff_rules_json: collectRulesFrom(elements.handoffList, 'handoff_rules'),
     openai_model: elements.openAiModel.value.trim() || null,
     openai_voice: elements.openAiVoice.value.trim() || null,
+    reasoning_effort: elements.reasoningEffort?.value?.trim() || null,
+    verbosity: elements.verbosity?.value?.trim() || null,
     use_advanced_ai: elements.useAdvancedAi.checked,
     is_published: elements.isPublished.checked,
   };

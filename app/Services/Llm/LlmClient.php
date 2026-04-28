@@ -70,10 +70,7 @@ class LlmClient
             'completion_tokens' => $response->completionTokens,
             'latency_ms' => $response->latencyMs,
             'trace_id' => $response->traceId,
-            'metadata' => [
-                'temperature' => $request->temperature,
-                'max_tokens' => $request->maxTokens,
-            ],
+            'metadata' => $this->ledgerMetadata($request),
         ]);
     }
 
@@ -93,11 +90,27 @@ class LlmClient
             'completion_tokens' => null,
             'latency_ms' => null,
             'trace_id' => $traceId,
-            'metadata' => [
-                'error_class' => $e::class,
-                'temperature' => $request->temperature,
-                'max_tokens' => $request->maxTokens,
-            ],
+            'metadata' => array_merge(
+                ['error_class' => $e::class],
+                $this->ledgerMetadata($request),
+            ),
         ]);
+    }
+
+    /**
+     * Knobs we record per call. Includes the new Responses-API tuning
+     * (reasoning effort, verbosity) so admin analytics can correlate
+     * cost / latency / quality with tuning choices once we start
+     * varying them per agent.
+     */
+    private function ledgerMetadata(LlmRequest $request): array
+    {
+        $meta = [
+            'temperature' => $request->temperature,
+            'max_tokens'  => $request->maxTokens,
+        ];
+        if ($request->reasoningEffort !== null) $meta['reasoning_effort'] = $request->reasoningEffort;
+        if ($request->verbosity !== null)        $meta['verbosity']        = $request->verbosity;
+        return $meta;
     }
 }

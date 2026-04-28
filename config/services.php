@@ -61,10 +61,12 @@ return [
     'openai' => [
         'api_key'              => env('OPENAI_API_KEY', ''),
         'base_url'             => env('OPENAI_API_BASE_URL', 'https://api.openai.com/v1'),
-        // gpt-4o is our known-good default for this OpenAI account. gpt-5.4
-        // is the documented flagship, but access isn't universal — switch
-        // via OPENAI_MODEL_DEFAULT in env when your account is cleared.
-        'model'                => env('OPENAI_MODEL_DEFAULT', 'gpt-4o'),
+        // Default model for the wellness vertical. gpt-5.5 is the
+        // current flagship and the recommended chat-quality default
+        // when Responses API is enabled (config('llm.openai_api_backend')
+        // = 'responses'). Override per-agent via the admin form or
+        // globally via OPENAI_MODEL_DEFAULT.
+        'model'                => env('OPENAI_MODEL_DEFAULT', 'gpt-5.5'),
         'timeout'              => env('OPENAI_TIMEOUT_SECONDS', 45),
         'temperature'          => env('OPENAI_TEMPERATURE', 0.3),
         // Default keeps natural-conversation replies short, but leaves
@@ -77,6 +79,17 @@ return [
         'max_knowledge_chars'  => env('OPENAI_MAX_KNOWLEDGE_CHARS', 12000),
         'tts_model'            => env('OPENAI_TTS_MODEL', 'gpt-4o-mini-tts'),
         'transcribe_model'     => env('OPENAI_TRANSCRIBE_MODEL', 'gpt-4o-transcribe'),
+        // Responses API tuning (gpt-5/o-series only — the provider
+        // gates on model id so sending these to gpt-4o is a no-op).
+        // 'low' is the official recommendation for chat-style turns;
+        // 'medium' is the API default and worth raising selectively
+        // for tasks that show measurable lift on the eval harness.
+        'reasoning_effort'     => env('OPENAI_REASONING_EFFORT', 'low'),
+        // 'low' yields noticeably more concise replies than the
+        // 'medium' default — what conversational chat wants. Users
+        // requesting plans/comparisons still get full structure
+        // because the prompt's success criteria ask for it.
+        'verbosity'            => env('OPENAI_VERBOSITY', 'low'),
     ],
 
     'saas' => [

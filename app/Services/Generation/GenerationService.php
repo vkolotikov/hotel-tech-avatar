@@ -169,17 +169,28 @@ final class GenerationService
             $history
         );
 
-        // Call LLM
+        // Call LLM. The strict JSON schema below replaces the older
+        // "describe the JSON shape in the prompt" pattern — gpt-5.5
+        // Structured Outputs validate the response server-side, which
+        // both improves adherence and lets us drop the schema text from
+        // the prompt itself (per the gpt-5.5 prompting guide).
+        $reasoningEffort = $agent->reasoning_effort
+            ?? (string) config('services.openai.reasoning_effort', 'low');
+        $verbosity = $agent->verbosity
+            ?? (string) config('services.openai.verbosity', 'low');
+
         try {
             $response = $this->llmClient->chat(new \App\Services\Llm\LlmRequest(
                 messages: $messages,
-                model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
+                model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-5.5'),
                 temperature: (float) config('services.openai.temperature', 0.3),
                 maxTokens: (int) config('services.openai.max_output_tokens', 1500),
                 tools: [],
                 purpose: 'generation',
                 messageId: null,
-                responseFormat: ['type' => 'json_object'],
+                responseFormat: $this->wellnessReplyJsonSchema(),
+                reasoningEffort: $reasoningEffort,
+                verbosity: $verbosity,
             ));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('GenerationService: LLM call failed', [
@@ -250,13 +261,15 @@ final class GenerationService
                 try {
                     $response = $this->llmClient->chat(new \App\Services\Llm\LlmRequest(
                         messages: $messages,
-                        model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-4o'),
+                        model: $agent->openai_model ?? (string) config('services.openai.model', 'gpt-5.5'),
                         temperature: (float) config('services.openai.temperature', 0.3),
                         maxTokens: (int) config('services.openai.max_output_tokens', 1500),
                         tools: [],
                         purpose: 'generation',
                         messageId: null,
-                        responseFormat: ['type' => 'json_object'],
+                        responseFormat: $this->wellnessReplyJsonSchema(),
+                        reasoningEffort: $reasoningEffort,
+                        verbosity: $verbosity,
                     ));
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::error('GenerationService: Revision LLM call failed', [
@@ -335,6 +348,54 @@ final class GenerationService
             'retrieval_used'         => $retrievedContext !== null && $retrievedContext->chunk_count > 0,
             'retrieval_source_count' => $retrievedContext?->chunk_count,
         ]);
+    }
+
+    /**
+     * Strict JSON schema for the wellness reply contract. With Structured
+     * Outputs (Responses API `text.format` / Chat Completions
+     * `response_format`), the model is constrained server-side to emit
+     * exactly this shape, so we no longer need to describe it in the
+     * system prompt. `strict: true` requires every property be listed in
+     * `required` and `additionalProperties: false` — that's the
+     * OpenAI-side contract for guaranteed schema adherence.
+     *
+     * Shape:
+     *   - reply        : the user-visible answer text, in the user's
+     *                    preferred language (system prompt enforces lang).
+     *   - suggestions  : up to 3 short follow-up prompts (≤80 chars each)
+     *                    rendered as quick-reply chips. Empty array is
+     *                    fine — strict mode requires the key to exist
+     *                    but the array can be empty.
+     */
+    private function wellnessReplyJsonSchema(): array
+    {
+        return [
+            'type'        => 'json_schema',
+            'json_schema' => [
+                'name'   => 'wellness_reply',
+                'strict' => true,
+                'schema' => [
+                    'type'                 => 'object',
+                    'additionalProperties' => false,
+                    'required'             => ['reply', 'suggestions'],
+                    'properties'           => [
+                        'reply' => [
+                            'type'        => 'string',
+                            'description' => "The user-visible answer in the user's preferred language. Plain prose, no JSON, no markdown fences.",
+                        ],
+                        'suggestions' => [
+                            'type'        => 'array',
+                            'description' => 'Up to 3 short follow-up prompts (≤80 chars) the user can tap. Empty array if nothing useful comes to mind.',
+                            'maxItems'    => 3,
+                            'items'       => [
+                                'type'      => 'string',
+                                'maxLength' => 80,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
     }
 
     /**

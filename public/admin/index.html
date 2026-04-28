@@ -80,6 +80,25 @@
               </button>
             </div>
           </label>
+          <label>
+            Reasoning Effort
+            <select id="reasoning_effort" name="reasoning_effort">
+              <option value="">Default (env)</option>
+              <option value="low">Low — fastest, best for chat</option>
+              <option value="medium">Medium — API default</option>
+              <option value="high">High — deeper reasoning</option>
+              <option value="xhigh">X-High — hardest reasoning</option>
+            </select>
+          </label>
+          <label>
+            Verbosity
+            <select id="verbosity" name="verbosity">
+              <option value="">Default (env)</option>
+              <option value="low">Low — concise replies</option>
+              <option value="medium">Medium — API default</option>
+              <option value="high">High — detailed replies</option>
+            </select>
+          </label>
           <label class="toggle-field">
             <input id="use_advanced_ai" name="use_advanced_ai" type="checkbox">
             <span>Advanced AI retrieval mode (File Search)</span>

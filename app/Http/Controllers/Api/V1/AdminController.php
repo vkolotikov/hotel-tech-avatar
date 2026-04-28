@@ -165,6 +165,8 @@ class AdminController extends Controller
             'prompt_suggestions_json.*' => 'string|max:200',
             'openai_model'           => 'nullable|string|max:120',
             'openai_voice'           => 'nullable|string|max:64',
+            'reasoning_effort'       => 'nullable|in:low,medium,high,xhigh',
+            'verbosity'              => 'nullable|in:low,medium,high',
             'use_advanced_ai'        => 'boolean',
             'is_published'           => 'boolean',
             'display_order'          => 'nullable|integer|min:0',

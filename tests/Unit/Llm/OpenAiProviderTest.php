@@ -64,8 +64,14 @@ class OpenAiProviderTest extends TestCase
             ));
             $this->fail('expected RuntimeException');
         } catch (\RuntimeException $e) {
+            // Exception now includes a 500-char snippet of the API body
+            // (OpenAI 4xx responses are JSON metadata about the request —
+            // model name, parameter validation — never user content), so
+            // operators can diagnose without trawling logs. Status, model,
+            // and the body snippet must all be present.
             $this->assertStringContainsString('HTTP 400', $e->getMessage());
-            $this->assertStringNotContainsString('bad', $e->getMessage(), 'exception message must not echo API body');
+            $this->assertStringContainsString('model=gpt-4o', $e->getMessage());
+            $this->assertStringContainsString('bad', $e->getMessage(), 'exception should surface the API error body for diagnosability');
         }
 
         Http::assertSent(fn ($req) => ($req->data()['store'] ?? null) === false);
