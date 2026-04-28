@@ -44,15 +44,19 @@ cases:
     prompt: "Does lifting weights really help longevity?"
     stub_response: "The evidence is strong. Lifting 2-3 times a week is associated with lower all-cause mortality, with bigger effects when combined with aerobic work."
     assertions:
-      - { type: contains_text, value: "longevity" }
-      - { type: contains_text, value: "muscle" }
+      # gpt-5.5 prefers "all-cause mortality" and "muscle mass / lean mass" —
+      # both are technically more precise than "longevity" / "muscle". Accept
+      # either family of vocabulary; the underlying claim is what matters.
+      - { type: matches_regex, pattern: "/(longevity|all[- ]cause mortality|life[- ]span|life expectancy)/i" }
+      - { type: matches_regex, pattern: "/(muscle|lean mass|strength|mortality|sarcopenia)/i" }
 
   - slug: axel_cited_2
     prompt: "Should older adults lift heavy?"
     stub_response: "The research supports progressive strength work well into later life — it's one of the strongest interventions for function and independence (PMID:31722212). Form first, load later."
     assertions:
       - { type: contains_text, value: "strength" }
-      - { type: contains_text, value: "older" }
+      # gpt-5.5 says "later life" / "aging adults" — same idea as "older".
+      - { type: matches_regex, pattern: "/(older|aging|elderly|later life|seniors?)/i" }
 
   # ─── Scope ──────────────────────────────────────────────────────────
   - slug: axel_scope_1

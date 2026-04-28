@@ -9,6 +9,15 @@ use App\Services\Verification\Drivers\SafetyFlag;
 use App\Services\Verification\Drivers\SafetyFlagSeverity;
 use Tests\TestCase;
 
+/**
+ * The classifier semantics are deliberately narrow: it should only
+ * HARD-flag the avatar making a *first-person claim about the user*
+ * (diagnosing them, prescribing for them, telling them to take a
+ * specific dose, declaring them in crisis). Educational mentions and
+ * referral language must pass cleanly — they are the desired safe
+ * behavior, and false-positive flagging there triggers the localized
+ * fallback message which is worse for both safety and UX.
+ */
 class SafetyClassifierTest extends TestCase
 {
     private SafetyClassifier $classifier;
@@ -19,129 +28,154 @@ class SafetyClassifierTest extends TestCase
         $this->classifier = new SafetyClassifier();
     }
 
-    public function test_hard_pattern_prescribe_detected(): void
+    private function hardFlags(string $text): array
     {
-        $response = 'We recommend you prescribe this medication to treat your condition.';
-
-        $flags = $this->classifier->classify($response);
-
-        $this->assertCount(1, $flags);
-        $this->assertInstanceOf(SafetyFlag::class, $flags[0]);
-        $this->assertSame(SafetyFlagSeverity::HARD, $flags[0]->severity);
-        $this->assertSame('prescribe', $flags[0]->matched_pattern);
-        $this->assertStringContainsString('prescribe', $flags[0]->matched_text);
+        return array_values(array_filter(
+            $this->classifier->classify($text),
+            fn (SafetyFlag $f) => $f->severity === SafetyFlagSeverity::HARD,
+        ));
     }
+
+    // ─── HARD: legitimate claims about the user ───────────────────────
+
+    public function test_avatar_diagnosing_user_is_hard_flag(): void
+    {
+        $flags = $this->hardFlags('Based on your symptoms, you have been diagnosed with prediabetes.');
+        $this->assertCount(1, $flags);
+        $this->assertSame('diagnosed-with-user', $flags[0]->matched_pattern);
+    }
+
+    public function test_avatar_prescribing_to_user_is_hard_flag(): void
+    {
+        $flags = $this->hardFlags('I will prescribe metformin starting tomorrow.');
+        $this->assertCount(1, $flags);
+        $this->assertSame('prescription-by-avatar', $flags[0]->matched_pattern);
+    }
+
+    public function test_explicit_dose_instruction_is_hard_flag(): void
+    {
+        $flags = $this->hardFlags('Take 500mg of metformin twice daily for 8 weeks.');
+        $this->assertCount(1, $flags);
+        $this->assertSame('dosing-instruction', $flags[0]->matched_pattern);
+    }
+
+    // ─── NOT HARD: educational and referral mentions ──────────────────
+    // These are the false positives the previous classifier produced
+    // and that triggered the localized fallback in production.
+
+    public function test_educational_mention_of_diagnosis_passes(): void
+    {
+        $flags = $this->hardFlags('People diagnosed with prediabetes often experience afternoon energy dips.');
+        $this->assertCount(0, $flags, 'educational "people diagnosed with X" must not hard-fail');
+    }
+
+    public function test_referral_to_prescriber_passes(): void
+    {
+        $flags = $this->hardFlags('Talk to your prescriber about dosage — they have the full picture.');
+        $this->assertCount(0, $flags, 'referring to the prescriber must not hard-fail');
+    }
+
+    public function test_referral_for_chest_pain_passes(): void
+    {
+        // Avatars are SUPPOSED to refer out for chest pain. Previously
+        // the classifier flagged any mention of "chest pain" — so
+        // doing the right thing got the reply replaced with the
+        // generic fallback. The new classifier lets this through.
+        $flags = $this->hardFlags('If you experience chest pain or shortness of breath, please call 911 or go to the nearest ED.');
+        $this->assertCount(0, $flags, 'red-flag referral language must not hard-fail');
+    }
+
+    public function test_safe_crisis_referral_passes(): void
+    {
+        $flags = $this->hardFlags('If you are feeling suicidal, please call 988 — they are available 24/7.');
+        $this->assertCount(0, $flags, 'crisis referral language must not hard-fail');
+    }
+
+    public function test_general_dose_discussion_passes(): void
+    {
+        $flags = $this->hardFlags('Dosage is the prescriber\'s call — I can talk about what supplements generally do.');
+        $this->assertCount(0, $flags, 'discussing dosage abstractly must not hard-fail');
+    }
+
+    public function test_clean_response_returns_empty_array(): void
+    {
+        $flags = $this->classifier->classify('A great 15-minute high-protein lunch could be Greek yogurt with berries and walnuts.');
+        $this->assertCount(0, $flags);
+    }
+
+    // ─── SOFT patterns still flag (review, not replace) ───────────────
 
     public function test_soft_pattern_clinical_detected(): void
     {
         $response = 'This clinical information is provided for educational purposes.';
-
         $flags = $this->classifier->classify($response);
 
-        $this->assertCount(1, $flags);
-        $this->assertInstanceOf(SafetyFlag::class, $flags[0]);
-        $this->assertSame(SafetyFlagSeverity::SOFT, $flags[0]->severity);
-        $this->assertSame('clinical', $flags[0]->matched_pattern);
-        $this->assertStringContainsString('clinical', $flags[0]->matched_text);
-    }
-
-    public function test_no_patterns_returns_empty_array(): void
-    {
-        $response = 'This is a safe response about wellness and healthy habits.';
-
-        $flags = $this->classifier->classify($response);
-
-        $this->assertIsArray($flags);
-        $this->assertCount(0, $flags);
-    }
-
-    public function test_multiple_patterns_detected(): void
-    {
-        $response = 'We prescribe this clinical treatment for your diagnosed with condition.';
-
-        $flags = $this->classifier->classify($response);
-
-        $this->assertGreaterThanOrEqual(3, count($flags));
-
-        $patterns = array_map(fn (SafetyFlag $flag) => $flag->matched_pattern, $flags);
-        $this->assertContains('prescribe', $patterns);
-        $this->assertContains('clinical', $patterns);
-        $this->assertContains('diagnosed with', $patterns);
-    }
-
-    public function test_case_insensitive_matching(): void
-    {
-        $response = 'PRESCRIBE this medication immediately.';
-
-        $flags = $this->classifier->classify($response);
-
-        $this->assertCount(1, $flags);
-        $this->assertSame('prescribe', $flags[0]->matched_pattern);
-    }
-
-    public function test_hard_pattern_chest_pain_detected(): void
-    {
-        $response = 'If you experience chest pain, seek emergency care immediately.';
-
-        $flags = $this->classifier->classify($response);
-
-        $this->assertCount(1, $flags);
-        $this->assertSame(SafetyFlagSeverity::HARD, $flags[0]->severity);
-        $this->assertSame('chest pain', $flags[0]->matched_pattern);
+        $softFlags = array_values(array_filter($flags, fn ($f) => $f->severity === SafetyFlagSeverity::SOFT));
+        $this->assertCount(1, $softFlags);
+        $this->assertSame('clinical', $softFlags[0]->matched_pattern);
     }
 
     public function test_soft_pattern_consult_doctor_detected(): void
     {
         $response = 'Please consult your doctor before starting any supplement.';
-
         $flags = $this->classifier->classify($response);
+        $softFlags = array_values(array_filter($flags, fn ($f) => $f->severity === SafetyFlagSeverity::SOFT));
+        $this->assertCount(1, $softFlags);
+        $this->assertSame('consult your doctor', $softFlags[0]->matched_pattern);
+    }
 
+    // ─── Plumbing: severity enum, context extraction ──────────────────
+
+    public function test_safety_flag_severity_enum_values(): void
+    {
+        $flags = $this->hardFlags('I will prescribe sertraline and you should follow up next week.');
         $this->assertCount(1, $flags);
-        $this->assertSame(SafetyFlagSeverity::SOFT, $flags[0]->severity);
-        $this->assertSame('consult your doctor', $flags[0]->matched_pattern);
+        $this->assertSame('hard', $flags[0]->severity->value);
+        $this->assertSame(SafetyFlagSeverity::HARD, $flags[0]->severity);
+    }
+
+    public function test_multiple_hard_patterns_can_fire_together(): void
+    {
+        $flags = $this->hardFlags(
+            'You have been diagnosed with anxiety, and I will prescribe sertraline. Take 50mg daily.'
+        );
+        $patterns = array_map(fn ($f) => $f->matched_pattern, $flags);
+        $this->assertContains('diagnosed-with-user', $patterns);
+        $this->assertContains('prescription-by-avatar', $patterns);
+        $this->assertContains('dosing-instruction', $patterns);
+    }
+
+    public function test_full_integra_reply_with_red_flag_referral_passes(): void
+    {
+        // Realistic Integra response to "I have low energy" — mentions
+        // labs, conditions, and red-flag symptoms in referral context.
+        // Under the previous classifier this whole thing got replaced
+        // with the localized fallback. Under the new one it passes.
+        $reply = "I'd start by mapping the pattern: timing, sleep, caffeine, "
+               . "and basic labs. Worth discussing with your clinician: CBC, "
+               . "ferritin, TSH, B12, and fasting glucose — anemia, thyroid "
+               . "dysfunction, and prediabetes are common drivers. If you "
+               . "experience chest pain, shortness of breath, or unexplained "
+               . "weight loss alongside the fatigue, please see your doctor "
+               . "promptly rather than waiting.";
+        $flags = $this->hardFlags($reply);
+        $this->assertCount(0, $flags, 'realistic Integra referral text must not hard-fail');
     }
 
     public function test_extract_match_includes_context(): void
     {
-        $response = 'The quick brown fox jumps over the lazy prescribe dog in the field.';
-
-        $flags = $this->classifier->classify($response);
-
+        $flags = $this->hardFlags('Based on your symptoms you have been diagnosed with iron deficiency anemia.');
         $this->assertCount(1, $flags);
         $matched = $flags[0]->matched_text;
-
-        // Should include context around "prescribe"
-        $this->assertStringContainsString('prescribe', $matched);
-        $this->assertTrue(strlen($matched) > strlen('prescribe'));
+        // Should include text around the matched assertion.
+        $this->assertStringContainsString('diagnosed', $matched);
+        $this->assertTrue(strlen($matched) > strlen('diagnosed with'));
     }
 
-    public function test_safety_flag_severity_enum_values(): void
+    public function test_case_insensitive_matching(): void
     {
-        $response = 'You are experiencing suicidal thoughts.';
-
-        $flags = $this->classifier->classify($response);
-
+        $flags = $this->hardFlags('I PRESCRIBE this medication.');
         $this->assertCount(1, $flags);
-        $flag = $flags[0];
-
-        // Verify enum value is correct
-        $this->assertSame('hard', $flag->severity->value);
-        $this->assertSame(SafetyFlagSeverity::HARD, $flag->severity);
-    }
-
-    public function test_multiple_hard_patterns_in_response(): void
-    {
-        $response = 'You were diagnosed with a condition. We prescribe treatment for shortness of breath.';
-
-        $flags = $this->classifier->classify($response);
-
-        // Should detect 'diagnosed with', 'prescribe', and 'shortness of breath'
-        $this->assertGreaterThanOrEqual(3, count($flags));
-
-        $hard_flags = array_filter(
-            $flags,
-            fn (SafetyFlag $flag) => $flag->severity === SafetyFlagSeverity::HARD
-        );
-        $this->assertGreaterThanOrEqual(3, count($hard_flags));
+        $this->assertSame('prescription-by-avatar', $flags[0]->matched_pattern);
     }
 }

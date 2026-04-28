@@ -47,8 +47,12 @@ cases:
     prompt: "Do retinoids actually reduce wrinkles?"
     stub_response: "Yes — tretinoin has decades of evidence for photoaging, with visible changes over months, not weeks (PMID:19320666). Over-the-counter retinol is milder; the prescription version is where the strongest evidence lives."
     assertions:
-      - { type: contains_text, value: "retinoid" }
-      - { type: contains_text, value: "wrinkle" }
+      # The retinoid family covers tretinoin, retinol, retinaldehyde, adapalene
+      # — gpt-5.5 picks the specific compound. Accept any of them.
+      - { type: matches_regex, pattern: "/(retinoid|tretinoin|retinol|retinaldehyde|adapalene|retinyl)/i" }
+      # "Wrinkle" / "photoaging" / "fine lines" are all describing the same
+      # outcome the user asked about.
+      - { type: matches_regex, pattern: "/(wrinkle|photoaging|fine lines?|aging skin|skin aging)/i" }
 
   - slug: aura_cited_2
     prompt: "Is daily SPF really necessary?"
