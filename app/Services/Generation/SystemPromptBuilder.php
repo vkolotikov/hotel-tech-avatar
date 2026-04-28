@@ -305,13 +305,12 @@ final class SystemPromptBuilder
         };
         if (!$name) return null;
 
-        return "# Language\n"
-            . "REPLY IN {$name} (ISO code: {$code}). Every message must be written in {$name}, "
-            . "including markdown headings, table headers, and follow-up questions. "
-            . "Citations stay as-is (PMID:1234, etc) — those are technical identifiers, not prose. "
-            . "If the user writes in a different language, still reply in {$name} unless they "
-            . "explicitly ask to switch. Avatar names (Nora, Luna, Zen, Axel, Aura, Dr. Integra) "
-            . "and the brand name (Hexalife) stay in their original form.";
+        return "# Language (HIGHEST priority — overrides defaults)\n"
+            . "EVERY word you produce must be in {$name} (ISO {$code}). This is non-negotiable.\n"
+            . "Applies to: the `reply` field, every `suggestions` string, all markdown headings, table headers and cells, bullet labels, follow-up questions, error messages, refusals.\n"
+            . "Exceptions (keep as-is): citation tokens (PMID:1234, USDA FDC ID:173410, URLs), avatar names (Nora, Luna, Zen, Axel, Aura, Dr. Integra), the brand name (Hexalife), and exact food/medicine/scientific names that don't have a natural translation.\n"
+            . "If the user writes in a different language, still reply in {$name} unless they explicitly ask to switch. Don't auto-detect their typing language and switch back — they picked {$name} on purpose.\n"
+            . "If your training default is English and you catch yourself drafting in English, STOP and rewrite in {$name} before sending.";
     }
 
     private function renderUserContext(?UserProfile $profile, ?string $userDisplayName): ?string
@@ -571,8 +570,9 @@ final class SystemPromptBuilder
     private function conversationStyleBlock(): string
     {
         return "# Conversation style\n"
-            . "Reply SHORT by default — 2 to 4 sentences, like a real chat. Don't dump lists or long explanations unless the user asks for detail.\n"
-            . "If useful, end your reply with ONE natural follow-up question.\n\n"
+            . "Answer the user's question DIRECTLY first. If they asked something specific, give them the answer. Don't deflect with a clarifying question unless their input was genuinely ambiguous (e.g. \"is X safe?\" → safe for whom? in what dose?).\n"
+            . "Keep replies SHORT by default — 2 to 4 sentences, like a real chat. Don't dump lists or long explanations unless the user asks for detail.\n"
+            . "Follow-up questions are OPTIONAL, not required. Add one ONLY if it would genuinely help (e.g. user said \"I'm tired\" — fine to ask about sleep hours). Otherwise end the reply when you've answered. Forcing a question every turn makes the chat feel evasive.\n\n"
             . "## When the user asks for structured output\n"
             . "When the user requests a meal plan, schedule, comparison, list of options, recipe, plan, table, breakdown, or any structured set of items — DELIVER IT IN FULL. Do not announce it (\"here is a meal plan…\") and then stop short. Do not omit details to keep things brief. The user asked for substance, give them substance.\n"
             . "Format structured output using markdown so the mobile app can render it cleanly:\n"
@@ -589,12 +589,14 @@ final class SystemPromptBuilder
             . "Markdown is rendered visually — never use it for decoration in conversational replies, only when it carries structure.\n\n"
             . "## Output contract\n"
             . "Always return a JSON object with this exact shape and nothing else:\n"
-            . "{\n  \"reply\": \"your answer here (markdown allowed in this string)\",\n  \"suggestions\": [\"short follow-up 1\", \"short follow-up 2\", \"Tell me more\"]\n}\n"
+            . "{\n  \"reply\": \"your answer here (markdown allowed in this string)\",\n  \"suggestions\": [\"short next-tap 1\", \"short next-tap 2\"]\n}\n"
             . "Rules for suggestions:\n"
-            . "- 2 to 3 items, each under 50 characters.\n"
-            . "- First two are natural next questions the user might want to tap.\n"
-            . "- If your reply was short (default), include \"Tell me more\" as the last item so the user can request detail.\n"
-            . "- If you delivered a long structured answer, drop \"Tell me more\" — offer concrete next questions instead.\n"
-            . "- Red-flag rules and handoffs OVERRIDE normal replies. When a red-flag matches, reply with the exact canned text and set suggestions to a single entry \"I understand\".";
+            . "- 0 to 3 items, each under 50 characters.\n"
+            . "- They are user-tappable shortcuts to a likely next question, NOT follow-up questions you ask. From the user's perspective.\n"
+            . "- Empty list (`[]`) is fine when no obvious next step exists. Do NOT pad with generic items.\n"
+            . "- Red-flag rules and handoffs OVERRIDE normal replies. When a red-flag matches, reply with the exact canned text and set suggestions to `[]`.\n\n"
+            . "## Final reminders\n"
+            . "- The reply field AND every suggestion string must be in the user's language declared at the top of this prompt. Do NOT switch to English mid-reply, mid-suggestion, or for follow-ups.\n"
+            . "- When unsure between answering and asking, ANSWER. The user came here to learn — don't make them work for it.";
     }
 }

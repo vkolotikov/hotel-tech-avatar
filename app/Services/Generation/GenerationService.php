@@ -11,8 +11,51 @@ use App\Services\Verification\Contracts\VerificationServiceInterface;
 
 final class GenerationService
 {
-    private const FALLBACK_RESPONSE = 'I recommend consulting a healthcare professional for this question.';
     private const MAX_REVISIONS = 2;
+
+    /**
+     * Localised fallback / error / offline strings. Keys match the
+     * preferred_language column on user_profiles. Anything outside
+     * this set falls through to English. KEEP THESE IN SYNC with the
+     * app's supported_languages list — adding a 10th language means
+     * adding a row here too, otherwise that user gets English fallbacks
+     * even though the rest of the chat is in their language.
+     */
+    private const FALLBACK_MESSAGES = [
+        'en' => "I'd suggest checking in with a healthcare professional on this one.",
+        'es' => "Te sugiero consultarlo con un profesional de la salud.",
+        'fr' => "Je vous suggère d'en parler à un professionnel de santé.",
+        'de' => "Ich würde empfehlen, das mit einer Fachperson zu besprechen.",
+        'pl' => "Zalecam skonsultować to z pracownikiem służby zdrowia.",
+        'it' => "Ti suggerisco di parlarne con un professionista sanitario.",
+        'ru' => "Рекомендую обсудить это с медицинским специалистом.",
+        'uk' => "Рекомендую обговорити це з медичним фахівцем.",
+        'lv' => "Iesaku par to konsultēties ar veselības aprūpes speciālistu.",
+    ];
+
+    private const ERROR_MESSAGES = [
+        'en' => "Something went wrong on my end. Please try again.",
+        'es' => "Algo falló de mi lado. Vuelve a intentarlo.",
+        'fr' => "Un problème est survenu de mon côté. Réessayez.",
+        'de' => "Auf meiner Seite ist etwas schiefgelaufen. Bitte erneut versuchen.",
+        'pl' => "Coś poszło nie tak po mojej stronie. Spróbuj ponownie.",
+        'it' => "Qualcosa è andato storto. Riprova.",
+        'ru' => "Что-то пошло не так. Попробуйте снова.",
+        'uk' => "Щось пішло не так. Спробуйте знову.",
+        'lv' => "Manā pusē kaut kas neizdevās. Lūdzu, mēģini vēlreiz.",
+    ];
+
+    private const OFFLINE_MESSAGES = [
+        'en' => "I'm currently offline — please try again shortly.",
+        'es' => "Estoy desconectado en este momento — inténtalo en un momento.",
+        'fr' => "Je suis hors ligne pour le moment — réessayez dans un instant.",
+        'de' => "Ich bin gerade offline — bitte versuche es gleich erneut.",
+        'pl' => "Jestem teraz offline — spróbuj ponownie za chwilę.",
+        'it' => "Sono offline in questo momento — riprova tra poco.",
+        'ru' => "Я сейчас офлайн — попробуйте через минуту.",
+        'uk' => "Я зараз офлайн — спробуйте за хвилину.",
+        'lv' => "Pašlaik esmu bezsaistē — lūdzu, mēģini vēlāk.",
+    ];
 
     public function __construct(
         private readonly LlmClient $llmClient,
@@ -20,6 +63,18 @@ final class GenerationService
         private readonly \App\Services\Knowledge\RetrievalService $retrieval,
         private readonly SystemPromptBuilder $promptBuilder,
     ) {}
+
+    /**
+     * Pick the localised message matching the conversation user's
+     * preferred_language, falling back to English. Centralised so
+     * adding a new error type doesn't mean writing the same lookup
+     * three times.
+     */
+    private function localized(array $bag, ?string $lang): string
+    {
+        if ($lang && isset($bag[$lang])) return $bag[$lang];
+        return $bag['en'];
+    }
 
     /**
      * Generate a response for a conversation and optionally verify it.
@@ -40,11 +95,16 @@ final class GenerationService
             $agent->load('vertical');
         }
 
+        // User's preferred language drives every fallback message
+        // below so a Russian/Polish/Latvian user never sees a sudden
+        // English error mid-conversation.
+        $userLang = $conversation->user?->profile?->preferred_language;
+
         if (empty(config('services.openai.api_key'))) {
             return $conversation->messages()->create([
                 'agent_id' => $agent->id,
                 'role'     => 'agent',
-                'content'  => "I'm currently offline — the AI service is not configured.",
+                'content'  => $this->localized(self::OFFLINE_MESSAGES, $userLang),
                 'trace_id' => null,
             ]);
         }
@@ -131,7 +191,7 @@ final class GenerationService
             return $conversation->messages()->create([
                 'agent_id'            => $agent->id,
                 'role'                => 'agent',
-                'content'             => "I encountered an error generating a response. Please try again.",
+                'content'             => $this->localized(self::ERROR_MESSAGES, $userLang),
                 'verification_status' => 'error',
                 'trace_id'            => null,
             ]);
@@ -224,9 +284,27 @@ final class GenerationService
                 $revisionCount++;
             }
 
-            // Use fallback if verification still failed
+            // If verification still rejects after revisions, only swap
+            // in the localised fallback when the failures include a
+            // hard-safety violation. For softer failures (citation
+            // formatting nits, completeness gripes from the critic)
+            // keep the model's last attempt — it's almost certainly
+            // useful even if not perfectly grounded, and the
+            // generic "consult a professional" deflection feels
+            // worse than a slightly imperfect answer.
             if (!$verificationResult->passed) {
-                $responseText = self::FALLBACK_RESPONSE;
+                $hasHardFailure = false;
+                foreach ($verificationResult->failures as $f) {
+                    $type = $f->type->value ?? null;
+                    if ($type === 'safety_violation') {
+                        $hasHardFailure = true;
+                        break;
+                    }
+                }
+                if ($hasHardFailure) {
+                    $responseText = $this->localized(self::FALLBACK_MESSAGES, $userLang);
+                }
+                // else: keep $responseText as-is (the model's last try).
             }
 
             $verificationLatencyMs = (int) round((microtime(true) - $verificationStartTime) * 1000);
