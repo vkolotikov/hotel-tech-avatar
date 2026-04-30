@@ -10,13 +10,25 @@ function baseUrl(): string {
 }
 
 /**
- * The `language` field in the form body is a hint to Whisper /
- * gpt-4o-transcribe so it expects that language. The backend prefers
- * the user's profile.preferred_language when set; this client-side
- * value is the fallback for anonymous sessions and a sanity-check
- * against profile drift. Without it Whisper auto-detects, which
+ * Normalise i18n.language into a 2-letter ISO-639-1 code Whisper
+ * accepts, or null when the locale isn't resolvable (i18n hasn't
+ * initialised yet, weird locale id like "cimode"). Sending null
+ * lets the backend fall through to the user's profile preference.
+ */
+function ifValidLanguage(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  const head = String(raw).slice(0, 2).toLowerCase();
+  return /^[a-z]{2}$/.test(head) ? head : null;
+}
+
+/**
+ * The `language` field is a hint to Whisper / gpt-4o-transcribe so it
+ * expects that language. Without it Whisper auto-detects, which
  * routinely flips between languages mid-conversation for bilingual
- * users (e.g. a Russian L1 speaking soft English).
+ * users (e.g. a Russian L1 speaking soft English). The backend layers
+ * its own fallback chain (form → profile → Accept-Language → null)
+ * so omitting this field still works for users with a saved
+ * preferred_language.
  */
 export async function transcribeAudio(
   uri: string,
@@ -31,27 +43,39 @@ export async function transcribeAudio(
     name: 'recording.m4a',
     type: 'audio/m4a',
   } as any);
-  // ISO-639-1 — i18n.language is one of our 9 supported codes.
-  form.append('language', (i18n.language || 'en').slice(0, 2));
+  const lang = ifValidLanguage(i18n.language);
+  if (lang) form.append('language', lang);
 
-  const response = await fetch(
-    `${baseUrl()}/api/v1/conversations/${conversationId}/voice/transcribe`,
-    {
+  const url = `${baseUrl()}/api/v1/conversations/${conversationId}/voice/transcribe`;
+  // Visible in Metro so the user can confirm what's being uploaded.
+  console.log('[transcribe] POST', url, '| lang=', lang ?? 'auto', '| uri=', uri);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',
-        // Sent for backend language fallback chains that don't read
-        // form fields directly (e.g. middleware-level locale lookup).
-        'Accept-Language': i18n.language || 'en',
+        // Layer-2 fallback hint for the backend.
+        ...(lang ? { 'Accept-Language': lang } : {}),
       },
       body: form,
-    },
-  );
+    });
+  } catch (err) {
+    console.warn('[transcribe] fetch threw:', err);
+    throw err;
+  }
 
   if (!response.ok) {
-    throw new Error(`Transcribe failed: ${response.status}`);
+    let bodyText = '';
+    try { bodyText = await response.text(); } catch { /* ignore */ }
+    console.warn('[transcribe] HTTP', response.status, 'body:', bodyText.slice(0, 400));
+    throw new Error(`Transcribe failed: HTTP ${response.status}${bodyText ? ' — ' + bodyText.slice(0, 160) : ''}`);
   }
+
   const body = await response.json();
-  return { transcript: body.text ?? body.transcript ?? '' };
+  const transcript: string = body.text ?? body.transcript ?? '';
+  console.log('[transcribe] OK len=', transcript.length, '| serverLang=', body.language ?? '?');
+  return { transcript };
 }

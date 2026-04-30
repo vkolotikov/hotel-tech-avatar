@@ -338,7 +338,14 @@ class ConversationController extends Controller
         $this->ensureOwnership($request, $conversation);
         $request->validate([
             'file'     => 'required|file|max:6144',
-            'language' => 'nullable|string|size:2',
+            // Permissive on shape — `resolveLanguageHint` does the
+            // strict 2-letter ISO-639-1 normalisation. Tightening the
+            // request validation here just forces 422s on edge cases
+            // (locale-tagged "en-US", short prefixes from i18n init,
+            // empty string before locale resolves) when we can simply
+            // ignore those inputs and fall through to the next link
+            // in the fallback chain.
+            'language' => 'nullable|string|max:16',
         ]);
 
         $file    = $request->file('file');
@@ -395,29 +402,31 @@ class ConversationController extends Controller
     /**
      * Walk the fallback chain to find the best language hint for
      * Whisper. Returns a 2-letter ISO 639-1 code or null.
+     *
+     * Each link does its own normalisation so a slightly-malformed
+     * input ("en-US", "EN", "  ru  ") doesn't disqualify a link — we
+     * trim, lowercase, and take the leading 2 letters before checking
+     * format.
      */
     private function resolveLanguageHint(Request $request): ?string
     {
-        // Form field beats everything — the mobile client knows the
-        // UI locale even when the user is anonymous.
-        $fromForm = $request->input('language');
-        if (is_string($fromForm) && strlen($fromForm) === 2) {
-            return strtolower($fromForm);
-        }
+        $normalize = static function (mixed $raw): ?string {
+            if (!is_string($raw)) return null;
+            $head = strtolower(substr(trim($raw), 0, 2));
+            return preg_match('/^[a-z]{2}$/', $head) ? $head : null;
+        };
 
-        // Authenticated user's saved preference.
-        $fromProfile = $request->user()?->profile?->preferred_language;
-        if (is_string($fromProfile) && strlen($fromProfile) === 2) {
-            return strtolower($fromProfile);
-        }
+        // 1. Form field — what the mobile client sent on this request.
+        if ($code = $normalize($request->input('language'))) return $code;
 
-        // Accept-Language header. Take the first 2-letter code.
+        // 2. Authenticated user's saved preference.
+        if ($code = $normalize($request->user()?->profile?->preferred_language)) return $code;
+
+        // 3. Accept-Language header — take the first comma-segment.
         $header = (string) $request->header('Accept-Language', '');
         if ($header !== '') {
-            $first = strtolower(substr(trim(explode(',', $header)[0]), 0, 2));
-            if (preg_match('/^[a-z]{2}$/', $first)) {
-                return $first;
-            }
+            $first = trim(explode(',', $header)[0]);
+            if ($code = $normalize($first)) return $code;
         }
 
         return null;

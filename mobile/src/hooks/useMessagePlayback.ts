@@ -65,13 +65,15 @@ async function playInternal(key: ActiveKey, dataUrl: string): Promise<void> {
 
   let sound: Audio.Sound;
   try {
+    console.log('[playback] createAsync, dataUrl length=', dataUrl.length, 'prefix=', dataUrl.slice(0, 32));
     const result = await Audio.Sound.createAsync(
       { uri: dataUrl },
       { shouldPlay: true, volume: 1.0 },
     );
     sound = result.sound;
+    console.log('[playback] createAsync OK');
   } catch (err) {
-    console.warn('useMessagePlayback: createAsync failed', err);
+    console.warn('[playback] createAsync FAILED', err);
     throw err instanceof Error ? err : new Error(String(err));
   }
   currentSound = sound;

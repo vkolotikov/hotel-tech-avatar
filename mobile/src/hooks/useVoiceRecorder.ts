@@ -44,9 +44,12 @@ export function useVoiceRecorder(
         Audio.RecordingOptionsPresets.HIGH_QUALITY,
       );
       recordingRef.current = recording;
+      console.log('[dictation] recording started');
       setState({ isRecording: true, isTranscribing: false, error: null });
     } catch (error) {
+      console.warn('[dictation] start failed', error);
       setState({ isRecording: false, isTranscribing: false, error: error as Error });
+      Alert.alert('Recording failed', (error as Error).message ?? 'Unknown error starting recorder');
     }
   }, []);
 
@@ -58,11 +61,13 @@ export function useVoiceRecorder(
       setState((s) => ({ ...s, isRecording: false, isTranscribing: true }));
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
+      console.log('[dictation] stop OK, uri=', uri);
       if (!uri) throw new Error('No recording URI');
       const { transcript } = await transcribeAudio(uri, conversationId);
       onTranscript(transcript);
       setState({ isRecording: false, isTranscribing: false, error: null });
     } catch (error) {
+      console.warn('[dictation] stop/transcribe failed', error);
       setState({ isRecording: false, isTranscribing: false, error: error as Error });
       Alert.alert('Transcription failed', (error as Error).message);
     }

@@ -20,6 +20,9 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
 /**
  * POSTs to the conversation's /voice/speak endpoint and returns a
  * data: URL that can be fed straight into expo-av Audio.Sound.
+ *
+ * Errors are deliberately verbose: a failure here is otherwise silent
+ * unless we surface the HTTP status / body / blob size to Metro.
  */
 export async function fetchSpeechDataUrl(
   conversationId: number,
@@ -28,9 +31,12 @@ export async function fetchSpeechDataUrl(
   const token = await SecureStore.getItemAsync(TOKEN_KEY);
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(
-    `${baseUrl()}/api/v1/conversations/${conversationId}/voice/speak`,
-    {
+  const url = `${baseUrl()}/api/v1/conversations/${conversationId}/voice/speak`;
+  console.log('[speak] POST', url, '| chars=', text.length);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -38,13 +44,34 @@ export async function fetchSpeechDataUrl(
         Accept: 'audio/mpeg',
       },
       body: JSON.stringify({ text }),
-    },
-  );
+    });
+  } catch (err) {
+    console.warn('[speak] fetch threw:', err);
+    throw err;
+  }
 
   if (!response.ok) {
-    throw new Error(`Speak failed: ${response.status}`);
+    let bodyText = '';
+    try { bodyText = await response.text(); } catch { /* ignore */ }
+    console.warn('[speak] HTTP', response.status, 'body:', bodyText.slice(0, 400));
+    throw new Error(`Speak failed: HTTP ${response.status}${bodyText ? ' — ' + bodyText.slice(0, 160) : ''}`);
   }
 
   const blob = await response.blob();
-  return blobToDataUrl(blob);
+  const blobSize = (blob as any).size ?? -1;
+  const blobType = (blob as any).type ?? 'unknown';
+  console.log('[speak] OK blob size=', blobSize, '| type=', blobType);
+  if (blobSize <= 0) {
+    throw new Error(`Speak returned empty audio (size=${blobSize}, type=${blobType})`);
+  }
+
+  let dataUrl: string;
+  try {
+    dataUrl = await blobToDataUrl(blob);
+  } catch (err) {
+    console.warn('[speak] blobToDataUrl failed:', err);
+    throw err;
+  }
+  console.log('[speak] dataUrl ready, prefix=', dataUrl.slice(0, 40), '| length=', dataUrl.length);
+  return dataUrl;
 }

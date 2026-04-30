@@ -84,6 +84,14 @@ export function VoiceModeScreen({
   const recordingRef = useRef<Audio.Recording | null>(null);
   const lastLoudAtRef = useRef<number>(0);
   const recordingStartedAtRef = useRef<number>(0);
+  // Some Android devices (especially emulators) never report a
+  // `metering` field. Without this flag the silence-detection logic
+  // would interpret the missing meter as "always quiet" and end the
+  // recording at MIN_RECORDING_MS — chopping the user off mid-word.
+  // We track whether ANY meter sample arrived: if not, we disable the
+  // silence-end branch entirely and let MAX_RECORDING_MS or a manual
+  // tap close the recording instead.
+  const sawMeteringRef = useRef<boolean>(false);
   // Track whether the user has explicitly paused the loop. While paused,
   // the screen stays visible but won't auto-arm the mic; tapping the big
   // central button re-arms it.
@@ -197,6 +205,7 @@ export function VoiceModeScreen({
       recordingRef.current = recording;
       recordingStartedAtRef.current = Date.now();
       lastLoudAtRef.current = Date.now();
+      sawMeteringRef.current = false;
       setPhase('listening');
 
       recording.setOnRecordingStatusUpdate((status) => {
@@ -205,23 +214,42 @@ export function VoiceModeScreen({
         const elapsed = now - recordingStartedAtRef.current;
         const meter = (status as { metering?: number }).metering;
 
-        if (typeof meter === 'number' && meter > SILENCE_THRESHOLD_DB) {
-          lastLoudAtRef.current = now;
+        if (typeof meter === 'number') {
+          sawMeteringRef.current = true;
+          if (meter > SILENCE_THRESHOLD_DB) {
+            lastLoudAtRef.current = now;
+          }
         }
+
         const silentFor = now - lastLoudAtRef.current;
 
-        // Endpoint detection: enough audio recorded AND a long-enough
-        // silence at the end. Cap at MAX_RECORDING_MS so a stuck mic
-        // doesn't drain forever.
+        // Endpoint detection runs in two modes depending on whether
+        // the device actually reports microphone level:
+        //
+        //   meterring supported → end after MIN reached AND
+        //                         SILENCE_HOLD_MS of below-threshold
+        //                         audio at the tail.
+        //
+        //   metering missing → silence detection is unreliable; just
+        //                      run until MAX_RECORDING_MS or the user
+        //                      taps the mic to finish manually. This
+        //                      is what kicks in on Android emulators
+        //                      and on devices where the OS chooses
+        //                      not to surface meter values.
+        const meteringSupported = sawMeteringRef.current;
         if (
-          (elapsed > MIN_RECORDING_MS && silentFor > SILENCE_HOLD_MS) ||
+          (meteringSupported && elapsed > MIN_RECORDING_MS && silentFor > SILENCE_HOLD_MS) ||
           elapsed > MAX_RECORDING_MS
         ) {
+          if (!meteringSupported) {
+            console.log('[voice-mode] metering not reported by OS — falling back to MAX_RECORDING_MS endpoint');
+          }
           void finishListening();
         }
       });
     } catch (err) {
-      console.warn('Voice mode: failed to start recording', err);
+      console.warn('[voice-mode] failed to start recording', err);
+      Alert.alert('Voice mode error', (err as Error).message ?? 'Could not start the recorder.');
       setPhase('error');
     }
   }, []);
@@ -234,9 +262,11 @@ export function VoiceModeScreen({
     try {
       await r.stopAndUnloadAsync();
       const uri = r.getURI();
+      console.log('[voice-mode] recording stopped, uri=', uri);
       if (!uri) throw new Error('No recording URI');
       const { transcript } = await transcribeAudio(uri, conversationId);
       const text = (transcript ?? '').trim();
+      console.log('[voice-mode] transcript=', JSON.stringify(text.slice(0, 80)), 'len=', text.length);
       if (!text) {
         // Empty transcript — likely the user didn't speak. Re-arm.
         if (!pausedRef.current) {
@@ -248,12 +278,14 @@ export function VoiceModeScreen({
       }
 
       const replyText = await onUserSpoke(text);
+      console.log('[voice-mode] reply received, len=', replyText?.length ?? 0);
       if (replyText && replyText.trim().length > 0) {
         setPhase('speaking');
         try {
           await fetchAndPlay('voice-mode-reply', conversationId, replyText);
         } catch (err) {
-          console.warn('Voice mode: TTS playback failed', err);
+          console.warn('[voice-mode] TTS playback failed:', err);
+          Alert.alert('Voice playback failed', (err as Error).message ?? 'Unknown error');
           setPhase('paused');
         }
       } else {
@@ -269,7 +301,8 @@ export function VoiceModeScreen({
         );
       }
     } catch (err) {
-      console.warn('Voice mode: transcription failed', err);
+      console.warn('[voice-mode] transcription failed', err);
+      Alert.alert('Transcription failed', (err as Error).message ?? 'Unknown error transcribing audio');
       setPhase('error');
     }
   }, [conversationId, onUserSpoke, startListening]);
