@@ -17,7 +17,8 @@
     "no": "No",
     "preferNotToSay": "Prefer not to say",
     "errorTitle": "Something went wrong",
-    "tapToSet": "Tap to set"
+    "tapToSet": "Tap to set",
+    "clear": "Clear"
   },
   "auth": {
     "signIn": "Sign in",

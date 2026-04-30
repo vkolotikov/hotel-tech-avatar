@@ -129,7 +129,25 @@ final class UserProfileController extends Controller
 
         $profile = $user->profile ?? new UserProfile(['user_id' => $user->id]);
         $profile->fill($validated);
-        $profile->save();
+
+        try {
+            $profile->save();
+        } catch (\Throwable $e) {
+            // QueryException at save time almost always means a migration
+            // hasn't been applied (column missing) or a constraint is
+            // violated (NOT NULL with no default, varchar overflow,
+            // enum-like check). Log the field set + class name + message
+            // so we can diagnose in Laravel Cloud logs without enabling
+            // app.debug=true. We do NOT log the values themselves —
+            // profile data is sensitive (conditions, medications).
+            \Illuminate\Support\Facades\Log::error('UserProfile save failed', [
+                'user_id'         => $user->id,
+                'submitted_keys'  => array_keys($validated),
+                'exception_class' => get_class($e),
+                'message'         => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         return response()->json([
             'profile' => $this->present($profile->fresh()),

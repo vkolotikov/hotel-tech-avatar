@@ -17,7 +17,8 @@
     "no": "No",
     "preferNotToSay": "Prefiero no decirlo",
     "errorTitle": "Algo salió mal",
-    "tapToSet": "Toca para configurar"
+    "tapToSet": "Toca para configurar",
+    "clear": "Borrar"
   },
   "auth": {
     "signIn": "Iniciar sesión",

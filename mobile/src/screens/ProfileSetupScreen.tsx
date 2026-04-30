@@ -34,18 +34,11 @@ import {
   type StressLevel,
   type EatingPattern,
   type EatingSchedule,
-  type CookingSkill,
   type LivingSituation,
   type TravelFrequency,
   type FemaleStatus,
   type Contraception,
-  type MotivationTrigger,
   type GoalTimeline,
-  type CoachingTone,
-  type CoachingDetail,
-  type CoachingPace,
-  type CoachingStyle,
-  type AccountabilityStyle,
 } from '../api/profile';
 import { colors, spacing, radius, fontSize } from '../theme';
 
@@ -72,9 +65,14 @@ type StepKey =
   | 'life'
   | 'female'
   | 'goals'
-  | 'coaching'
   | 'review';
 
+// Onboarding flow shrunk on 2026-04-28: cooking/motivation/coaching slides
+// dropped per product feedback that they made the funnel feel longer
+// without driving meaningfully better avatar replies. The fields stay
+// in the DB schema (column drops would force everyone to re-onboard
+// for nothing) — the SystemPromptBuilder just renders empty when these
+// are null, which is the existing graceful-degradation path.
 const ALL_STEPS_SETUP: StepKey[] = [
   'language',
   'welcome',
@@ -89,7 +87,6 @@ const ALL_STEPS_SETUP: StepKey[] = [
   'life',
   'female',
   'goals',
-  'coaching',
   'review',
 ];
 
@@ -106,34 +103,47 @@ const ALL_STEPS_EDIT: StepKey[] = [
   'life',
   'female',
   'goals',
-  'coaching',
 ];
 
 // ─── Option catalogues — single source of truth ──────────────────────────
-// Defined at module scope so re-renders don't allocate fresh arrays.
+//
+// Built as factories that take the i18n `t` function so the chip labels
+// pick up the active language. Static structure (value, icon, emoji)
+// stays the same across languages; only the label/sub text varies.
+//
+// Adding a new language is purely a JSON file change — these factories
+// reference the existing locale keys (sex.*, ageBand.*, activity.*, …).
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
 type Option<T> = { value: T; label: string; icon?: IoniconName; emoji?: string; sub?: string };
 
-const SEX_OPTIONS: Option<NonNullable<SexAtBirth>>[] = [
-  { value: 'F', label: 'Female', icon: 'female-outline' },
-  { value: 'M', label: 'Male', icon: 'male-outline' },
-  { value: 'I', label: 'Intersex', icon: 'transgender-outline' },
+type T = (key: string) => string;
+
+const sexOptions = (t: T): Option<NonNullable<SexAtBirth>>[] => [
+  { value: 'F', label: t('profileSetup.sexFemale'),   icon: 'female-outline' },
+  { value: 'M', label: t('profileSetup.sexMale'),     icon: 'male-outline' },
+  { value: 'I', label: t('profileSetup.sexIntersex'), icon: 'transgender-outline' },
 ];
 
 const PRONOUN_OPTIONS = ['she/her', 'he/him', 'they/them', 'ze/zir', 'other'];
 
-const AGE_OPTIONS: Option<NonNullable<AgeBand>>[] = [
-  { value: 'under-18', label: 'Under 18' },
-  { value: '18-24', label: '18-24' },
-  { value: '25-34', label: '25-34' },
-  { value: '35-44', label: '35-44' },
-  { value: '45-54', label: '45-54' },
-  { value: '55-64', label: '55-64' },
-  { value: '65+', label: '65+' },
+const ageOptions = (t: T): Option<NonNullable<AgeBand>>[] => [
+  { value: 'under-18', label: t('ageBand.under-18') },
+  { value: '18-24',    label: t('ageBand.18-24') },
+  { value: '25-34',    label: t('ageBand.25-34') },
+  { value: '35-44',    label: t('ageBand.35-44') },
+  { value: '45-54',    label: t('ageBand.45-54') },
+  { value: '55-64',    label: t('ageBand.55-64') },
+  { value: '65+',      label: t('ageBand.65+') },
 ];
 
+// Ethnicity, allergies, conditions etc. are kept as label-keyed string
+// arrays because the *value stored in the DB* IS the label — changing
+// the label would orphan existing rows. To localise, MultiChip looks
+// up `multichip.{section}.{key}` if present and falls back to the raw
+// label so future languages can be added without breaking storage.
+// The keys below match `allergy.*`, `intolerance.*`, etc. in en.json.
 const ETHNICITY_OPTIONS = [
   'White / European',
   'Black / African',
@@ -147,118 +157,138 @@ const ETHNICITY_OPTIONS = [
   'Prefer not to say',
 ];
 
-const ACTIVITY_OPTIONS: Option<NonNullable<ActivityLevel>>[] = [
-  { value: 'sedentary', label: 'Sedentary', icon: 'bed-outline', sub: 'Mostly sitting' },
-  { value: 'light',     label: 'Light',     icon: 'walk-outline', sub: 'A few walks' },
-  { value: 'moderate',  label: 'Moderate',  icon: 'bicycle-outline', sub: '3-4 sessions/wk' },
-  { value: 'active',    label: 'Active',    icon: 'barbell-outline', sub: '5+ sessions/wk' },
-  { value: 'athlete',   label: 'Athlete',   icon: 'trophy-outline', sub: 'Compete or train daily' },
+const ETHNICITY_KEYS: Record<string, string> = {
+  'White / European':    'ethnicity.white',
+  'Black / African':     'ethnicity.black',
+  'East Asian':          'ethnicity.east-asian',
+  'South Asian':         'ethnicity.south-asian',
+  'Hispanic / Latino':   'ethnicity.hispanic',
+  'Middle Eastern':      'ethnicity.middle-eastern',
+  'Indigenous':          'ethnicity.indigenous',
+  'Mixed':               'ethnicity.mixed',
+  'Other':               'ethnicity.other',
+  'Prefer not to say':   'common.preferNotToSay',
+};
+
+const activityOptions = (t: T): Option<NonNullable<ActivityLevel>>[] => [
+  { value: 'sedentary', label: t('activity.sedentary'), icon: 'bed-outline',     sub: t('activity.sedentarySub') },
+  { value: 'light',     label: t('activity.light'),     icon: 'walk-outline',    sub: t('activity.lightSub') },
+  { value: 'moderate',  label: t('activity.moderate'),  icon: 'bicycle-outline', sub: t('activity.moderateSub') },
+  { value: 'active',    label: t('activity.active'),    icon: 'barbell-outline', sub: t('activity.activeSub') },
+  { value: 'athlete',   label: t('activity.athlete'),   icon: 'trophy-outline',  sub: t('activity.athleteSub') },
 ];
 
-const JOB_OPTIONS: Option<NonNullable<JobType>>[] = [
-  { value: 'desk',     label: 'Desk all day', icon: 'laptop-outline' },
-  { value: 'mixed',    label: 'Mixed',         icon: 'shuffle' },
-  { value: 'feet',     label: 'On my feet',    icon: 'walk' },
-  { value: 'physical', label: 'Physical work', icon: 'construct-outline' },
-  { value: 'shift',    label: 'Shift work',    icon: 'moon-outline' },
-  { value: 'none',     label: 'Not working',   icon: 'home-outline' },
+const jobOptions = (t: T): Option<NonNullable<JobType>>[] => [
+  { value: 'desk',     label: t('jobType.desk'),     icon: 'laptop-outline' },
+  { value: 'mixed',    label: t('jobType.mixed'),    icon: 'shuffle' },
+  { value: 'feet',     label: t('jobType.feet'),     icon: 'walk' },
+  { value: 'physical', label: t('jobType.physical'), icon: 'construct-outline' },
+  { value: 'shift',    label: t('jobType.shift'),    icon: 'moon-outline' },
+  { value: 'none',     label: t('jobType.none'),     icon: 'home-outline' },
 ];
 
-const TIME_BAND_OUTDOOR: Option<NonNullable<TimeBand>>[] = [
-  { value: 'under-15', label: '<15 min', icon: 'cloud-outline' },
-  { value: '15-60',    label: '15-60 min', icon: 'partly-sunny-outline' },
-  { value: '60-120',   label: '1-2 hours', icon: 'sunny-outline' },
-  { value: '120+',     label: '2 hours+', icon: 'sunny' },
+const timeBandOutdoor = (t: T): Option<NonNullable<TimeBand>>[] => [
+  { value: 'under-15', label: t('timeBand.under-15'), icon: 'cloud-outline' },
+  { value: '15-60',    label: t('timeBand.15-60'),    icon: 'partly-sunny-outline' },
+  { value: '60-120',   label: t('timeBand.60-120'),   icon: 'sunny-outline' },
+  { value: '120+',     label: t('timeBand.120+'),     icon: 'sunny' },
 ];
 
-const TIME_BAND_WELLNESS: Option<NonNullable<TimeBand>>[] = [
-  { value: 'under-15', label: '<15 min', icon: 'time-outline' },
-  { value: '15-30',    label: '15-30 min', icon: 'time-outline' },
-  { value: '30-60',    label: '30-60 min', icon: 'timer-outline' },
-  { value: '60+',      label: '1 hour+', icon: 'timer' },
+const timeBandWellness = (t: T): Option<NonNullable<TimeBand>>[] => [
+  { value: 'under-15', label: t('timeBand.under-15'), icon: 'time-outline' },
+  { value: '15-30',    label: t('timeBand.15-30'),    icon: 'time-outline' },
+  { value: '30-60',    label: t('timeBand.30-60'),    icon: 'timer-outline' },
+  { value: '60+',      label: t('timeBand.60+'),      icon: 'timer' },
 ];
 
-const TIME_BAND_COOKING: Option<NonNullable<TimeBand>>[] = [
-  { value: 'under-15', label: '<15 min', icon: 'flash-outline' },
-  { value: '15-30',    label: '15-30 min', icon: 'time-outline' },
-  { value: '30-60',    label: '30-60 min', icon: 'timer-outline' },
-  { value: '60+',      label: '1 hour+', icon: 'restaurant-outline' },
+const sleepQualityOptions = (t: T): Option<NonNullable<SleepQuality>>[] => [
+  { value: 'great', label: t('sleepQuality.great'), emoji: '😴' },
+  { value: 'okay',  label: t('sleepQuality.okay'),  emoji: '😐' },
+  { value: 'poor',  label: t('sleepQuality.poor'),  emoji: '😩' },
 ];
 
-const SLEEP_QUALITY_OPTIONS: Option<NonNullable<SleepQuality>>[] = [
-  { value: 'great', label: 'Great', emoji: '😴' },
-  { value: 'okay',  label: 'Okay',  emoji: '😐' },
-  { value: 'poor',  label: 'Poor',  emoji: '😩' },
+const chronotypeOptions = (t: T): Option<NonNullable<Chronotype>>[] => [
+  { value: 'morning', label: t('chronotype.morning'), icon: 'sunny-outline', sub: t('chronotype.morningSub') },
+  { value: 'night',   label: t('chronotype.night'),   icon: 'moon-outline',  sub: t('chronotype.nightSub') },
+  { value: 'shift',   label: t('chronotype.shift'),   icon: 'sync-outline',  sub: t('chronotype.shiftSub') },
 ];
 
-const CHRONOTYPE_OPTIONS: Option<NonNullable<Chronotype>>[] = [
-  { value: 'morning', label: 'Morning lark', icon: 'sunny-outline', sub: 'Up early, wired before noon' },
-  { value: 'night',   label: 'Night owl',    icon: 'moon-outline', sub: 'Late riser, peak in the evening' },
-  { value: 'shift',   label: 'Shift / mixed', icon: 'sync-outline', sub: 'Schedule changes' },
+const smokingOptions = (t: T): Option<NonNullable<SmokingStatus>>[] => [
+  { value: 'never',      label: t('smoking.never'),      icon: 'close-circle-outline' },
+  { value: 'quit',       label: t('smoking.quit'),       icon: 'checkmark-done-circle-outline' },
+  { value: 'occasional', label: t('smoking.occasional'), icon: 'time-outline' },
+  { value: 'daily',      label: t('smoking.daily'),      icon: 'flame-outline' },
 ];
 
-const SMOKING_OPTIONS: Option<NonNullable<SmokingStatus>>[] = [
-  { value: 'never',      label: 'Never',      icon: 'close-circle-outline' },
-  { value: 'quit',       label: 'Quit',       icon: 'checkmark-done-circle-outline' },
-  { value: 'occasional', label: 'Occasional', icon: 'time-outline' },
-  { value: 'daily',      label: 'Daily',      icon: 'flame-outline' },
+const alcoholOptions = (t: T): Option<NonNullable<AlcoholFreq>>[] => [
+  { value: 'none',     label: t('alcohol.none'),     icon: 'close-circle-outline' },
+  { value: 'light',    label: t('alcohol.light'),    icon: 'wine-outline' },
+  { value: 'moderate', label: t('alcohol.moderate'), icon: 'wine' },
+  { value: 'heavy',    label: t('alcohol.heavy'),    icon: 'beer-outline' },
 ];
 
-const ALCOHOL_OPTIONS: Option<NonNullable<AlcoholFreq>>[] = [
-  { value: 'none',     label: 'None',         icon: 'close-circle-outline' },
-  { value: 'light',    label: '1-3 drinks/wk', icon: 'wine-outline' },
-  { value: 'moderate', label: '4-7 drinks/wk', icon: 'wine' },
-  { value: 'heavy',    label: '8+ drinks/wk',  icon: 'beer-outline' },
+const caffeineOptions = (t: T): Option<NonNullable<CaffeineFreq>>[] => [
+  { value: 'none', label: t('caffeine.none'), icon: 'close-circle-outline' },
+  { value: '1-2',  label: t('caffeine.1-2'),  icon: 'cafe-outline' },
+  { value: '3-4',  label: t('caffeine.3-4'),  icon: 'cafe' },
+  { value: '5+',   label: t('caffeine.5+'),   icon: 'flash' },
 ];
 
-const CAFFEINE_OPTIONS: Option<NonNullable<CaffeineFreq>>[] = [
-  { value: 'none', label: 'None',     icon: 'close-circle-outline' },
-  { value: '1-2',  label: '1-2 cups', icon: 'cafe-outline' },
-  { value: '3-4',  label: '3-4 cups', icon: 'cafe' },
-  { value: '5+',   label: '5+ cups',  icon: 'flash' },
+const stressOptions = (t: T): Option<NonNullable<StressLevel>>[] => [
+  { value: 'low',    label: t('stress.low'),    icon: 'happy-outline' },
+  { value: 'medium', label: t('stress.medium'), icon: 'remove-circle-outline' },
+  { value: 'high',   label: t('stress.high'),   icon: 'alert-circle' },
 ];
 
-const STRESS_OPTIONS: Option<NonNullable<StressLevel>>[] = [
-  { value: 'low',    label: 'Low',    icon: 'happy-outline' },
-  { value: 'medium', label: 'Medium', icon: 'remove-circle-outline' },
-  { value: 'high',   label: 'High',   icon: 'alert-circle' },
+const eatingPatternOptions = (t: T): Option<NonNullable<EatingPattern>>[] => [
+  { value: 'omnivore',      label: t('eatingPattern.omnivore'),      icon: 'restaurant-outline' },
+  { value: 'pescatarian',   label: t('eatingPattern.pescatarian'),   icon: 'fish-outline' },
+  { value: 'vegetarian',    label: t('eatingPattern.vegetarian'),    icon: 'leaf-outline' },
+  { value: 'vegan',         label: t('eatingPattern.vegan'),         icon: 'leaf' },
+  { value: 'mediterranean', label: t('eatingPattern.mediterranean'), icon: 'sunny-outline' },
+  { value: 'keto',          label: t('eatingPattern.keto'),          icon: 'flame-outline' },
+  { value: 'paleo',         label: t('eatingPattern.paleo'),         icon: 'pizza-outline' },
+  { value: 'no-specific',   label: t('eatingPattern.no-specific'),   icon: 'help-outline' },
 ];
 
-const EATING_PATTERN_OPTIONS: Option<NonNullable<EatingPattern>>[] = [
-  { value: 'omnivore',      label: 'Omnivore',       icon: 'restaurant-outline' },
-  { value: 'pescatarian',   label: 'Pescatarian',    icon: 'fish-outline' },
-  { value: 'vegetarian',    label: 'Vegetarian',     icon: 'leaf-outline' },
-  { value: 'vegan',         label: 'Vegan',          icon: 'leaf' },
-  { value: 'mediterranean', label: 'Mediterranean',  icon: 'sunny-outline' },
-  { value: 'keto',          label: 'Keto',           icon: 'flame-outline' },
-  { value: 'paleo',         label: 'Paleo',          icon: 'pizza-outline' },
-  { value: 'no-specific',   label: 'No specific',    icon: 'help-outline' },
-];
-
-const EATING_SCHEDULE_OPTIONS: Option<NonNullable<EatingSchedule>>[] = [
-  { value: '3-meals',        label: '3 meals/day',     icon: 'list-outline' },
-  { value: '2-meals',        label: '2 meals/day',     icon: 'remove-outline' },
-  { value: 'if',             label: 'Intermittent fasting', icon: 'time-outline' },
-  { value: 'snacky',         label: 'Snacky / grazing', icon: 'apps-outline' },
-  { value: 'skip-breakfast', label: 'Skip breakfast',   icon: 'cafe-outline' },
-];
-
-const COOKING_SKILL_OPTIONS: Option<NonNullable<CookingSkill>>[] = [
-  { value: 'none',         label: "Don't cook",  icon: 'close-circle-outline' },
-  { value: 'basic',        label: 'Basic',        icon: 'thumbs-up-outline' },
-  { value: 'intermediate', label: 'Intermediate', icon: 'restaurant-outline' },
-  { value: 'advanced',     label: 'Advanced',     icon: 'star-outline' },
+const eatingScheduleOptions = (t: T): Option<NonNullable<EatingSchedule>>[] => [
+  { value: '3-meals',        label: t('eatingSchedule.3-meals'),        icon: 'list-outline' },
+  { value: '2-meals',        label: t('eatingSchedule.2-meals'),        icon: 'remove-outline' },
+  { value: 'if',             label: t('eatingSchedule.if'),             icon: 'time-outline' },
+  { value: 'snacky',         label: t('eatingSchedule.snacky'),         icon: 'apps-outline' },
+  { value: 'skip-breakfast', label: t('eatingSchedule.skip-breakfast'), icon: 'cafe-outline' },
 ];
 
 const ALLERGY_OPTIONS = [
   'Peanuts', 'Tree nuts', 'Dairy', 'Eggs', 'Gluten',
   'Shellfish', 'Soy', 'Sesame', 'Fish', 'None',
 ];
+const ALLERGY_KEYS: Record<string, string> = {
+  'Peanuts': 'allergy.peanuts',
+  'Tree nuts': 'allergy.tree-nuts',
+  'Dairy': 'allergy.dairy',
+  'Eggs': 'allergy.eggs',
+  'Gluten': 'allergy.gluten',
+  'Shellfish': 'allergy.shellfish',
+  'Soy': 'allergy.soy',
+  'Sesame': 'allergy.sesame',
+  'Fish': 'allergy.fish',
+  'None': 'allergy.none',
+};
 
 const INTOLERANCE_OPTIONS = [
   'Lactose', 'Fructose', 'FODMAP-sensitive', 'Gluten (non-coeliac)',
   'Histamine', 'Caffeine', 'None',
 ];
+const INTOLERANCE_KEYS: Record<string, string> = {
+  'Lactose': 'intolerance.lactose',
+  'Fructose': 'intolerance.fructose',
+  'FODMAP-sensitive': 'intolerance.fodmap',
+  'Gluten (non-coeliac)': 'intolerance.gluten-non-coeliac',
+  'Histamine': 'intolerance.histamine',
+  'Caffeine': 'intolerance.caffeine',
+  'None': 'intolerance.none',
+};
 
 const CONDITION_OPTIONS = [
   'Type 2 diabetes', 'Type 1 diabetes', 'Prediabetes',
@@ -266,6 +296,23 @@ const CONDITION_OPTIONS = [
   'Asthma', 'IBS / IBD', 'Autoimmune', 'Anxiety', 'Depression',
   'ADHD', 'Thyroid', 'Endometriosis', 'PCOS',
 ];
+const CONDITION_KEYS: Record<string, string> = {
+  'Type 2 diabetes':     'condition.t2d',
+  'Type 1 diabetes':     'condition.t1d',
+  'Prediabetes':         'condition.prediabetes',
+  'High blood pressure': 'condition.hbp',
+  'High cholesterol':    'condition.hcl',
+  'Heart disease':       'condition.heart',
+  'Asthma':              'condition.asthma',
+  'IBS / IBD':           'condition.ibs',
+  'Autoimmune':          'condition.autoimmune',
+  'Anxiety':             'condition.anxiety',
+  'Depression':          'condition.depression',
+  'ADHD':                'condition.adhd',
+  'Thyroid':             'condition.thyroid',
+  'Endometriosis':       'condition.endometriosis',
+  'PCOS':                'condition.pcos',
+};
 
 const COMMON_MEDS = [
   'Statin', 'Metformin', 'SSRI', 'Beta-blocker',
@@ -276,54 +323,81 @@ const FAMILY_HISTORY_OPTIONS = [
   'Heart disease', 'Type 2 diabetes', 'Cancer',
   'Dementia', 'Stroke', 'Mental health', 'None',
 ];
+const FAMILY_HISTORY_KEYS: Record<string, string> = {
+  'Heart disease':    'familyHistory.heart',
+  'Type 2 diabetes':  'familyHistory.t2d',
+  'Cancer':           'familyHistory.cancer',
+  'Dementia':         'familyHistory.dementia',
+  'Stroke':           'familyHistory.stroke',
+  'Mental health':    'familyHistory.mental',
+  'None':             'familyHistory.none',
+};
 
 const INJURY_OPTIONS = [
   'Lower back', 'Knee', 'Shoulder', 'Hip',
   'Neck', 'Ankle', 'Wrist', 'None',
 ];
+const INJURY_KEYS: Record<string, string> = {
+  'Lower back': 'injury.lower-back',
+  'Knee':       'injury.knee',
+  'Shoulder':   'injury.shoulder',
+  'Hip':        'injury.hip',
+  'Neck':       'injury.neck',
+  'Ankle':      'injury.ankle',
+  'Wrist':      'injury.wrist',
+  'None':       'injury.none',
+};
 
 const MENTAL_HEALTH_OPTIONS = [
   'Anxiety', 'Depression', 'ADHD',
   'Eating disorder', 'OCD', 'Prefer not to say',
 ];
+const MENTAL_HEALTH_KEYS: Record<string, string> = {
+  'Anxiety':            'mentalHealth.anxiety',
+  'Depression':         'mentalHealth.depression',
+  'ADHD':               'mentalHealth.adhd',
+  'Eating disorder':    'mentalHealth.eating-disorder',
+  'OCD':                'mentalHealth.ocd',
+  'Prefer not to say':  'common.preferNotToSay',
+};
 
-const LIVING_OPTIONS: Option<NonNullable<LivingSituation>>[] = [
-  { value: 'alone',       label: 'Alone',                    icon: 'person-outline' },
-  { value: 'partner',     label: 'With partner',             icon: 'heart-outline' },
-  { value: 'family-kids', label: 'Family with kids',         icon: 'people-outline' },
-  { value: 'parents',     label: 'With parents',             icon: 'home-outline' },
-  { value: 'roommates',   label: 'With roommates',           icon: 'people-circle-outline' },
+const livingOptions = (t: T): Option<NonNullable<LivingSituation>>[] => [
+  { value: 'alone',       label: t('living.alone'),       icon: 'person-outline' },
+  { value: 'partner',     label: t('living.partner'),     icon: 'heart-outline' },
+  { value: 'family-kids', label: t('living.family-kids'), icon: 'people-outline' },
+  { value: 'parents',     label: t('living.parents'),     icon: 'home-outline' },
+  { value: 'roommates',   label: t('living.roommates'),   icon: 'people-circle-outline' },
 ];
 
-const TRAVEL_OPTIONS: Option<NonNullable<TravelFrequency>>[] = [
-  { value: 'rarely',  label: 'Rarely',  icon: 'home-outline' },
-  { value: 'monthly', label: 'Monthly', icon: 'airplane-outline' },
-  { value: 'weekly',  label: 'Weekly+', icon: 'airplane' },
+const travelOptions = (t: T): Option<NonNullable<TravelFrequency>>[] => [
+  { value: 'rarely',  label: t('travel.rarely'),  icon: 'home-outline' },
+  { value: 'monthly', label: t('travel.monthly'), icon: 'airplane-outline' },
+  { value: 'weekly',  label: t('travel.weekly'),  icon: 'airplane' },
 ];
 
-const FEMALE_STATUS_OPTIONS: Option<NonNullable<FemaleStatus>>[] = [
-  { value: 'regular',          label: 'Regular cycle',     icon: 'refresh-circle-outline' },
-  { value: 'irregular',        label: 'Irregular cycle',   icon: 'pulse-outline' },
-  { value: 'trying',           label: 'Trying to conceive', icon: 'heart-circle-outline' },
-  { value: 'pregnant',         label: 'Pregnant',           icon: 'female' },
-  { value: 'breastfeeding',    label: 'Breastfeeding',      icon: 'water-outline' },
-  { value: 'perimenopause',    label: 'Perimenopause',      icon: 'thermometer-outline' },
-  { value: 'menopause',        label: 'Menopause',          icon: 'sunny-outline' },
-  { value: 'post-menopause',   label: 'Post-menopause',     icon: 'sparkles-outline' },
-  { value: 'prefer-not-to-say', label: 'Prefer not to say', icon: 'eye-off-outline' },
+const femaleStatusOptions = (t: T): Option<NonNullable<FemaleStatus>>[] => [
+  { value: 'regular',           label: t('femaleStatus.regular'),         icon: 'refresh-circle-outline' },
+  { value: 'irregular',         label: t('femaleStatus.irregular'),       icon: 'pulse-outline' },
+  { value: 'trying',            label: t('femaleStatus.trying'),          icon: 'heart-circle-outline' },
+  { value: 'pregnant',          label: t('femaleStatus.pregnant'),        icon: 'female' },
+  { value: 'breastfeeding',     label: t('femaleStatus.breastfeeding'),   icon: 'water-outline' },
+  { value: 'perimenopause',     label: t('femaleStatus.perimenopause'),   icon: 'thermometer-outline' },
+  { value: 'menopause',         label: t('femaleStatus.menopause'),       icon: 'sunny-outline' },
+  { value: 'post-menopause',    label: t('femaleStatus.post-menopause'),  icon: 'sparkles-outline' },
+  { value: 'prefer-not-to-say', label: t('common.preferNotToSay'),        icon: 'eye-off-outline' },
 ];
 
-const CONTRACEPTION_OPTIONS: Option<NonNullable<Contraception>>[] = [
-  { value: 'none',              label: 'None' },
-  { value: 'pill',              label: 'Pill' },
-  { value: 'iud-hormonal',      label: 'IUD (hormonal)' },
-  { value: 'iud-copper',        label: 'IUD (copper)' },
-  { value: 'implant',           label: 'Implant' },
-  { value: 'patch',             label: 'Patch' },
-  { value: 'ring',              label: 'Ring' },
-  { value: 'injection',         label: 'Injection' },
-  { value: 'natural',           label: 'Natural / tracking' },
-  { value: 'prefer-not-to-say', label: 'Prefer not to say' },
+const contraceptionOptions = (t: T): Option<NonNullable<Contraception>>[] => [
+  { value: 'none',              label: t('contraception.none') },
+  { value: 'pill',              label: t('contraception.pill') },
+  { value: 'iud-hormonal',      label: t('contraception.iud-hormonal') },
+  { value: 'iud-copper',        label: t('contraception.iud-copper') },
+  { value: 'implant',           label: t('contraception.implant') },
+  { value: 'patch',             label: t('contraception.patch') },
+  { value: 'ring',              label: t('contraception.ring') },
+  { value: 'injection',         label: t('contraception.injection') },
+  { value: 'natural',           label: t('contraception.natural') },
+  { value: 'prefer-not-to-say', label: t('common.preferNotToSay') },
 ];
 
 type GoalKey =
@@ -337,65 +411,24 @@ type GoalDef = {
   avatars: string[]; // names shown when selected
 };
 
-const GOAL_OPTIONS: GoalDef[] = [
-  { key: 'fitness',   label: 'Build fitness',   icon: 'barbell-outline',   avatars: ['Axel'] },
-  { key: 'weight',    label: 'Manage weight',   icon: 'fitness-outline',   avatars: ['Nora', 'Axel'] },
-  { key: 'energy',    label: 'More energy',     icon: 'flash-outline',     avatars: ['Nora', 'Luna'] },
-  { key: 'sleep',     label: 'Better sleep',    icon: 'moon-outline',      avatars: ['Luna'] },
-  { key: 'stress',    label: 'Reduce stress',   icon: 'leaf-outline',      avatars: ['Zen'] },
-  { key: 'nutrition', label: 'Better nutrition', icon: 'restaurant-outline', avatars: ['Nora'] },
-  { key: 'gut',       label: 'Gut health',      icon: 'medkit-outline',    avatars: ['Nora'] },
-  { key: 'skin',      label: 'Skin & beauty',   icon: 'sparkles-outline',  avatars: ['Aura'] },
-  { key: 'longevity', label: 'Longevity',       icon: 'infinite-outline',  avatars: ['Dr. Integra', 'Axel'] },
-  { key: 'labs',      label: 'Understand labs', icon: 'flask-outline',     avatars: ['Dr. Integra'] },
+const goalOptions = (t: T): GoalDef[] => [
+  { key: 'fitness',   label: t('goal.fitness'),   icon: 'barbell-outline',    avatars: ['Axel'] },
+  { key: 'weight',    label: t('goal.weight'),    icon: 'fitness-outline',    avatars: ['Nora', 'Axel'] },
+  { key: 'energy',    label: t('goal.energy'),    icon: 'flash-outline',      avatars: ['Nora', 'Luna'] },
+  { key: 'sleep',     label: t('goal.sleep'),     icon: 'moon-outline',       avatars: ['Luna'] },
+  { key: 'stress',    label: t('goal.stress'),    icon: 'leaf-outline',       avatars: ['Zen'] },
+  { key: 'nutrition', label: t('goal.nutrition'), icon: 'restaurant-outline', avatars: ['Nora'] },
+  { key: 'gut',       label: t('goal.gut'),       icon: 'medkit-outline',     avatars: ['Nora'] },
+  { key: 'skin',      label: t('goal.skin'),      icon: 'sparkles-outline',   avatars: ['Aura'] },
+  { key: 'longevity', label: t('goal.longevity'), icon: 'infinite-outline',   avatars: ['Dr. Integra', 'Axel'] },
+  { key: 'labs',      label: t('goal.labs'),      icon: 'flask-outline',      avatars: ['Dr. Integra'] },
 ];
 
-const MOTIVATION_OPTIONS: Option<NonNullable<MotivationTrigger>>[] = [
-  { value: 'health-scare',  label: 'Health scare',     icon: 'medkit-outline' },
-  { value: 'event',         label: 'Event coming up',  icon: 'gift-outline' },
-  { value: 'birthday',      label: 'Big birthday',     icon: 'sparkles-outline' },
-  { value: 'doctor',        label: 'Doctor said so',   icon: 'medical-outline' },
-  { value: 'energy',        label: 'Want more energy', icon: 'flash-outline' },
-  { value: 'specific-goal', label: 'Specific goal',    icon: 'flag-outline' },
-  { value: 'ready',         label: 'Just ready',       icon: 'checkmark-circle-outline' },
-  { value: 'other',         label: 'Something else',   icon: 'ellipsis-horizontal' },
-];
-
-const TIMELINE_OPTIONS: Option<NonNullable<GoalTimeline>>[] = [
-  { value: 'weeks',       label: 'In weeks',     icon: 'flash-outline' },
-  { value: 'months',      label: 'In months',    icon: 'calendar-outline' },
-  { value: 'year',        label: 'This year',    icon: 'calendar' },
-  { value: 'no-deadline', label: 'No deadline',  icon: 'infinite-outline' },
-];
-
-const COACHING_TONE_OPTIONS: Option<NonNullable<CoachingTone>>[] = [
-  { value: 'friendly', label: 'Friendly', icon: 'happy-outline', sub: 'Like a buddy' },
-  { value: 'expert',   label: 'Expert',   icon: 'school-outline', sub: 'Like a clinician' },
-  { value: 'direct',   label: 'Direct',   icon: 'megaphone-outline', sub: 'No filler' },
-  { value: 'gentle',   label: 'Gentle',   icon: 'heart-outline', sub: 'Soft + supportive' },
-];
-
-const COACHING_DETAIL_OPTIONS: Option<NonNullable<CoachingDetail>>[] = [
-  { value: 'brief',    label: 'Brief',    icon: 'remove-outline' },
-  { value: 'balanced', label: 'Balanced', icon: 'list-outline' },
-  { value: 'thorough', label: 'Thorough', icon: 'library-outline' },
-];
-
-const COACHING_PACE_OPTIONS: Option<NonNullable<CoachingPace>>[] = [
-  { value: 'slow', label: 'Slow & steady', icon: 'walk-outline' },
-  { value: 'fast', label: 'Fast & focused', icon: 'rocket-outline' },
-];
-
-const COACHING_STYLE_OPTIONS: Option<NonNullable<CoachingStyle>>[] = [
-  { value: 'routines', label: 'Routines',  icon: 'refresh-circle-outline' },
-  { value: 'variety',  label: 'Variety',   icon: 'shuffle' },
-];
-
-const ACCOUNTABILITY_OPTIONS: Option<NonNullable<AccountabilityStyle>>[] = [
-  { value: 'solo',    label: 'Solo',          icon: 'person-outline' },
-  { value: 'track',   label: 'Track it all',  icon: 'analytics-outline' },
-  { value: 'coach',   label: 'Coach me',      icon: 'megaphone-outline' },
-  { value: 'compete', label: 'Compete',       icon: 'trophy-outline' },
+const timelineOptions = (t: T): Option<NonNullable<GoalTimeline>>[] => [
+  { value: 'weeks',       label: t('timeline.weeks'),       icon: 'flash-outline' },
+  { value: 'months',      label: t('timeline.months'),      icon: 'calendar-outline' },
+  { value: 'year',        label: t('timeline.year'),        icon: 'calendar' },
+  { value: 'no-deadline', label: t('timeline.no-deadline'), icon: 'infinite-outline' },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -492,14 +525,23 @@ function ChipChoice<T extends string>({
 }
 
 /**
- * Multi-select chip strip. Used for chips without strong icons (allergies,
- * conditions, family history). Wraps into rows automatically.
+ * Multi-select chip strip. The `options` are stored as the canonical
+ * English label (which is also the value persisted to the DB), while
+ * `keys` is an optional lookup table mapping each option to a
+ * translation key. When provided, the chip renders the localised
+ * string; without `keys`, the raw label shows.
+ *
+ * Storing the English label as the value keeps existing rows working
+ * — changing it would orphan thousands of profiles. The translation
+ * lookup happens at render time, never at write time.
  */
-function MultiChip({ options, values, onChange }: {
+function MultiChip({ options, values, onChange, keys }: {
   options: string[];
   values: string[];
   onChange: (next: string[]) => void;
+  keys?: Record<string, string>;
 }) {
+  const { t } = useTranslation();
   const toggle = (option: string) => {
     if (values.includes(option)) {
       onChange(values.filter((v) => v !== option));
@@ -511,6 +553,14 @@ function MultiChip({ options, values, onChange }: {
         onChange([...values.filter((v) => v !== 'None'), option]);
       }
     }
+  };
+  const display = (option: string): string => {
+    const key = keys?.[option];
+    if (!key) return option;
+    const translated = t(key);
+    // i18next returns the key when no translation is found — fall
+    // back to the English label so the chip never shows raw key text.
+    return translated === key ? option : translated;
   };
   return (
     <View style={multiStyles.wrap}>
@@ -530,7 +580,7 @@ function MultiChip({ options, values, onChange }: {
               <Ionicons name="checkmark" size={14} color={colors.primary} />
             ) : null}
             <Text style={[multiStyles.chipText, selected && multiStyles.chipTextSelected]}>
-              {option}
+              {display(option)}
             </Text>
           </Pressable>
         );
@@ -539,9 +589,19 @@ function MultiChip({ options, values, onChange }: {
   );
 }
 
-function Stepper({ value, onChange, min, max, step = 1, unit, icon, tint }: {
+/**
+ * Numeric stepper with -5/-1/+1/+5 buttons and an optional clear button.
+ *
+ * Pass `onClear` (alongside `onChange`) to let the user delete a value
+ * after they've set it — useful for body fields like height/weight
+ * where a user might tap "Tap to set", see the placeholder value, then
+ * decide they'd rather skip the field. Without onClear, once a value
+ * is set the user can only adjust it, not undo it.
+ */
+function Stepper({ value, onChange, onClear, min, max, step = 1, unit, icon, tint }: {
   value: number | null | undefined;
   onChange: (n: number) => void;
+  onClear?: () => void;
   min: number;
   max: number;
   step?: number;
@@ -585,6 +645,16 @@ function Stepper({ value, onChange, min, max, step = 1, unit, icon, tint }: {
       <Pressable onPress={() => change(safeStep * 5)} style={stepperStyles.btnLg}>
         <Ionicons name="add" size={20} color={colors.textPrimary} />
       </Pressable>
+      {onClear ? (
+        <Pressable
+          onPress={onClear}
+          accessibilityLabel={t('common.clear')}
+          hitSlop={8}
+          style={stepperStyles.clearBtn}
+        >
+          <Ionicons name="close" size={16} color={colors.textMuted} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -653,7 +723,6 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
   const onLife     = step === 'life';
   const onFemale   = step === 'female';
   const onGoals    = step === 'goals';
-  const onCoaching = step === 'coaching';
   const onReview   = step === 'review';
 
   useEffect(() => {
@@ -755,7 +824,6 @@ export function ProfileSetupScreen({ visible, mode, onFinish, onClose }: Props) 
             {onLife && <LifeStep profile={profile} set={set} />}
             {onFemale && <FemaleStep profile={profile} set={set} />}
             {onGoals && <GoalsStep profile={profile} set={set} />}
-            {onCoaching && <CoachingStep profile={profile} set={set} />}
             {onReview && <ReviewStep profile={profile} jumpTo={setStepIdx} steps={visibleSteps} />}
           </ScrollView>
         )}
@@ -890,7 +958,7 @@ function AboutStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldAge')}</FieldLabel>
       <ChipChoice
-        options={AGE_OPTIONS}
+        options={ageOptions(t)}
         value={profile.age_band ?? null}
         onChange={(v) => set('age_band', v)}
         columns={3}
@@ -898,7 +966,7 @@ function AboutStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldSex')}</FieldLabel>
       <ChipChoice
-        options={SEX_OPTIONS}
+        options={sexOptions(t)}
         value={profile.sex_at_birth ?? null}
         onChange={(v) => set('sex_at_birth', v)}
         columns={3}
@@ -930,6 +998,7 @@ function HeritageStep({ profile, set }: StepProps) {
       <FieldLabel optional>{t('profileSetup.heritageHelper')}</FieldLabel>
       <MultiChip
         options={ETHNICITY_OPTIONS}
+        keys={ETHNICITY_KEYS}
         values={profile.ethnicity ?? []}
         onChange={(vs) => set('ethnicity', vs)}
       />
@@ -947,6 +1016,7 @@ function BodyStep({ profile, set }: StepProps) {
       <Stepper
         value={profile.height_cm}
         onChange={(n) => set('height_cm', n)}
+        onClear={() => set('height_cm', null)}
         min={120} max={220} unit="cm" icon="resize-outline" tint={ACCENT}
       />
 
@@ -954,6 +1024,7 @@ function BodyStep({ profile, set }: StepProps) {
       <Stepper
         value={profile.weight_kg}
         onChange={(n) => set('weight_kg', n)}
+        onClear={() => set('weight_kg', null)}
         min={30} max={250} unit="kg" icon="barbell-outline" tint={ACCENT}
       />
 
@@ -961,6 +1032,7 @@ function BodyStep({ profile, set }: StepProps) {
       <Stepper
         value={profile.waist_cm}
         onChange={(n) => set('waist_cm', n)}
+        onClear={() => set('waist_cm', null)}
         min={50} max={160} unit="cm" icon="ellipse-outline" tint={ACCENT}
       />
     </>
@@ -975,14 +1047,14 @@ function DayStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldActivity')}</FieldLabel>
       <ChipChoice
-        options={ACTIVITY_OPTIONS}
+        options={activityOptions(t)}
         value={profile.activity_level ?? null}
         onChange={(v) => set('activity_level', v)}
       />
 
       <FieldLabel>{t('profileSetup.fieldJob')}</FieldLabel>
       <ChipChoice
-        options={JOB_OPTIONS}
+        options={jobOptions(t)}
         value={profile.job_type ?? null}
         onChange={(v) => set('job_type', v)}
         columns={3}
@@ -990,7 +1062,7 @@ function DayStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldOutdoor')}</FieldLabel>
       <ChipChoice
-        options={TIME_BAND_OUTDOOR}
+        options={timeBandOutdoor(t)}
         value={profile.outdoor_minutes_band ?? null}
         onChange={(v) => set('outdoor_minutes_band', v)}
         columns={2}
@@ -998,7 +1070,7 @@ function DayStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldWellnessTime')}</FieldLabel>
       <ChipChoice
-        options={TIME_BAND_WELLNESS}
+        options={timeBandWellness(t)}
         value={profile.wellness_time_band ?? null}
         onChange={(v) => set('wellness_time_band', v)}
         columns={2}
@@ -1022,7 +1094,7 @@ function SleepStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldSleepQuality')}</FieldLabel>
       <ChipChoice
-        options={SLEEP_QUALITY_OPTIONS}
+        options={sleepQualityOptions(t)}
         value={profile.sleep_quality ?? null}
         onChange={(v) => set('sleep_quality', v)}
         columns={3}
@@ -1030,7 +1102,7 @@ function SleepStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldChronotype')}</FieldLabel>
       <ChipChoice
-        options={CHRONOTYPE_OPTIONS}
+        options={chronotypeOptions(t)}
         value={profile.chronotype ?? null}
         onChange={(v) => set('chronotype', v)}
         columns={1}
@@ -1046,16 +1118,16 @@ function HabitsStep({ profile, set }: StepProps) {
       <StepHero icon="cafe-outline" tint={ACCENT} title={t('profileSetup.habitsTitle')} />
 
       <FieldLabel>{t('profileSetup.fieldSmoking')}</FieldLabel>
-      <ChipChoice options={SMOKING_OPTIONS} value={profile.smoking_status ?? null} onChange={(v) => set('smoking_status', v)} columns={2} />
+      <ChipChoice options={smokingOptions(t)} value={profile.smoking_status ?? null} onChange={(v) => set('smoking_status', v)} columns={2} />
 
       <FieldLabel>{t('profileSetup.fieldAlcohol')}</FieldLabel>
-      <ChipChoice options={ALCOHOL_OPTIONS} value={profile.alcohol_freq ?? null} onChange={(v) => set('alcohol_freq', v)} columns={2} />
+      <ChipChoice options={alcoholOptions(t)} value={profile.alcohol_freq ?? null} onChange={(v) => set('alcohol_freq', v)} columns={2} />
 
       <FieldLabel>{t('profileSetup.fieldCaffeine')}</FieldLabel>
-      <ChipChoice options={CAFFEINE_OPTIONS} value={profile.caffeine_freq ?? null} onChange={(v) => set('caffeine_freq', v)} columns={2} />
+      <ChipChoice options={caffeineOptions(t)} value={profile.caffeine_freq ?? null} onChange={(v) => set('caffeine_freq', v)} columns={2} />
 
       <FieldLabel>{t('profileSetup.fieldStress')}</FieldLabel>
-      <ChipChoice options={STRESS_OPTIONS} value={profile.stress_level ?? null} onChange={(v) => set('stress_level', v)} columns={3} />
+      <ChipChoice options={stressOptions(t)} value={profile.stress_level ?? null} onChange={(v) => set('stress_level', v)} columns={3} />
     </>
   );
 }
@@ -1068,7 +1140,7 @@ function EatingStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldEatingPattern')}</FieldLabel>
       <ChipChoice
-        options={EATING_PATTERN_OPTIONS}
+        options={eatingPatternOptions(t)}
         value={profile.eating_pattern ?? null}
         onChange={(v) => set('eating_pattern', v)}
         columns={2}
@@ -1076,31 +1148,16 @@ function EatingStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldEatingSchedule')}</FieldLabel>
       <ChipChoice
-        options={EATING_SCHEDULE_OPTIONS}
+        options={eatingScheduleOptions(t)}
         value={profile.eating_schedule ?? null}
         onChange={(v) => set('eating_schedule', v)}
-        columns={2}
-      />
-
-      <FieldLabel>{t('profileSetup.fieldCookingSkill')}</FieldLabel>
-      <ChipChoice
-        options={COOKING_SKILL_OPTIONS}
-        value={profile.cooking_skill ?? null}
-        onChange={(v) => set('cooking_skill', v)}
-        columns={2}
-      />
-
-      <FieldLabel>{t('profileSetup.fieldCookingTime')}</FieldLabel>
-      <ChipChoice
-        options={TIME_BAND_COOKING}
-        value={profile.cooking_time_band ?? null}
-        onChange={(v) => set('cooking_time_band', v)}
         columns={2}
       />
 
       <FieldLabel optional>{t('profileSetup.fieldAllergies')}</FieldLabel>
       <MultiChip
         options={ALLERGY_OPTIONS}
+        keys={ALLERGY_KEYS}
         values={profile.allergies ?? []}
         onChange={(vs) => set('allergies', vs)}
       />
@@ -1108,6 +1165,7 @@ function EatingStep({ profile, set }: StepProps) {
       <FieldLabel optional>{t('profileSetup.fieldIntolerances')}</FieldLabel>
       <MultiChip
         options={INTOLERANCE_OPTIONS}
+        keys={INTOLERANCE_KEYS}
         values={profile.intolerances ?? []}
         onChange={(vs) => set('intolerances', vs)}
       />
@@ -1136,6 +1194,7 @@ function HealthStep({ profile, set }: StepProps) {
       <FieldLabel optional>{t('profileSetup.fieldConditions')}</FieldLabel>
       <MultiChip
         options={CONDITION_OPTIONS}
+        keys={CONDITION_KEYS}
         values={profile.conditions ?? []}
         onChange={(vs) => set('conditions', vs)}
       />
@@ -1182,6 +1241,7 @@ function HealthStep({ profile, set }: StepProps) {
       <FieldLabel optional>{t('profileSetup.fieldFamilyHistory')}</FieldLabel>
       <MultiChip
         options={FAMILY_HISTORY_OPTIONS}
+        keys={FAMILY_HISTORY_KEYS}
         values={profile.family_history ?? []}
         onChange={(vs) => set('family_history', vs)}
       />
@@ -1189,6 +1249,7 @@ function HealthStep({ profile, set }: StepProps) {
       <FieldLabel optional>{t('profileSetup.fieldInjuries')}</FieldLabel>
       <MultiChip
         options={INJURY_OPTIONS}
+        keys={INJURY_KEYS}
         values={profile.past_injuries ?? []}
         onChange={(vs) => set('past_injuries', vs)}
       />
@@ -1196,6 +1257,7 @@ function HealthStep({ profile, set }: StepProps) {
       <FieldLabel optional>{t('profileSetup.fieldMentalHealth')}</FieldLabel>
       <MultiChip
         options={MENTAL_HEALTH_OPTIONS}
+        keys={MENTAL_HEALTH_KEYS}
         values={profile.mental_health ?? []}
         onChange={(vs) => set('mental_health', vs)}
       />
@@ -1211,7 +1273,7 @@ function LifeStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldLiving')}</FieldLabel>
       <ChipChoice
-        options={LIVING_OPTIONS}
+        options={livingOptions(t)}
         value={profile.living_situation ?? null}
         onChange={(v) => set('living_situation', v)}
         columns={2}
@@ -1219,7 +1281,7 @@ function LifeStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldTravel')}</FieldLabel>
       <ChipChoice
-        options={TRAVEL_OPTIONS}
+        options={travelOptions(t)}
         value={profile.travel_frequency ?? null}
         onChange={(v) => set('travel_frequency', v)}
         columns={3}
@@ -1262,7 +1324,7 @@ function FemaleStep({ profile, set }: StepProps) {
 
       <FieldLabel>{t('profileSetup.fieldFemaleStatus')}</FieldLabel>
       <ChipChoice
-        options={FEMALE_STATUS_OPTIONS}
+        options={femaleStatusOptions(t)}
         value={status}
         onChange={(v) => set('female_status', v)}
         columns={2}
@@ -1303,7 +1365,7 @@ function FemaleStep({ profile, set }: StepProps) {
 
       <FieldLabel optional>{t('profileSetup.fieldContraception')}</FieldLabel>
       <ChipChoice
-        options={CONTRACEPTION_OPTIONS}
+        options={contraceptionOptions(t)}
         value={profile.contraception ?? null}
         onChange={(v) => set('contraception', v)}
         columns={2}
@@ -1314,6 +1376,7 @@ function FemaleStep({ profile, set }: StepProps) {
 
 function GoalsStep({ profile, set }: StepProps) {
   const { t } = useTranslation();
+  const goals = useMemo(() => goalOptions(t), [t]);
   const selected = (profile.goals ?? []) as string[];
   const toggle = (key: string) => {
     if (selected.includes(key)) {
@@ -1324,18 +1387,18 @@ function GoalsStep({ profile, set }: StepProps) {
   };
   const teamMembers = useMemo(() => {
     const names = new Set<string>();
-    GOAL_OPTIONS.forEach((g) => {
+    goals.forEach((g) => {
       if (selected.includes(g.key)) g.avatars.forEach((n) => names.add(n));
     });
     return Array.from(names);
-  }, [selected]);
+  }, [selected, goals]);
 
   return (
     <>
       <StepHero icon="flag-outline" tint={ACCENT} title={t('profileSetup.goalsTitle')} subtitle={t('profileSetup.goalsSubtitle')} />
 
       <View style={chipStyles.grid}>
-        {GOAL_OPTIONS.map((g) => {
+        {goals.map((g) => {
           const isSelected = selected.includes(g.key);
           const disabled = !isSelected && selected.length >= 3;
           return (
@@ -1367,27 +1430,9 @@ function GoalsStep({ profile, set }: StepProps) {
         </View>
       ) : null}
 
-      <FieldLabel optional>{t('profileSetup.fieldMotivation')}</FieldLabel>
-      <ChipChoice
-        options={MOTIVATION_OPTIONS}
-        value={profile.motivation_trigger ?? null}
-        onChange={(v) => set('motivation_trigger', v)}
-        columns={2}
-      />
-
-      <FieldLabel optional>{t('profileSetup.fieldMotivationText')}</FieldLabel>
-      <TextInput
-        style={[styles.text, { minHeight: 70 }]}
-        placeholder={t('profileSetup.motivationPlaceholder')}
-        placeholderTextColor={colors.textMuted}
-        value={profile.motivation_text ?? ''}
-        onChangeText={(v) => set('motivation_text', v)}
-        multiline
-      />
-
       <FieldLabel>{t('profileSetup.fieldTimeline')}</FieldLabel>
       <ChipChoice
-        options={TIMELINE_OPTIONS}
+        options={timelineOptions(t)}
         value={profile.goal_timeline ?? null}
         onChange={(v) => set('goal_timeline', v)}
         columns={2}
@@ -1399,30 +1444,6 @@ function GoalsStep({ profile, set }: StepProps) {
         onChange={(n) => set('goal_confidence', n)}
         tint={ACCENT}
       />
-    </>
-  );
-}
-
-function CoachingStep({ profile, set }: StepProps) {
-  const { t } = useTranslation();
-  return (
-    <>
-      <StepHero icon="sparkles-outline" tint={ACCENT} title={t('profileSetup.coachingTitle')} subtitle={t('profileSetup.coachingSubtitle')} />
-
-      <FieldLabel>{t('profileSetup.fieldTone')}</FieldLabel>
-      <ChipChoice options={COACHING_TONE_OPTIONS} value={profile.coaching_tone ?? null} onChange={(v) => set('coaching_tone', v)} columns={2} />
-
-      <FieldLabel>{t('profileSetup.fieldDetail')}</FieldLabel>
-      <ChipChoice options={COACHING_DETAIL_OPTIONS} value={profile.coaching_detail ?? null} onChange={(v) => set('coaching_detail', v)} columns={3} />
-
-      <FieldLabel>{t('profileSetup.fieldPace')}</FieldLabel>
-      <ChipChoice options={COACHING_PACE_OPTIONS} value={profile.coaching_pace ?? null} onChange={(v) => set('coaching_pace', v)} columns={2} />
-
-      <FieldLabel>{t('profileSetup.fieldStyle')}</FieldLabel>
-      <ChipChoice options={COACHING_STYLE_OPTIONS} value={profile.coaching_style ?? null} onChange={(v) => set('coaching_style', v)} columns={2} />
-
-      <FieldLabel>{t('profileSetup.fieldAccountability')}</FieldLabel>
-      <ChipChoice options={ACCOUNTABILITY_OPTIONS} value={profile.accountability_style ?? null} onChange={(v) => set('accountability_style', v)} columns={2} />
     </>
   );
 }
@@ -1469,7 +1490,6 @@ function buildSummary(
     { step: 'health',   icon: 'medical-outline',   title: t('profileSetup.reviewSection.health'), body: [arr(p.conditions), arr(p.medications), arr(p.family_history)].filter(Boolean).join(' · ') },
     { step: 'life',     icon: 'home-outline',      title: t('profileSetup.reviewSection.life'),   body: [p.living_situation, p.travel_frequency].filter(Boolean).join(' · ') },
     { step: 'goals',    icon: 'flag-outline',      title: t('profileSetup.reviewSection.goals'),  body: [arr(p.goals), p.goal_timeline].filter(Boolean).join(' · ') },
-    { step: 'coaching', icon: 'sparkles-outline',  title: t('profileSetup.reviewSection.style'),  body: [p.coaching_tone, p.coaching_detail, p.coaching_pace].filter(Boolean).join(' · ') },
   ];
 }
 
@@ -1693,6 +1713,12 @@ const stepperStyles = StyleSheet.create({
   },
   valueText: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: '800' },
   unitText: { color: colors.textMuted, fontSize: fontSize.sm },
+  clearBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center', justifyContent: 'center',
+    marginLeft: 4,
+  },
 });
 
 const confStyles = StyleSheet.create({
