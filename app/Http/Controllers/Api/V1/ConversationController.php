@@ -387,14 +387,17 @@ class ConversationController extends Controller
         //   4. null — let Whisper auto-detect (legacy behaviour).
         $language = $this->resolveLanguageHint($request);
 
-        // Domain context dramatically improves accuracy on terms
-        // Whisper otherwise garbles ("Nora" → "Nara", "ferritin" →
-        // "ferret in", PMID → "P MID"). The avatar name + a short
-        // wellness scope statement is enough; we don't need to dump
-        // the full system prompt in here.
-        $promptHint = $this->buildTranscribePrompt($conversation);
-
-        $text = $openai->transcribe($tmpPath, null, $filename, $language, $promptHint);
+        // No prompt hint by default. The previous prompt was a long
+        // English wellness-vocabulary primer ("nutrition, sleep, B12,
+        // ferritin, …, Nora, Luna, Aura, Dr. Integra"). Whisper biases
+        // its output toward the prompt's language and vocabulary —
+        // this primer made short, unclear, or non-English audio
+        // hallucinate wellness-themed gibberish. Plain transcription
+        // without a primer is the right default; if a future ADR
+        // wants to bias toward avatar names again, do it
+        // language-aware (Russian primer for ru users, etc.) and only
+        // ship after the eval harness shows it actually helps.
+        $text = $openai->transcribe($tmpPath, null, $filename, $language, null);
 
         return response()->json(['text' => $text, 'language' => $language]);
     }
@@ -432,27 +435,6 @@ class ConversationController extends Controller
         return null;
     }
 
-    /**
-     * Short prompt that biases Whisper toward our wellness vocabulary
-     * + the active avatar's name. Per OpenAI's transcription guide,
-     * this is most useful for proper nouns, acronyms, and domain
-     * jargon — exactly where we were seeing transcription drift.
-     */
-    private function buildTranscribePrompt(Conversation $conversation): string
-    {
-        $agentName = $conversation->agent?->name ?? 'wellness coach';
-        $vertical  = $conversation->agent?->vertical?->slug ?? 'wellness';
-
-        if ($vertical === 'wellness') {
-            return "Wellness conversation with {$agentName}. "
-                . 'Topics may include nutrition, sleep, fitness, mindfulness, skin care, '
-                . 'functional medicine, vitamins (B12, vitamin D), labs (CBC, ferritin, TSH, HbA1c), '
-                . 'and supplements. Avatar names: Nora, Luna, Zen, Axel, Aura, Dr. Integra. '
-                . 'Citations like PMID:12345678 may be spoken.';
-        }
-
-        return "Conversation with {$agentName}.";
-    }
 
     /** Text-to-speech. */
     public function speak(Request $request, Conversation $conversation): mixed

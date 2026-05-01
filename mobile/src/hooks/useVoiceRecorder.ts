@@ -19,6 +19,7 @@ export function useVoiceRecorder(
     error: null,
   });
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingStartedAtRef = useRef<number>(0);
 
   const start = useCallback(async () => {
     try {
@@ -44,6 +45,7 @@ export function useVoiceRecorder(
         Audio.RecordingOptionsPresets.HIGH_QUALITY,
       );
       recordingRef.current = recording;
+      recordingStartedAtRef.current = Date.now();
       console.log('[dictation] recording started');
       setState({ isRecording: true, isTranscribing: false, error: null });
     } catch (error) {
@@ -55,14 +57,25 @@ export function useVoiceRecorder(
 
   const stop = useCallback(async () => {
     const recording = recordingRef.current;
+    const startedAt = recordingStartedAtRef.current;
     recordingRef.current = null;
     if (!recording) return;
     try {
       setState((s) => ({ ...s, isRecording: false, isTranscribing: true }));
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
-      console.log('[dictation] stop OK, uri=', uri);
+      const elapsed = Date.now() - startedAt;
+      console.log('[dictation] stop OK, uri=', uri, 'elapsed=', elapsed, 'ms');
       if (!uri) throw new Error('No recording URI');
+      // Reject sub-1-second clips. Whisper hallucinates on tiny audio
+      // — same root cause as the voice-mode "wrong understandable
+      // things" reports. Better to silently drop than to feed
+      // garbage into the chat.
+      if (elapsed < 1000) {
+        console.log('[dictation] clip too short — dropping');
+        setState({ isRecording: false, isTranscribing: false, error: null });
+        return;
+      }
       const { transcript } = await transcribeAudio(uri, conversationId);
       onTranscript(transcript);
       setState({ isRecording: false, isTranscribing: false, error: null });

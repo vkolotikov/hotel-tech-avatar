@@ -256,14 +256,33 @@ export function VoiceModeScreen({
 
   const finishListening = useCallback(async () => {
     const r = recordingRef.current;
+    const recordingStartedAt = recordingStartedAtRef.current;
     recordingRef.current = null;
     if (!r) return;
     setPhase('thinking');
     try {
       await r.stopAndUnloadAsync();
       const uri = r.getURI();
-      console.log('[voice-mode] recording stopped, uri=', uri);
+      const elapsed = Date.now() - recordingStartedAt;
+      console.log('[voice-mode] recording stopped, uri=', uri, 'elapsed=', elapsed, 'ms');
       if (!uri) throw new Error('No recording URI');
+
+      // Short clips are almost always silence (user opened voice mode
+      // but didn't speak, or the auto-rearm caught a tail of the
+      // agent's TTS audio leak between sessions). Whisper happily
+      // hallucinates plausible sentences from <1 s of audio, which
+      // is exactly the "wrong understandable things" failure mode
+      // users have reported. Skip the upload and re-arm silently.
+      if (elapsed < 1000) {
+        console.log('[voice-mode] clip too short — skipping transcribe and rearming');
+        if (!pausedRef.current) {
+          void startListening();
+        } else {
+          setPhase('paused');
+        }
+        return;
+      }
+
       const { transcript } = await transcribeAudio(uri, conversationId);
       const text = (transcript ?? '').trim();
       console.log('[voice-mode] transcript=', JSON.stringify(text.slice(0, 80)), 'len=', text.length);
